@@ -1,0 +1,677 @@
+"""
+Modulo de Conocimiento Coreano y K-pop para Nebu.
+
+Base de datos de cultura coreana REAL, basada en fuentes verificables:
+- Korean Cultural Heritage Administration (CHA) — patrimonio cultural oficial
+- UNESCO World Heritage Centre — listados de Corea del Sur
+- "A New History of Korea" — Ki-baik Lee (historia coreana academica)
+- "Korea: A Historical and Cultural Dictionary" — Keith Pratt & Richard Rutt
+- Korean Foundation for International Cultural Exchange (KOFICE) — datos K-pop
+- BBC, Reuters, Billboard — datos verificados de industria K-pop
+
+Cada entrada tiene version academica y version `para_ninos`.
+Nebu usa la version para_ninos en sus interacciones.
+"""
+
+import random
+from typing import Optional
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# HISTORIA COREANA — Momentos clave de la peninsula
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HISTORIA_COREANA = [
+    {
+        "nombre": "Los Tres Reinos de Corea",
+        "periodo": "57 a.C. — 668 d.C.",
+        "descripcion": (
+            "La peninsula coreana estuvo dividida en tres reinos: Goguryeo "
+            "al norte (poderoso y guerrero), Baekje al suroeste (gran "
+            "influencia cultural sobre Japon) y Silla al sureste (que "
+            "finalmente unifico la peninsula en 668 d.C. con ayuda de la "
+            "dinastia Tang de China). Cada reino desarrollo su propia "
+            "cultura, arte y sistema politico."
+        ),
+        "para_ninos": (
+            "Hace mucho tiempo, Corea estaba dividida en TRES reinos que "
+            "competian entre si. Goguryeo era el mas grande y guerrero, "
+            "Baekje era famoso por su arte, y Silla era el mas pequeno "
+            "pero el mas astuto. Al final, Silla logro unir toda Corea "
+            "en un solo pais."
+        ),
+        "dato_extra": (
+            "El reino de Baekje envio maestros, artistas y monjes budistas "
+            "a Japon, influyendo enormemente en la cultura japonesa antigua."
+        ),
+    },
+    {
+        "nombre": "La Dinastia Joseon",
+        "periodo": "1392 — 1897",
+        "descripcion": (
+            "Una de las dinastias mas largas de la historia mundial, "
+            "con 27 reyes a lo largo de 505 anos. Fundada por el general "
+            "Yi Seong-gye, adopto el confucianismo como filosofia de "
+            "estado. Durante esta dinastia se creo el alfabeto hangul "
+            "(1443), se desarrollaron avances cientificos notables y "
+            "se construyeron los palacios de Seul que siguen en pie hoy."
+        ),
+        "para_ninos": (
+            "La dinastia Joseon duro mas de 500 anos, con 27 reyes. "
+            "Durante este tiempo se invento el hangul, el alfabeto "
+            "coreano que es considerado uno de los mas cientificos del "
+            "mundo. Los hermosos palacios de Seul que puedes visitar "
+            "hoy fueron construidos en esta epoca."
+        ),
+        "dato_extra": (
+            "La dinastia Joseon mantuvo registros historicos tan "
+            "detallados (los Joseon Wangjo Sillok) que hoy son "
+            "Patrimonio de la Humanidad por la UNESCO."
+        ),
+    },
+    {
+        "nombre": "El Milagro del Rio Han",
+        "periodo": "Decadas de 1960 — 1990",
+        "descripcion": (
+            "Tras la devastadora Guerra de Corea (1950-1953), Corea del "
+            "Sur era uno de los paises mas pobres del mundo. En solo "
+            "tres decadas, se transformo en una potencia economica "
+            "mundial. El PIB per capita paso de menos de 100 dolares "
+            "en 1960 a mas de 10,000 dolares en 1995. Empresas como "
+            "Samsung, Hyundai y LG nacieron durante este periodo."
+        ),
+        "para_ninos": (
+            "Despues de una guerra terrible, Corea del Sur era un pais "
+            "muy pobre. Pero los coreanos trabajaron muchisimo y en solo "
+            "30 anos lo convirtieron en uno de los paises mas modernos "
+            "del mundo. Samsung, Hyundai y LG nacieron ahi. A este "
+            "cambio increible le llaman 'El Milagro del Rio Han'."
+        ),
+        "dato_extra": (
+            "El rio Han cruza Seul, la capital. Por eso el milagro "
+            "economico lleva su nombre: todo ocurrio a orillas de ese rio."
+        ),
+    },
+    {
+        "nombre": "La Division de Corea",
+        "periodo": "1945 — presente",
+        "descripcion": (
+            "Al terminar la Segunda Guerra Mundial en 1945, la peninsula "
+            "coreana fue dividida en dos por el paralelo 38: el norte "
+            "bajo influencia sovietica y el sur bajo influencia "
+            "estadounidense. La Guerra de Corea (1950-1953) devasto la "
+            "peninsula y consolido la division. Tecnicamente, las dos "
+            "Coreas siguen en guerra: solo firmaron un armisticio, no "
+            "un tratado de paz."
+        ),
+        "para_ninos": (
+            "Corea solia ser un solo pais, pero despues de una gran "
+            "guerra mundial lo dividieron en dos: Corea del Norte y "
+            "Corea del Sur. Las familias quedaron separadas. Hoy son "
+            "dos paises muy diferentes, pero muchos coreanos suenan "
+            "con volver a ser uno solo algun dia."
+        ),
+        "dato_extra": (
+            "La Zona Desmilitarizada (DMZ) que separa ambas Coreas tiene "
+            "4 km de ancho y 250 km de largo. Al no tener actividad "
+            "humana, se ha convertido en un refugio involuntario para "
+            "especies en peligro de extincion."
+        ),
+    },
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FILOSOFIA COREANA — Conceptos culturales profundos
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILOSOFIA_COREANA = [
+    {
+        "nombre": "Jeong",
+        "hangul": "정",
+        "descripcion": (
+            "Un lazo emocional profundo que va mas alla del carino o la "
+            "amistad. Es un vinculo que se construye con el tiempo y la "
+            "convivencia. Los coreanos desarrollan jeong con personas, "
+            "lugares e incluso objetos. Es considerado el corazon de "
+            "las relaciones humanas coreanas y no tiene traduccion "
+            "exacta en otros idiomas."
+        ),
+        "para_ninos": (
+            "Jeong (정) es un sentimiento especial coreano. Es como el "
+            "carino que sientes por tu mejor amigo, pero multiplicado "
+            "por mil. Crece cuando pasas mucho tiempo con alguien. "
+            "Puedes sentir jeong por tus amigos, tu familia, tu escuela "
+            "e incluso por tu peluche favorito."
+        ),
+    },
+    {
+        "nombre": "Nunchi",
+        "hangul": "눈치",
+        "descripcion": (
+            "Literalmente 'medida del ojo'. Es la habilidad de leer el "
+            "ambiente emocional de una habitacion, entender lo que otros "
+            "sienten sin que lo digan, y actuar apropiadamente. Es una "
+            "forma de inteligencia social altamente valorada en Corea. "
+            "Los padres coreanos ensenan nunchi a sus hijos desde pequenos."
+        ),
+        "para_ninos": (
+            "Nunchi (눈치) es como un superpoder coreano: es la habilidad "
+            "de entender como se sienten los demas SIN que te lo digan. "
+            "Si entras a un cuarto y te das cuenta de que alguien esta "
+            "triste aunque no haya dicho nada, tienes buen nunchi. "
+            "En Corea, los papas ensenan esto desde chiquitos."
+        ),
+    },
+    {
+        "nombre": "Ppalli-ppalli",
+        "hangul": "빨리빨리",
+        "descripcion": (
+            "Significa 'rapido, rapido'. Es la cultura de urgencia y "
+            "eficiencia que impulso el rapido desarrollo economico de "
+            "Corea del Sur. Se refleja en todo: internet ultrarapido, "
+            "entregas el mismo dia, construccion acelerada. Es una "
+            "fuerza que impulsa la innovacion pero tambien genera "
+            "debate sobre el equilibrio con la calidad de vida."
+        ),
+        "para_ninos": (
+            "Ppalli-ppalli (빨리빨리) significa 'rapido, rapido'. Los "
+            "coreanos hacen TODO super rapido: tienen el internet mas "
+            "veloz del mundo, sus trenes son rapidisimos y si pides "
+            "comida te llega en minutos. Esta energia de hacer las cosas "
+            "rapido ayudo a Corea a crecer muchisimo en poco tiempo."
+        ),
+    },
+    {
+        "nombre": "Han",
+        "hangul": "한",
+        "descripcion": (
+            "Sentimiento colectivo de tristeza, injusticia y esperanza "
+            "acumulado a lo largo de siglos de invasiones y sufrimiento. "
+            "No es solo dolor: es la resiliencia que surge de ese dolor. "
+            "Muchos academicos consideran que el han es la fuerza "
+            "emocional detras del arte, la musica y la literatura "
+            "coreana, incluyendo el K-pop y el cine moderno."
+        ),
+        "para_ninos": (
+            "Han (한) es un sentimiento muy especial de los coreanos. "
+            "Es como una tristeza antigua que se transforma en fuerza. "
+            "Corea sufrio muchas invasiones y guerras, pero en vez de "
+            "rendirse, los coreanos usaron esa energia para crear cosas "
+            "hermosas: musica, arte, peliculas y tecnologia increible."
+        ),
+    },
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FIGURAS CULTURALES COREANAS — Historicas y contemporaneas
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FIGURAS_CULTURALES = [
+    {
+        "nombre": "Rey Sejong el Grande",
+        "titulo": "El rey que le dio un alfabeto a su pueblo (1397-1450)",
+        "descripcion": (
+            "Cuarto rey de la dinastia Joseon, considerado el mas grande "
+            "gobernante de la historia coreana. Creo el hangul en 1443 "
+            "para que la gente comun pudiera leer y escribir, ya que "
+            "antes solo se usaban caracteres chinos que requerían anos "
+            "de estudio. Tambien impulso avances en astronomia, "
+            "agricultura, medicina y musica."
+        ),
+        "para_ninos": (
+            "El Rey Sejong es el heroe mas querido de Corea. Invento el "
+            "hangul, el alfabeto coreano, porque queria que TODOS "
+            "pudieran leer y escribir, no solo los ricos. Antes usaban "
+            "letras chinas que eran dificilisimas. Gracias a el, Corea "
+            "tiene uno de los alfabetos mas faciles de aprender del mundo."
+        ),
+    },
+    {
+        "nombre": "Almirante Yi Sun-sin",
+        "titulo": "El heroe naval invicto (1545-1598)",
+        "descripcion": (
+            "Almirante que defendio Corea de la invasion japonesa de "
+            "1592-1598. Gano 23 batallas navales sin perder ninguna, "
+            "a pesar de estar frecuentemente en desventaja numerica. "
+            "Invento el barco tortuga (geobukseon), considerado uno de "
+            "los primeros barcos acorazados del mundo."
+        ),
+        "para_ninos": (
+            "El Almirante Yi Sun-sin nunca perdio una batalla naval. "
+            "Gano 23 de 23 peleas en el mar. Invento el 'barco tortuga', "
+            "un barco cubierto de pinchos de hierro que parecia una "
+            "tortuga gigante. Los enemigos no podian subirse porque "
+            "se pinchaban. Es uno de los heroes mas grandes de Corea."
+        ),
+    },
+    {
+        "nombre": "BTS (Bangtan Sonyeondan)",
+        "titulo": "Grupo de K-pop que cambio la musica global",
+        "descripcion": (
+            "Grupo de siete integrantes (RM, Jin, Suga, J-Hope, Jimin, "
+            "V, Jungkook) formado en 2013 por Big Hit Entertainment. "
+            "Primer grupo de K-pop en llegar al numero 1 en el Billboard "
+            "Hot 100 de EE.UU. (2020, con 'Dynamite'). Han hablado en "
+            "la Asamblea General de las Naciones Unidas y su fandom "
+            "ARMY es uno de los mas grandes del mundo."
+        ),
+        "para_ninos": (
+            "BTS son siete chicos coreanos que se convirtieron en el "
+            "grupo de musica mas famoso del planeta. Cantan, bailan y "
+            "escriben canciones sobre amar quien eres. Fueron los "
+            "primeros coreanos en llegar al numero 1 en Estados Unidos "
+            "y hasta hablaron en las Naciones Unidas sobre la importancia "
+            "de quererse a uno mismo."
+        ),
+    },
+    {
+        "nombre": "BLACKPINK",
+        "titulo": "Grupo femenino de K-pop que rompio records mundiales",
+        "descripcion": (
+            "Grupo de cuatro integrantes (Jisoo, Jennie, Rose, Lisa) "
+            "formado en 2016 por YG Entertainment. Fueron el primer "
+            "grupo de K-pop en actuar en Coachella (2019), y su canal "
+            "de YouTube supero los 90 millones de suscriptores, "
+            "convirtiendose en uno de los mas seguidos del mundo. "
+            "Su cancion 'DDU-DU DDU-DU' fue el video de un grupo "
+            "de K-pop mas visto en YouTube."
+        ),
+        "para_ninos": (
+            "BLACKPINK son cuatro chicas increibles: Jisoo, Jennie, "
+            "Rose y Lisa. Son una de las bandas de chicas mas famosas "
+            "del mundo. Sus videos tienen MILES DE MILLONES de vistas "
+            "en YouTube. Demuestran que las chicas pueden ser fuertes "
+            "y elegantes al mismo tiempo."
+        ),
+    },
+    {
+        "nombre": "PSY (Park Jae-sang)",
+        "titulo": "El artista que abrio la puerta global al K-pop",
+        "descripcion": (
+            "Cantante y productor cuyo 'Gangnam Style' (2012) fue el "
+            "primer video en la historia de YouTube en alcanzar mil "
+            "millones de vistas. Este fenomeno viral demostro que la "
+            "musica coreana podia tener exito mundial y preparo el "
+            "camino para la ola hallyu (ola coreana) global."
+        ),
+        "para_ninos": (
+            "PSY hizo 'Gangnam Style', el primer video en la historia "
+            "de YouTube en llegar a MIL MILLONES de vistas. Su baile "
+            "del caballito se hizo famoso en todo el mundo. Gracias a "
+            "el, mucha gente descubrio la musica coreana por primera vez."
+        ),
+    },
+    {
+        "nombre": "Kim Yuna",
+        "titulo": "La reina del hielo (nacida en 1990)",
+        "descripcion": (
+            "Patinadora artistica surcoreana que gano la medalla de oro "
+            "en los Juegos Olimpicos de Invierno de Vancouver 2010, con "
+            "un puntaje record mundial de 228.56 puntos. Es considerada "
+            "una de las mejores patinadoras de todos los tiempos. "
+            "Encendio el pebetero olimpico en Pyeongchang 2018."
+        ),
+        "para_ninos": (
+            "Kim Yuna es 'la reina del hielo'. Gano el oro olimpico en "
+            "patinaje artistico con un puntaje tan alto que rompio el "
+            "record mundial. Cuando Corea organizo sus propios Juegos "
+            "Olimpicos de Invierno en 2018, ella tuvo el honor de "
+            "encender la llama olimpica."
+        ),
+    },
+    {
+        "nombre": "Bong Joon-ho",
+        "titulo": "Director que hizo historia en el cine (nacido en 1969)",
+        "descripcion": (
+            "Director de cine surcoreano cuya pelicula 'Parasite' (2019) "
+            "gano cuatro premios Oscar, incluyendo Mejor Pelicula, "
+            "convirtiendose en la primera pelicula en idioma no ingles "
+            "en ganar ese premio en la historia de los Oscar. Tambien "
+            "dirigio 'Memories of Murder', 'The Host' y 'Snowpiercer'."
+        ),
+        "para_ninos": (
+            "Bong Joon-ho es un director de cine coreano que gano "
+            "cuatro premios Oscar con su pelicula 'Parasite'. Fue la "
+            "PRIMERA VEZ en la historia que una pelicula que no era "
+            "en ingles ganaba el Oscar a Mejor Pelicula. Demostro que "
+            "las grandes historias no tienen idioma."
+        ),
+    },
+    {
+        "nombre": "Son Heung-min",
+        "titulo": "Estrella mundial del futbol (nacido en 1992)",
+        "descripcion": (
+            "Futbolista surcoreano que juega en el Tottenham Hotspur "
+            "de la Premier League inglesa. Gano la Bota de Oro de la "
+            "Premier League en la temporada 2021-2022, compartida con "
+            "Mohamed Salah, convirtiendose en el primer jugador asiatico "
+            "en lograr este titulo. Es el maximo goleador historico de "
+            "la seleccion surcoreana."
+        ),
+        "para_ninos": (
+            "Son Heung-min es el futbolista coreano mas famoso del mundo. "
+            "Juega en Inglaterra y fue el primer jugador asiatico en "
+            "ser goleador de la Premier League. En Corea es un heroe "
+            "nacional y demuestra que con esfuerzo puedes competir "
+            "con los mejores del mundo."
+        ),
+    },
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# INNOVACIONES COREANAS — Logros verificables
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+INNOVACIONES_COREANAS = [
+    {
+        "nombre": "Hangul: el alfabeto coreano",
+        "campo": "Linguistica",
+        "descripcion": (
+            "Creado en 1443 por el Rey Sejong el Grande y promulgado en "
+            "1446. Es un sistema de escritura cientifico: las consonantes "
+            "imitan la forma de la boca y lengua al pronunciarlas. Tiene "
+            "14 consonantes y 10 vocales basicas que se combinan en "
+            "bloques silabicos. La UNESCO creo el Premio de Alfabetizacion "
+            "Rey Sejong en su honor."
+        ),
+        "para_ninos": (
+            "El hangul es el alfabeto coreano y es considerado uno de "
+            "los mas inteligentes del mundo. Fue inventado por un rey "
+            "que queria que todos pudieran leer. Las letras tienen la "
+            "forma de tu boca cuando las dices. Por ejemplo, la letra "
+            "'ㅁ' (m) tiene forma de boca cerrada porque asi se ve "
+            "tu boca cuando dices 'mmm'."
+        ),
+    },
+    {
+        "nombre": "Jikji: impresion con tipos moviles de metal",
+        "campo": "Imprenta",
+        "descripcion": (
+            "El Jikji (Antologia de ensenanzas Zen) fue impreso en "
+            "Corea en 1377 con tipos moviles de metal, 78 anos ANTES "
+            "que la Biblia de Gutenberg (1455). Es el libro impreso "
+            "con tipos moviles de metal mas antiguo que se conserva. "
+            "Esta registrado en el programa Memoria del Mundo de la "
+            "UNESCO desde 2001."
+        ),
+        "para_ninos": (
+            "Cuando en Europa todavia copiaban libros a mano, los "
+            "coreanos ya habian inventado la imprenta con letras de "
+            "METAL. El Jikji se imprimio en 1377, casi 80 anos antes "
+            "que Gutenberg en Europa. Es el libro impreso con metal "
+            "mas antiguo del mundo y esta protegido por la UNESCO."
+        ),
+    },
+    {
+        "nombre": "Ondol: calefaccion por suelo radiante",
+        "campo": "Ingenieria",
+        "descripcion": (
+            "Sistema de calefaccion que canaliza aire caliente bajo el "
+            "piso de las viviendas. Desarrollado hace mas de 2,000 anos "
+            "en la peninsula coreana. El humo y aire caliente de la "
+            "cocina pasan por conductos bajo el suelo de piedra, "
+            "calentando toda la habitacion de forma uniforme. Por eso "
+            "los coreanos duermen, comen y se sientan en el piso."
+        ),
+        "para_ninos": (
+            "Los coreanos inventaron la calefaccion por el piso hace "
+            "mas de 2,000 anos. Se llama ondol: el aire caliente de "
+            "la cocina pasa por tubos debajo del suelo y calienta "
+            "toda la casa. Por eso en Corea se sientan y duermen en "
+            "el piso: siempre esta calientito."
+        ),
+    },
+    {
+        "nombre": "Fermentacion coreana: kimchi y mas",
+        "campo": "Gastronomia y ciencia alimentaria",
+        "descripcion": (
+            "La cultura de fermentacion coreana es Patrimonio Inmaterial "
+            "de la Humanidad por la UNESCO (el kimjang, la practica de "
+            "hacer kimchi). El kimchi se prepara fermentando col (baechu) "
+            "con chile, ajo, jengibre y salsa de pescado. Existen mas "
+            "de 200 variedades. Es rico en probioticos, vitaminas y "
+            "antioxidantes."
+        ),
+        "para_ninos": (
+            "El kimchi es el plato mas famoso de Corea: es col fermentada "
+            "con chile y especias. Los coreanos lo comen con TODAS las "
+            "comidas. Hacerlo es tan importante que la UNESCO lo declaro "
+            "patrimonio de la humanidad. Existen mas de 200 tipos "
+            "diferentes de kimchi y esta lleno de vitaminas."
+        ),
+    },
+    {
+        "nombre": "El sistema de entrenamiento K-pop",
+        "campo": "Industria musical",
+        "descripcion": (
+            "Las agencias de entretenimiento coreanas (SM, YG, JYP, "
+            "HYBE) desarrollaron un sistema unico de formacion de "
+            "artistas. Los trainees (aprendices) entrenan canto, baile, "
+            "actuacion, idiomas y hasta composicion durante un promedio "
+            "de 2 a 7 anos antes de debutar. Este sistema industrializado "
+            "de formacion artistica no tiene equivalente en el mundo."
+        ),
+        "para_ninos": (
+            "Para ser una estrella de K-pop hay que entrenar MUCHO. "
+            "Los futuros idols practican canto, baile, actuacion e "
+            "idiomas durante anos antes de salir al escenario. Algunos "
+            "entrenan desde los 10 anos. Es como un entrenamiento de "
+            "atleta olimpico pero para la musica y el baile."
+        ),
+    },
+    {
+        "nombre": "Liderazgo en tecnologia 5G",
+        "campo": "Telecomunicaciones",
+        "descripcion": (
+            "Corea del Sur fue el primer pais del mundo en lanzar una "
+            "red 5G comercial a nivel nacional, el 3 de abril de 2019. "
+            "Samsung y LG son lideres mundiales en equipamiento 5G. "
+            "El pais tiene una de las velocidades de internet mas altas "
+            "del mundo, con mas del 97% de hogares conectados a banda "
+            "ancha de alta velocidad."
+        ),
+        "para_ninos": (
+            "Corea del Sur fue el PRIMER pais del mundo en tener 5G, "
+            "el internet super rapido de los celulares. Tambien tiene "
+            "uno de los internet mas veloces del planeta. Casi todas "
+            "las casas en Corea estan conectadas a internet de alta "
+            "velocidad. Samsung y LG, que son coreanas, ayudaron a "
+            "crear esta tecnologia."
+        ),
+    },
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TRADICIONES COREANAS — Festividades y costumbres
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TRADICIONES_COREANAS = [
+    {
+        "titulo": "Seollal: el Ano Nuevo Lunar coreano",
+        "descripcion": (
+            "La festividad mas importante de Corea, celebrada el primer "
+            "dia del calendario lunar. Las familias se reunen, visten "
+            "hanbok (traje tradicional), realizan sebae (reverencia a "
+            "los mayores), comen tteokguk (sopa de pastel de arroz) y "
+            "juegan juegos tradicionales como yutnori. Los ninos reciben "
+            "dinero en sobres despues de hacer sebae."
+        ),
+        "para_ninos": (
+            "El Seollal es el Ano Nuevo coreano y se celebra segun la "
+            "luna. Toda la familia se reune, se ponen ropa tradicional "
+            "llamada hanbok y los ninos hacen una reverencia especial "
+            "a los abuelos llamada sebae. A cambio, los abuelos les "
+            "dan dinero en sobres. Tambien comen una sopa especial "
+            "de pastelitos de arroz. Comerla significa que cumpliste "
+            "un ano mas."
+        ),
+    },
+    {
+        "titulo": "Chuseok: el festival de la cosecha",
+        "descripcion": (
+            "Festival de la cosecha que se celebra el dia 15 del octavo "
+            "mes lunar (septiembre u octubre). Es el equivalente coreano "
+            "del Dia de Accion de Gracias. Las familias visitan las "
+            "tumbas de sus ancestros, preparan songpyeon (pastelitos "
+            "de arroz rellenos cocidos al vapor con agujas de pino) y "
+            "dan gracias por la cosecha del ano."
+        ),
+        "para_ninos": (
+            "Chuseok es como el Dia de Accion de Gracias coreano. Las "
+            "familias se reunen para agradecer por la comida del ano. "
+            "Visitan las tumbas de sus abuelos para mostrar respeto y "
+            "preparan unos pastelitos de arroz especiales llamados "
+            "songpyeon, que se cocinan con hojas de pino y huelen "
+            "delicioso."
+        ),
+    },
+    {
+        "titulo": "El hanbok y su significado",
+        "descripcion": (
+            "Vestimenta tradicional coreana con mas de 1,600 anos de "
+            "historia. El hanbok femenino consiste en una chaqueta "
+            "corta (jeogori) y una falda amplia de cintura alta (chima). "
+            "El masculino incluye jeogori y pantalones amplios (baji). "
+            "Los colores tienen significado: azul y rojo representan "
+            "el yin y yang, y cada color del arcoiris corresponde a "
+            "los cinco elementos coreanos."
+        ),
+        "para_ninos": (
+            "El hanbok es la ropa tradicional de Corea y tiene mas de "
+            "1,600 anos. Es super colorido y elegante: las chicas "
+            "usan una falda larga con una chaqueta corta, y los chicos "
+            "usan pantalones amplios. Cada color tiene un significado "
+            "especial. Hoy en dia, los coreanos lo usan en fiestas "
+            "importantes y muchos turistas se lo prueban para tomarse "
+            "fotos en los palacios de Seul."
+        ),
+    },
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# VOCABULARIO COREANO PARA NEBU
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VOCABULARIO_COREANO = [
+    {"palabra": "Annyeonghaseyo (안녕하세요)", "significado": "Hola (formal)", "uso": "saludo"},
+    {"palabra": "Kamsahamnida (감사합니다)", "significado": "Gracias (formal)", "uso": "agradecimiento"},
+    {"palabra": "Daebak (대박)", "significado": "Increible / genial", "uso": "exclamacion"},
+    {"palabra": "Hwaiting (화이팅)", "significado": "Tu puedes / animo", "uso": "motivacion"},
+    {"palabra": "Aegyo (애교)", "significado": "Actuar de forma tierna y adorable", "uso": "concepto cultural"},
+    {"palabra": "Oppa (오빠)", "significado": "Hermano mayor (dicho por una chica)", "uso": "termino familiar"},
+    {"palabra": "Unnie (언니)", "significado": "Hermana mayor (dicho por una chica)", "uso": "termino familiar"},
+    {"palabra": "Hyung (형)", "significado": "Hermano mayor (dicho por un chico)", "uso": "termino familiar"},
+    {"palabra": "Noona (누나)", "significado": "Hermana mayor (dicho por un chico)", "uso": "termino familiar"},
+    {"palabra": "Sunbae (선배)", "significado": "Senior / persona con mas experiencia", "uso": "termino de respeto"},
+    {"palabra": "Maknae (막내)", "significado": "El mas joven del grupo", "uso": "termino de grupo"},
+    {"palabra": "Hallyu (한류)", "significado": "La ola coreana (expansion cultural)", "uso": "concepto cultural"},
+    {"palabra": "Mukbang (먹방)", "significado": "Transmision en vivo comiendo", "uso": "concepto cultural"},
+    {"palabra": "Selca (셀카)", "significado": "Selfie (abreviacion coreana)", "uso": "palabra moderna"},
+    {"palabra": "Aigoo (아이고)", "significado": "Expresion de sorpresa o frustacion", "uso": "exclamacion"},
+    {"palabra": "Omo (어머)", "significado": "Oh Dios mio / que sorpresa", "uso": "exclamacion"},
+    {"palabra": "Saranghae (사랑해)", "significado": "Te quiero", "uso": "sentimiento"},
+    {"palabra": "Jjang (짱)", "significado": "El mejor / lo maximo", "uso": "exclamacion"},
+    {"palabra": "Gamsahae (감사해)", "significado": "Gracias (informal)", "uso": "agradecimiento"},
+    {"palabra": "Bap meogeosse? (밥 먹었어?)", "significado": "Has comido? (forma de decir como estas)", "uso": "saludo"},
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FUNCIONES HELPER
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def get_random_korean_history() -> dict:
+    """Retorna un hecho historico coreano aleatorio."""
+    return random.choice(HISTORIA_COREANA)
+
+
+def get_random_korean_philosophy() -> dict:
+    """Retorna un concepto filosofico coreano aleatorio."""
+    return random.choice(FILOSOFIA_COREANA)
+
+
+def get_random_cultural_figure() -> dict:
+    """Retorna una figura cultural coreana aleatoria."""
+    return random.choice(FIGURAS_CULTURALES)
+
+
+def get_random_korean_innovation() -> dict:
+    """Retorna una innovacion coreana aleatoria."""
+    return random.choice(INNOVACIONES_COREANAS)
+
+
+def get_random_korean_tradition() -> dict:
+    """Retorna una tradicion coreana aleatoria."""
+    return random.choice(TRADICIONES_COREANAS)
+
+
+def get_korean_word() -> dict:
+    """Retorna una palabra coreana aleatoria."""
+    return random.choice(VOCABULARIO_COREANO)
+
+
+def build_korean_knowledge_injection() -> str:
+    """
+    Construye una inyeccion de conocimiento coreano para el prompt.
+    Mezcla diferentes tipos de contenido para variedad.
+    """
+    blocks = []
+
+    # Elegir 1 pieza de conocimiento aleatorio
+    source = random.choice([
+        "historia", "filosofia", "figura", "innovacion",
+        "tradicion", "vocabulario_concepto",
+    ])
+
+    if source == "historia":
+        hist = get_random_korean_history()
+        blocks.append(
+            f"CONOCIMIENTO COREANO ({hist['nombre']}, {hist['periodo']}): "
+            f"{hist['para_ninos']} "
+            f"Dato extra: {hist['dato_extra']}"
+        )
+    elif source == "filosofia":
+        phil = get_random_korean_philosophy()
+        blocks.append(
+            f"FILOSOFIA COREANA — {phil['nombre']} ({phil['hangul']}): "
+            f"{phil['para_ninos']}"
+        )
+    elif source == "figura":
+        fig = get_random_cultural_figure()
+        blocks.append(
+            f"FIGURA COREANA — {fig['nombre']}, {fig['titulo']}: "
+            f"{fig['para_ninos']}"
+        )
+    elif source == "innovacion":
+        inno = get_random_korean_innovation()
+        blocks.append(
+            f"INNOVACION COREANA — {inno['nombre']} ({inno['campo']}): "
+            f"{inno['para_ninos']}"
+        )
+    elif source == "tradicion":
+        trad = get_random_korean_tradition()
+        blocks.append(
+            f"TRADICION COREANA — {trad['titulo']}: {trad['para_ninos']}"
+        )
+    elif source == "vocabulario_concepto":
+        word = get_korean_word()
+        blocks.append(
+            f"CONCEPTO COREANO — {word['palabra']}: "
+            f"significa '{word['significado']}'. "
+            f"Se usa como {word['uso']}."
+        )
+
+    # Bonus: 40% de chance de agregar una palabra coreana
+    if random.random() < 0.4:
+        word = get_korean_word()
+        blocks.append(
+            f"PALABRA COREANA: '{word['palabra']}' = {word['significado']}. "
+            f"Ensenasela al nino si encaja!"
+        )
+
+    return "\n".join(blocks)
