@@ -67,7 +67,6 @@ COPY --from=builder /build/deps /app/deps
 
 # Copiar código fuente
 COPY src/ ./src/
-COPY .env.example ./
 
 # Download turn detector model files from HuggingFace
 RUN OPENAI_API_KEY=dummy \
