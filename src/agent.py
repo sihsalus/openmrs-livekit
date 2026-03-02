@@ -109,6 +109,24 @@ class NebuAgent:
         )
 
 
+def _build_owner_context(room_metadata: dict) -> str:
+    """Construye un bloque de contexto sobre el niño/owner para inyectar en el prompt."""
+    lines = []
+    if name := room_metadata.get("owner_name"):
+        lines.append(f"- Nombre del niño: {name}")
+    if age := room_metadata.get("owner_age"):
+        lines.append(f"- Edad: {age} años")
+    if interests := room_metadata.get("owner_interests"):
+        lines.append(f"- Intereses: {interests}")
+    if goals := room_metadata.get("learning_goals"):
+        lines.append(f"- Objetivos de aprendizaje: {goals}")
+    if toy_name := room_metadata.get("toy_name"):
+        lines.append(f"- En esta sesión te llamas '{toy_name}'")
+    if not lines:
+        return ""
+    return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)
+
+
 def prewarm_models(proc: agents.JobProcess):
     """Precarga los modelos para mejor rendimiento inicial"""
     silero.VAD.load()
@@ -162,12 +180,19 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Obtener prompt personalizado desde metadata o usar default
     custom_prompt = room_metadata.get("agent_prompt")
+    owner_context = _build_owner_context(room_metadata)
+
     if custom_prompt:
         job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
-        instructions = custom_prompt + CAPABILITIES_BLOCK
+        instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
     else:
         job_logger.info("Usando prompt por defecto")
         instructions = get_system_prompt()
+        if owner_context:
+            instructions = instructions.replace(CAPABILITIES_BLOCK, owner_context + CAPABILITIES_BLOCK)
+
+    if owner_context:
+        job_logger.info("Contexto del owner inyectado en prompt")
 
     # Crear instancia del agente
     nebu = NebuAgent()
