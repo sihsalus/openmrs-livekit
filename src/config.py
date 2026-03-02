@@ -71,9 +71,6 @@ class Settings(BaseSettings):
     allow_interruptions: bool = Field(default=True, description="Permitir interrupciones")
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
 
-    # ============= Observability =============
-    sentry_dsn: str | None = Field(default=None, description="Sentry DSN para error tracking")
-
     # ============= API Settings =============
     api_enabled: bool = Field(default=True, description="Habilitar API REST")
     api_host: str = Field(default="0.0.0.0", description="Host del servidor API")

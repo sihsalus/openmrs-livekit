@@ -7,7 +7,6 @@ import traceback
 from typing import Dict, Any
 from contextlib import asynccontextmanager
 
-import sentry_sdk
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -81,8 +80,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        """Captura excepciones no manejadas, las reporta a Sentry y retorna 500"""
-        sentry_sdk.capture_exception(exc)
+        """Captura excepciones no manejadas y retorna 500"""
         logger.error(
             "Unhandled exception",
             extra={
@@ -91,6 +89,7 @@ def create_app() -> FastAPI:
                 "error": str(exc),
                 "traceback": traceback.format_exc(),
             },
+            exc_info=True,
         )
         return JSONResponse(
             status_code=500,

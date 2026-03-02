@@ -36,8 +36,6 @@ dependencies = [
     "fastapi~=0.104",
     "uvicorn~=0.24",
 
-    # Error tracking
-    "sentry-sdk[fastapi]~=2.0",
 ]
 
 [project.optional-dependencies]

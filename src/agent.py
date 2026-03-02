@@ -15,8 +15,6 @@ import signal
 import threading
 from typing import Optional
 
-import sentry_sdk
-
 from livekit import agents, rtc
 from livekit.agents import AgentSession, Agent
 from livekit.plugins import openai, silero
@@ -158,8 +156,7 @@ async def entrypoint(ctx: agents.JobContext):
     try:
         await ctx.connect()
     except Exception as e:
-        job_logger.error("Error conectando al room", extra={"error": str(e)})
-        sentry_sdk.capture_exception(e)
+        job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
         return
     job_logger.info("Conectado al room", extra={"room": ctx.room.name})
 
@@ -201,8 +198,7 @@ async def entrypoint(ctx: agents.JobContext):
     try:
         session = await nebu.create_session(instructions)
     except Exception as e:
-        job_logger.error("Error creando sesión", extra={"error": str(e)})
-        sentry_sdk.capture_exception(e)
+        job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
         return
     personality_id = room_metadata.get("personality_profile")
     try:
@@ -324,8 +320,7 @@ async def entrypoint(ctx: agents.JobContext):
             agent=agent,
         )
     except Exception as e:
-        job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)})
-        sentry_sdk.capture_exception(e)
+        job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
         return
     job_logger.info("Sesión iniciada y escuchando")
 
@@ -347,8 +342,7 @@ async def entrypoint(ctx: agents.JobContext):
             try:
                 await session.say(greeting_text)
             except Exception as e:
-                job_logger.error("Error enviando greeting", extra={"error": str(e)})
-                sentry_sdk.capture_exception(e)
+                job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
 
     job_logger.info("Agente activo y escuchando")
 
@@ -396,34 +390,10 @@ def start_api_server():
     return server
 
 
-def _init_sentry(settings):
-    """Inicializa Sentry si está configurado"""
-    if settings.sentry_dsn:
-
-        def _before_send(event, hint):
-            """Filtra errores internos del SDK de LiveKit que no son bugs nuestros"""
-            message = event.get("message", "") or ""
-            if "non-zero exit code" in message:
-                return None  # Descartar: proceso de inference OOM transitorio
-            if "audio filter" in message:
-                return None  # Descartar: noise cancellation requiere LiveKit Cloud
-            return event
-
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=0.1,
-            environment="production",
-            release="nebu-agent@2.0.0",
-            before_send=_before_send,
-        )
-        logger.info("Sentry inicializado")
-
-
 def main():
     """Función principal para ejecutar el agente"""
     setup_signal_handlers()
     settings = get_settings()
-    _init_sentry(settings)
 
     logger.info(
         "Iniciando Nebu Agent",
