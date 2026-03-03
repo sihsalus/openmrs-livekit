@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
 
     # ============= TTS Configuration =============
-    tts_provider: Literal["elevenlabs", "openai", "cartesia", "google", "deepgram"] = Field(
-        default="openai", description="Proveedor de TTS"
+    tts_provider: Literal["elevenlabs", "openai", "cartesia", "google", "deepgram", "inworld"] = Field(
+        default="inworld", description="Proveedor de TTS"
     )
     elevenlabs_api_key: str | None = Field(default=None, description="API Key de ElevenLabs")
     voice_id: str = Field(default="wnQAQM2xwHFeVXM7PQOq", description="Voice ID (ElevenLabs)")
@@ -41,6 +41,25 @@ class Settings(BaseSettings):
     )
     cartesia_model: str = Field(default="sonic-2", description="Modelo Cartesia (sonic-2, sonic-3)")
     google_credentials_file: str | None = Field(default=None, description="Path a credenciales Google")
+
+    # ============= Inworld Configuration =============
+    inworld_api_key: str | None = Field(default=None, description="API Key de Inworld")
+    inworld_voice_id: str = Field(
+        default="default-oklrorszoxbwzfdj8zjhng__nebucherry",
+        description="Voice ID de Inworld (voz clonada NEBUCherry)"
+    )
+    inworld_model: str = Field(
+        default="inworld-tts-1.5-max",
+        description="Modelo Inworld (inworld-tts-1, inworld-tts-1.5-max)"
+    )
+    inworld_speaking_rate: float = Field(
+        default=1.0,
+        description="Velocidad de habla Inworld (0.5-1.5, 1.0 = normal)"
+    )
+    inworld_temperature: float = Field(
+        default=1.1,
+        description="Temperatura Inworld (0-2, controla variabilidad emocional)"
+    )
 
     # ============= Deepgram Configuration (Optional) =============
     deepgram_api_key: str | None = Field(default=None, description="API Key Deepgram")

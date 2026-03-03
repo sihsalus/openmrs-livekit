@@ -69,6 +69,16 @@ def _build_tts(settings: Settings):
         from livekit.plugins import deepgram
         return deepgram.TTS(api_key=settings.deepgram_api_key)
 
+    if provider == "inworld":
+        from livekit.plugins import inworld
+        return inworld.TTS(
+            api_key=settings.inworld_api_key,
+            voice=settings.inworld_voice_id,
+            model=settings.inworld_model,
+            speaking_rate=settings.inworld_speaking_rate,
+            temperature=settings.inworld_temperature,
+        )
+
     raise ValueError(f"TTS provider desconocido: {provider}")
 
 
