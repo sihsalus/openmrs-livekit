@@ -456,22 +456,6 @@ async def entrypoint(ctx: agents.JobContext):
         if _turn_start is not None:
             LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
 
-    def on_conversation_item_with_truncate(ev):
-        """Trunca historial después de cada mensaje para mantener prompt estable"""
-        MAX_MESSAGES = 16  # 8 turnos (user + assistant)
-
-        # Acceder al chat_ctx del agente actual
-        if hasattr(session, 'current_agent') and session.current_agent:
-            chat_ctx = session.current_agent.chat_ctx
-            msg_count = len(chat_ctx.messages())  # messages() es un método, no propiedad
-
-            if msg_count > MAX_MESSAGES:
-                # Usar método oficial de truncate (preserva system prompt automáticamente)
-                chat_ctx.truncate(max_items=MAX_MESSAGES)
-                job_logger.info(f"✂️ Historial truncado: {msg_count} → {MAX_MESSAGES} mensajes")
-            elif msg_count > 10:  # Log solo cuando se acerca al límite
-                job_logger.debug(f"📊 Mensajes en historial: {msg_count}/{MAX_MESSAGES}")
-
     def on_speech_created(ev: SpeechCreatedEvent):
         """Record full turn latency from user speech end to TTS pipeline start."""
         nonlocal _turn_start
@@ -488,7 +472,6 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Listeners de métricas siempre activos
     session.on("conversation_item_added", on_conversation_item_for_latency)
-    session.on("conversation_item_added", on_conversation_item_with_truncate)  # Truncado automático
     session.on("speech_created", on_speech_created)
 
     # Iniciar sesión de voz
