@@ -363,13 +363,7 @@ class VarietyEngine:
         patterns = self.profile.narrative_patterns
         if not patterns:
             return ""
-        available = [p for p in patterns if p not in self._pattern_history]
-        if not available:
-            self._pattern_history.clear()
-            available = patterns
-        chosen = random.choice(available)
-        self._pattern_history.append(chosen)
-        return chosen
+        return self._pick_unique(patterns, self._pattern_history)
 
     def _build_pattern_instruction(self) -> str:
         """Genera instrucción de patrón narrativo para variedad semántica."""
@@ -436,6 +430,16 @@ class VarietyEngine:
     # 📚 FACTS — El plato fuerte
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+    def _pick_unique(self, options: list, used: deque):
+        """Elige un elemento de options evitando repetir los de used."""
+        available = [x for x in options if x not in used]
+        if not available:
+            used.clear()
+            available = options
+        chosen = random.choice(available)
+        used.append(chosen)
+        return chosen
+
     def pick_fact_category(self) -> dict:
         categories = self.profile.fact_categories
         available = [c for c in categories if c["id"] not in self._fact_categories_used]
@@ -448,14 +452,7 @@ class VarietyEngine:
         return chosen
 
     def pick_delivery_style(self) -> str:
-        styles = self.profile.delivery_styles
-        available = [s for s in styles if s not in self._styles_used]
-        if not available:
-            self._styles_used.clear()
-            available = styles
-        chosen = random.choice(available)
-        self._styles_used.append(chosen)
-        return chosen
+        return self._pick_unique(self.profile.delivery_styles, self._styles_used)
 
     def record_fact(self, summary: str):
         self._facts_told.append(summary)
@@ -643,14 +640,7 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def pick_trivia_category(self) -> str:
-        categories = self.profile.trivia_categories
-        available = [c for c in categories if c not in self._trivia_categories_used]
-        if not available:
-            self._trivia_categories_used.clear()
-            available = categories
-        chosen = random.choice(available)
-        self._trivia_categories_used.append(chosen)
-        return chosen
+        return self._pick_unique(self.profile.trivia_categories, self._trivia_categories_used)
 
     def build_trivia_prompt(self) -> str:
         category = self.pick_trivia_category()
@@ -675,14 +665,7 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def pick_story_theme(self) -> str:
-        themes = self.profile.story_themes
-        available = [t for t in themes if t not in self._story_themes_used]
-        if not available:
-            self._story_themes_used.clear()
-            available = themes
-        chosen = random.choice(available)
-        self._story_themes_used.append(chosen)
-        return chosen
+        return self._pick_unique(self.profile.story_themes, self._story_themes_used)
 
     def build_story_prompt(self, custom_theme: str = "") -> str:
         theme = custom_theme or self.pick_story_theme()

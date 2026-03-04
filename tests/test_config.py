@@ -30,24 +30,24 @@ class TestSettingsDefaults:
 
 class TestVadValidation:
     def test_valid_threshold(self):
-        s = Settings(vad_threshold=0.5)
-        assert s.vad_threshold == 0.5
+        s = Settings(vad_activation_threshold=0.5)
+        assert s.vad_activation_threshold == 0.5
 
     def test_threshold_zero_is_valid(self):
-        s = Settings(vad_threshold=0.0)
-        assert s.vad_threshold == 0.0
+        s = Settings(vad_activation_threshold=0.0)
+        assert s.vad_activation_threshold == 0.0
 
     def test_threshold_one_is_valid(self):
-        s = Settings(vad_threshold=1.0)
-        assert s.vad_threshold == 1.0
+        s = Settings(vad_activation_threshold=1.0)
+        assert s.vad_activation_threshold == 1.0
 
     def test_threshold_above_one_raises(self):
-        with pytest.raises(ValueError, match="vad_threshold"):
-            Settings(vad_threshold=1.5)
+        with pytest.raises(ValueError, match="vad_activation_threshold"):
+            Settings(vad_activation_threshold=1.5)
 
     def test_threshold_negative_raises(self):
-        with pytest.raises(ValueError, match="vad_threshold"):
-            Settings(vad_threshold=-0.1)
+        with pytest.raises(ValueError, match="vad_activation_threshold"):
+            Settings(vad_activation_threshold=-0.1)
 
     def test_silence_duration_positive(self):
         s = Settings(vad_min_silence_duration=0.3)
