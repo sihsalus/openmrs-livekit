@@ -405,6 +405,8 @@ async def entrypoint(ctx: agents.JobContext):
         if not ev.is_final:
             return
 
+        # Sobrescribir intencionalmente: si el usuario interrumpe, la medición anterior
+        # se descarta (el speech anterior fue cancelado y on_speech_created no disparará).
         _turn_start = time.time()
 
         # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
@@ -428,13 +430,12 @@ async def entrypoint(ctx: agents.JobContext):
         anchor = variety.build_persona_anchor()
         summary = variety.build_sliding_summary()
         if anchor or summary:
-            base = session.userdata.get("base_instructions", "")
-            extra = ""
-            if anchor:
-                extra += "\n" + anchor
-            if summary:
-                extra += "\n" + summary
-            asyncio.create_task(session.current_agent.update_instructions(base + extra))
+            extra = ("\n" + anchor if anchor else "") + ("\n" + summary if summary else "")
+            # Solo actualizar si el contenido cambió — evita re-enviar context tokens en cada turno
+            if extra != session.userdata.get("_last_instructions_extra", ""):
+                session.userdata["_last_instructions_extra"] = extra
+                base = session.userdata.get("base_instructions", "")
+                asyncio.create_task(session.current_agent.update_instructions(base + extra))
 
     def on_conversation_item(ev):
         """Gap 2: Record what the LLM actually said for anti-repetition."""
@@ -453,8 +454,12 @@ async def entrypoint(ctx: agents.JobContext):
         nonlocal _turn_start
         if not hasattr(ev.item, "role") or ev.item.role != "assistant":
             return
-        if _turn_start is not None:
-            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
+        # Snapshot y limpiar: si speech_created no llega (TTS desactivado o interrupción),
+        # el siguiente turno no hereda un _turn_start obsoleto.
+        t = _turn_start
+        _turn_start = None
+        if t is not None:
+            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - t)
 
     def on_speech_created(ev: SpeechCreatedEvent):
         """Record full turn latency from user speech end to TTS pipeline start."""
@@ -490,8 +495,9 @@ async def entrypoint(ctx: agents.JobContext):
         job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
         await _pause_for_walkie_talkie()
     else:
-        # Enviar greeting inicial
-        await asyncio.sleep(0.5)
+        # Pequeña pausa para que el track de audio del room esté suscrito antes del primer TTS.
+        # 0.1s es suficiente; 0.5s era conservador sin medición.
+        await asyncio.sleep(0.1)
         if settings.greeting_enabled:
             custom_greeting = room_metadata.get("greeting")
             if custom_greeting:
