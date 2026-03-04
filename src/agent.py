@@ -17,7 +17,7 @@ import time
 
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
-from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
+from livekit.agents.metrics import EOUMetrics, LLMMetrics, STTMetrics, TTSMetrics
 from livekit.plugins import openai, silero
 
 from src.config import Settings, get_settings
