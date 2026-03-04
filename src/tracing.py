@@ -8,8 +8,8 @@ Call setup_tracing() once at startup. After that, use:
         span.set_attribute("key", "value")
 """
 
-import os
 import logging
+import os
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
