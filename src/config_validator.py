@@ -52,7 +52,7 @@ def validate_config() -> bool:
                 "VOICE_ID parece ser inválido (muy corto)", extra={"voice_id": settings.voice_id}
             )
 
-        logger.info("✅ Configuración válida")
+        logger.info("Configuración válida")
         return True
 
     except Exception as e:
@@ -69,7 +69,7 @@ def display_config_sources():
     # Verificar .env
     env_path = Path(".env")
     if env_path.exists():
-        print(f"✅ .env encontrado: {env_path.absolute()}")
+        print(f".env encontrado: {env_path.absolute()}")
     else:
         print("❌ .env no encontrado")
 
