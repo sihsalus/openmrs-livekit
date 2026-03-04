@@ -8,14 +8,14 @@ Call setup_tracing() once at startup. After that, use:
         span.set_attribute("key", "value")
 """
 
-import logging
 import os
+import logging
 
 from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.semconv.resource import ResourceAttributes
 
 logger = logging.getLogger("nebu.tracing")
@@ -37,10 +37,12 @@ def setup_tracing() -> None:
     service_name = os.getenv("OTEL_SERVICE_NAME", "nebu-agent")
     environment = os.getenv("ENVIRONMENT", "development")
 
-    resource = Resource.create({
-        ResourceAttributes.SERVICE_NAME: service_name,
-        ResourceAttributes.DEPLOYMENT_ENVIRONMENT: environment,
-    })
+    resource = Resource.create(
+        {
+            ResourceAttributes.SERVICE_NAME: service_name,
+            ResourceAttributes.DEPLOYMENT_ENVIRONMENT: environment,
+        }
+    )
 
     exporter = OTLPSpanExporter(endpoint=endpoint, insecure=True)
     provider = TracerProvider(resource=resource)
@@ -48,7 +50,10 @@ def setup_tracing() -> None:
     trace.set_tracer_provider(provider)
 
     _initialized = True
-    logger.info("OpenTelemetry tracing initialized", extra={"endpoint": endpoint, "service": service_name})
+    logger.info(
+        "OpenTelemetry tracing initialized",
+        extra={"endpoint": endpoint, "service": service_name},
+    )
 
 
 def get_tracer(name: str = "nebu.agent"):

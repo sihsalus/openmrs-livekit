@@ -17,7 +17,7 @@ import time
 
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
-from livekit.agents.metrics import EOUMetrics, LLMMetrics, STTMetrics, TTSMetrics
+from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
 from livekit.plugins import openai, silero
 
 from src.config import Settings, get_settings
@@ -149,35 +149,41 @@ class NebuAgent:
 
         # Attach metrics collectors if logger provided
         if job_logger:
+
             def llm_metrics_wrapper(metrics: LLMMetrics):
                 job_logger.info(
                     f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
                     f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}"
                 )
+
             llm.on("metrics_collected", llm_metrics_wrapper)
 
             def stt_metrics_wrapper(metrics: STTMetrics):
                 job_logger.info(
                     f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
                 )
+
             stt.on("metrics_collected", stt_metrics_wrapper)
 
             def eou_metrics_wrapper(metrics: EOUMetrics):
                 job_logger.info(
                     f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s"
                 )
+
             stt.on("eou_metrics_collected", eou_metrics_wrapper)
 
             def tts_metrics_wrapper(metrics: TTSMetrics):
                 job_logger.info(
                     f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
                 )
+
             tts.on("metrics_collected", tts_metrics_wrapper)
 
         # Import condicional de TurnDetector solo si está habilitado
         turn_detection_model = None
         if self.settings.enable_turn_detection:
             from livekit.plugins.turn_detector.multilingual import MultilingualModel
+
             turn_detection_model = MultilingualModel()
 
         return AgentSession(
@@ -186,7 +192,7 @@ class NebuAgent:
             vad=silero.VAD.load(
                 min_silence_duration=0.6,  # Era 0.5 → menos procesamiento
                 activation_threshold=0.4,  # Era 0.3 → menos sensible, menos false positives
-                min_speech_duration=0.3,   # Era 0.2 → ignora ruidos muy cortos
+                min_speech_duration=0.3,  # Era 0.2 → ignora ruidos muy cortos
             ),
             stt=stt,
             llm=llm,
@@ -232,7 +238,8 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Crear logger con contexto del job
     job_logger = logger.with_context(
-        job_id=ctx.job.id if ctx.job else "unknown", room=ctx.room.name if ctx.room else "unknown"
+        job_id=ctx.job.id if ctx.job else "unknown",
+        room=ctx.room.name if ctx.room else "unknown",
     )
 
     job_logger.info("Iniciando entrypoint del agente")
@@ -250,7 +257,9 @@ async def entrypoint(ctx: agents.JobContext):
     try:
         await ctx.connect()
     except Exception as e:
-        job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
+        job_logger.error(
+            "Error conectando al room", extra={"error": str(e)}, exc_info=True
+        )
         ERRORS_TOTAL.labels(type="connect").inc()
         return
     job_logger.info("Conectado al room", extra={"room": ctx.room.name})
@@ -261,7 +270,9 @@ async def entrypoint(ctx: agents.JobContext):
     if metadata_raw:
         try:
             room_metadata = json.loads(metadata_raw)
-            job_logger.info("Metadata parseada", extra={"keys": list(room_metadata.keys())})
+            job_logger.info(
+                "Metadata parseada", extra={"keys": list(room_metadata.keys())}
+            )
         except json.JSONDecodeError as e:
             job_logger.error("Error parseando metadata", extra={"error": str(e)})
     else:
@@ -272,7 +283,9 @@ async def entrypoint(ctx: agents.JobContext):
     owner_context = _build_owner_context(room_metadata)
 
     if custom_prompt:
-        job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
+        job_logger.info(
+            "Usando prompt personalizado", extra={"length": len(custom_prompt)}
+        )
         instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
     else:
         job_logger.info("Usando prompt por defecto")
@@ -297,6 +310,7 @@ async def entrypoint(ctx: agents.JobContext):
         return
     # Hardcoded simple personality (no module loading)
     from types import SimpleNamespace
+
     profile = SimpleNamespace(id="neutral", name="Neutral")
 
     # VarietyEngine - solo si está habilitado (import condicional)
@@ -327,10 +341,16 @@ async def entrypoint(ctx: agents.JobContext):
 
     tracer = get_tracer()
     _session_span = tracer.start_span("voice_session")
-    _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
+    _session_span.set_attribute(
+        "session.room", ctx.room.name if ctx.room else "unknown"
+    )
     _session_span.set_attribute("session.personality", profile.id)
-    _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
-    _session_span.set_attribute("session.language", room_metadata.get("preferred_language", "es"))
+    _session_span.set_attribute(
+        "session.owner_age", str(room_metadata.get("owner_age", ""))
+    )
+    _session_span.set_attribute(
+        "session.language", room_metadata.get("preferred_language", "es")
+    )
 
     async def _on_session_end():
         ACTIVE_SESSIONS.dec()
@@ -374,7 +394,9 @@ async def entrypoint(ctx: agents.JobContext):
 
         @ctx.room.on("participant_connected")
         def on_participant_connected(participant: rtc.RemoteParticipant):
-            job_logger.info("Nuevo participante", extra={"participant": participant.identity})
+            job_logger.info(
+                "Nuevo participante", extra={"participant": participant.identity}
+            )
             if _is_parent(participant):
                 job_logger.info(
                     "Padre conectado - pausando AI para walkie-talkie",
@@ -384,7 +406,9 @@ async def entrypoint(ctx: agents.JobContext):
 
         @ctx.room.on("participant_disconnected")
         def on_participant_disconnected(participant: rtc.RemoteParticipant):
-            job_logger.info("Participante desconectado", extra={"participant": participant.identity})
+            job_logger.info(
+                "Participante desconectado", extra={"participant": participant.identity}
+            )
             if _is_parent(participant) and not _has_parent_in_room():
                 job_logger.info(
                     "Padre desconectado - reanudando AI",
@@ -405,8 +429,6 @@ async def entrypoint(ctx: agents.JobContext):
         if not ev.is_final:
             return
 
-        # Sobrescribir intencionalmente: si el usuario interrumpe, la medición anterior
-        # se descarta (el speech anterior fue cancelado y on_speech_created no disparará).
         _turn_start = time.time()
 
         # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
@@ -430,12 +452,13 @@ async def entrypoint(ctx: agents.JobContext):
         anchor = variety.build_persona_anchor()
         summary = variety.build_sliding_summary()
         if anchor or summary:
-            extra = ("\n" + anchor if anchor else "") + ("\n" + summary if summary else "")
-            # Solo actualizar si el contenido cambió — evita re-enviar context tokens en cada turno
-            if extra != session.userdata.get("_last_instructions_extra", ""):
-                session.userdata["_last_instructions_extra"] = extra
-                base = session.userdata.get("base_instructions", "")
-                asyncio.create_task(session.current_agent.update_instructions(base + extra))
+            base = session.userdata.get("base_instructions", "")
+            extra = ""
+            if anchor:
+                extra += "\n" + anchor
+            if summary:
+                extra += "\n" + summary
+            asyncio.create_task(session.current_agent.update_instructions(base + extra))
 
     def on_conversation_item(ev):
         """Gap 2: Record what the LLM actually said for anti-repetition."""
@@ -454,12 +477,10 @@ async def entrypoint(ctx: agents.JobContext):
         nonlocal _turn_start
         if not hasattr(ev.item, "role") or ev.item.role != "assistant":
             return
-        # Snapshot y limpiar: si speech_created no llega (TTS desactivado o interrupción),
-        # el siguiente turno no hereda un _turn_start obsoleto.
-        t = _turn_start
-        _turn_start = None
-        if t is not None:
-            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - t)
+        if _turn_start is not None:
+            LLM_LATENCY.labels(personality=profile.id).observe(
+                time.time() - _turn_start
+            )
 
     def on_speech_created(ev: SpeechCreatedEvent):
         """Record full turn latency from user speech end to TTS pipeline start."""
@@ -486,18 +507,21 @@ async def entrypoint(ctx: agents.JobContext):
             agent=agent,
         )
     except Exception as e:
-        job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
+        job_logger.error(
+            "Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True
+        )
         return
     job_logger.info("Sesión iniciada y escuchando")
 
     # Check if a parent is already in the room (joined before agent) - only if walkie-talkie enabled
     if settings.enable_walkie_talkie and _has_parent_in_room():
-        job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
+        job_logger.info(
+            "Padre ya presente en la sala - iniciando en modo walkie-talkie"
+        )
         await _pause_for_walkie_talkie()
     else:
-        # Pequeña pausa para que el track de audio del room esté suscrito antes del primer TTS.
-        # 0.1s es suficiente; 0.5s era conservador sin medición.
-        await asyncio.sleep(0.1)
+        # Enviar greeting inicial
+        await asyncio.sleep(0.5)
         if settings.greeting_enabled:
             custom_greeting = room_metadata.get("greeting")
             if custom_greeting:
@@ -509,7 +533,9 @@ async def entrypoint(ctx: agents.JobContext):
             try:
                 await session.say(greeting_text)
             except Exception as e:
-                job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
+                job_logger.error(
+                    "Error enviando greeting", extra={"error": str(e)}, exc_info=True
+                )
                 ERRORS_TOTAL.labels(type="greeting").inc()
 
     job_logger.info("Agente activo y escuchando")
@@ -556,8 +582,12 @@ def start_metrics_server(settings: Settings) -> None:
         def log_message(self, *_):
             pass  # Suprime logs de acceso HTTP en stdout
 
-    httpd = make_server("0.0.0.0", settings.api_port, _metrics_wsgi, handler_class=_SilentHandler)
-    thread = threading.Thread(target=httpd.serve_forever, name="metrics-server", daemon=True)
+    httpd = make_server(
+        "0.0.0.0", settings.api_port, _metrics_wsgi, handler_class=_SilentHandler
+    )
+    thread = threading.Thread(
+        target=httpd.serve_forever, name="metrics-server", daemon=True
+    )
     thread.start()
     logger.info("Metrics server iniciado", extra={"port": settings.api_port})
 
@@ -581,13 +611,15 @@ def main():
         print(settings.display_config())
 
     # Publicar info estática en métricas (legible por NestJS vía /metrics)
-    AGENT_INFO.info({
-        "version": "2.0.0",
-        "agent_name": settings.agent_name,
-        "tts_provider": settings.tts_provider,
-        "stt_provider": settings.stt_provider,
-        "log_level": settings.log_level,
-    })
+    AGENT_INFO.info(
+        {
+            "version": "2.0.0",
+            "agent_name": settings.agent_name,
+            "tts_provider": settings.tts_provider,
+            "stt_provider": settings.stt_provider,
+            "log_level": settings.log_level,
+        }
+    )
 
     start_metrics_server(settings)
 
