@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # ============= OpenAI Configuration =============
     openai_api_key: str = Field(..., description="API Key de OpenAI")
-    openai_model: str = Field(default="gpt-4.1", description="Modelo de OpenAI para LLM")
+    openai_model: str = Field(default="gpt-4.1-mini", description="Modelo de OpenAI para LLM")
     openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
 
     # ============= TTS Configuration =============
@@ -55,8 +55,8 @@ class Settings(BaseSettings):
         description="Voice ID de Inworld (voz clonada NEBUCherry)",
     )
     inworld_model: str = Field(
-        default="inworld-tts-1.5-max",
-        description="Modelo Inworld (inworld-tts-1, inworld-tts-1.5-max)",
+        default="inworld-tts-1.5-mini",
+        description="Modelo Inworld (inworld-tts-1, inworld-tts-1.5-mini, inworld-tts-1.5-max)",
     )
     inworld_speaking_rate: float = Field(
         default=1.0, description="Velocidad de habla Inworld (0.5-1.5, 1.0 = normal)"
