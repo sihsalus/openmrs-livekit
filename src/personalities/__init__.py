@@ -32,14 +32,18 @@ def get_profile(profile_id: str | None = None) -> PersonalityProfile:
 
 
 # Auto-register built-in profiles on import
-from src.personalities.peruvian import profile as _peruvian
+from src.personalities.peruvian import profile as _peruvian  # noqa: E402
+
 register(_peruvian)
 
-from src.personalities.mexican import profile as _mexican
+from src.personalities.mexican import profile as _mexican  # noqa: E402
+
 register(_mexican)
 
-from src.personalities.kpop import profile as _kpop
+from src.personalities.kpop import profile as _kpop  # noqa: E402
+
 register(_kpop)
 
-from src.personalities.roblox import profile as _roblox
+from src.personalities.roblox import profile as _roblox  # noqa: E402
+
 register(_roblox)

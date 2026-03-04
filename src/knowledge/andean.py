@@ -14,8 +14,6 @@ Nebu usa la versión para_ninos en sus interacciones.
 """
 
 import random
-from typing import Optional
-
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🌍 LOS TRES PACHAS — Las dimensiones de la realidad andina

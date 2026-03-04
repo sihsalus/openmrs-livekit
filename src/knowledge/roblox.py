@@ -16,8 +16,6 @@ Nebu usa la version para_ninos en sus interacciones.
 """
 
 import random
-from typing import Optional
-
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # HISTORIA_GAMING — El nacimiento y evolucion de los videojuegos

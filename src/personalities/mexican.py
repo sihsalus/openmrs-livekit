@@ -6,8 +6,8 @@ Personalidad mexicana — El perfil de Nebu Azteca.
 
 import random
 
-from src.personality import PersonalityProfile
 from src.knowledge.mexican import build_mexican_knowledge_injection
+from src.personality import PersonalityProfile
 
 
 def _knowledge_injector(category_id: str) -> str:

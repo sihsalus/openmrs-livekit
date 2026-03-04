@@ -14,8 +14,6 @@ Nebu usa la version para_ninos en sus interacciones.
 """
 
 import random
-from typing import Optional
-
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # HISTORIA COREANA — Momentos clave de la peninsula

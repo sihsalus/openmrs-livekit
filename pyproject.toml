@@ -20,6 +20,7 @@ dependencies = [
     "livekit-plugins-elevenlabs",
     "livekit-plugins-cartesia",
     "livekit-plugins-inworld",
+    "livekit-plugins-deepgram",
     "livekit-plugins-turn-detector",
     "livekit-plugins-noise-cancellation",
 

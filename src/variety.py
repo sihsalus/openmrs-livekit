@@ -20,10 +20,8 @@ import random
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Optional
 
 from src.personality import PersonalityProfile
-
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🚫 DATOS PROHIBIDOS — Universales, no dependen del perfil
@@ -77,7 +75,7 @@ class VarietyEngine:
     """
 
     # ── Profile (fuente de todo el contenido cultural) ────────────────
-    profile: Optional[PersonalityProfile] = field(default=None, repr=False)
+    profile: PersonalityProfile | None = field(default=None, repr=False)
 
     # ── Tracking anti-repetición ────────────────────────────────────────
     _fact_categories_used: deque = field(default_factory=lambda: deque(maxlen=10))
@@ -211,7 +209,7 @@ class VarietyEngine:
             chosen = chosen.replace("{prev_topic}", self._last_category_label)
         return chosen
 
-    def check_milestone(self) -> Optional[str]:
+    def check_milestone(self) -> str | None:
         milestones = self.profile.catchphrases.get("milestone", {})
         return milestones.get(self.turn_count)
 
@@ -219,7 +217,7 @@ class VarietyEngine:
     # 🎲 WILDCARDS
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    def roll_wildcard(self) -> Optional[str]:
+    def roll_wildcard(self) -> str | None:
         if self.profile.wildcard_events and random.random() < WILDCARD_CHANCE:
             event = random.choice(self.profile.wildcard_events)
             return event["inject"]
@@ -322,7 +320,7 @@ class VarietyEngine:
         )
 
     @property
-    def favorite_category(self) -> Optional[str]:
+    def favorite_category(self) -> str | None:
         if not self._favorite_categories:
             return None
         max_cat = max(self._favorite_categories, key=self._favorite_categories.get)
@@ -426,7 +424,7 @@ class VarietyEngine:
     # 🌙 TIME-AWARE
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    def get_time_flavor(self, hour: Optional[int] = None) -> str:
+    def get_time_flavor(self, hour: int | None = None) -> str:
         if hour is None:
             hour = time.localtime().tm_hour
         flavors = self.profile.time_flavors
@@ -493,7 +491,7 @@ class VarietyEngine:
             available = specific_options
         return random.choice(available)
 
-    def build_fact_prompt(self, topic: str = "", hour: Optional[int] = None) -> str:
+    def build_fact_prompt(self, topic: str = "", hour: int | None = None) -> str:
         """
         Construye el prompt completo para generar un dato curioso.
         v4: Parametrizable + patches + personalidad configurable.

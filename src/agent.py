@@ -14,29 +14,57 @@ import json
 import signal
 import threading
 import time
-from typing import Optional
 
 from livekit import agents, rtc
-from livekit.agents import AgentSession, Agent
+from livekit.agents import Agent, AgentSession
 from livekit.plugins import openai, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
-from src.config import get_settings, Settings
-from src.logger import setup_logging, get_logger
+from src.config import Settings, get_settings
+from src.logger import get_logger, setup_logging
 from src.metrics import (
-    ACTIVE_SESSIONS, SESSIONS_TOTAL, SESSION_DURATION,
-    ERRORS_TOTAL, TURNS_TOTAL, CHILD_SIGNALS_TOTAL,
+    ACTIVE_SESSIONS,
+    CHILD_SIGNALS_TOTAL,
+    ERRORS_TOTAL,
+    SESSION_DURATION,
+    SESSIONS_TOTAL,
+    TURNS_TOTAL,
 )
-from src.prompts import get_system_prompt, get_greeting, CAPABILITIES_BLOCK
+from src.personalities import get_profile
+from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.tools import ALL_TOOLS
 from src.variety import VarietyEngine
-from src.personalities import get_profile
-
 
 # Setup logging al importar
 setup_logging()
 logger = get_logger("nebu.agent")
 _api_server = None
+
+
+def _build_stt(settings: Settings):
+    """Construye el STT según el proveedor configurado."""
+    provider = settings.stt_provider
+
+    if provider == "openai":
+        return openai.STT(
+            model=settings.openai_stt_model,
+            language="es",
+            noise_reduction_type="far_field",
+        )
+
+    if provider == "deepgram":
+        from livekit.plugins import deepgram
+        return deepgram.STT(
+            model=settings.deepgram_model,
+            language=settings.deepgram_language,
+            interim_results=True,
+            smart_format=settings.deepgram_smart_format,
+            punctuate=settings.deepgram_punctuate,
+            profanity_filter=False,
+            endpointing_ms=settings.deepgram_endpointing_ms,
+        )
+
+    raise ValueError(f"STT provider desconocido: {provider}")
 
 
 def _build_tts(settings: Settings):
@@ -92,7 +120,7 @@ class NebuAgent:
 
     def __init__(self):
         self.settings = get_settings()
-        self.session: Optional[AgentSession] = None
+        self.session: AgentSession | None = None
         self._shutdown_event = asyncio.Event()
 
     async def create_session(self, instructions: str) -> AgentSession:
@@ -399,6 +427,7 @@ def start_api_server():
 
     try:
         import uvicorn
+
         from src.api import app
     except Exception as exc:
         logger.error(f"No se pudo iniciar la API REST: {exc}")

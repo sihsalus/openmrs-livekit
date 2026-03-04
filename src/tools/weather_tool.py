@@ -1,8 +1,6 @@
 """Tool: Clima actual via Open-Meteo (geocoding + forecast)"""
 import aiohttp
-
-from livekit.agents import function_tool, RunContext
-
+from livekit.agents import RunContext, function_tool
 
 _GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 _WEATHER_URL = "https://api.open-meteo.com/v1/forecast"

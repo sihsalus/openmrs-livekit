@@ -2,20 +2,18 @@
 API REST Module - Expone endpoints HTTP para el agente
 """
 
-import asyncio
 import traceback
-from typing import Dict, Any
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from src.config import get_settings
-from src.logger import get_logger
 from src.health_check import HealthChecker
-
+from src.logger import get_logger
 
 logger = get_logger("nebu.api")
 
@@ -50,13 +48,13 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Iniciando API REST")
     health_checker = get_health_checker()
-    
+
     # Ejecutar health checks iniciales
     health_status = await health_checker.run_all_checks()
     logger.info(f"Initial health check: {health_status['status']}")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Apagando API REST")
 
@@ -98,10 +96,10 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/health", tags=["Health"])
-    async def health_check() -> Dict[str, Any]:
+    async def health_check() -> dict[str, Any]:
         """
         Health check endpoint
-        
+
         Retorna el estado de salud del agente sin ejecutar checks
         (respuesta más rápida)
         """
@@ -109,10 +107,10 @@ def create_app() -> FastAPI:
         return health_checker.get_health_status()
 
     @app.get("/health/full", tags=["Health"])
-    async def health_check_full() -> Dict[str, Any]:
+    async def health_check_full() -> dict[str, Any]:
         """
         Health check completo endpoint
-        
+
         Ejecuta todos los checks de salud y retorna resultados detallados.
         Puede ser más lento que /health
         """
@@ -123,12 +121,12 @@ def create_app() -> FastAPI:
     async def readiness_check() -> Response:
         """
         Readiness check endpoint (Kubernetes-style)
-        
+
         Retorna 200 OK si el agente está listo, 503 si no
         """
         health_checker = get_health_checker()
         status = health_checker.get_health_status()
-        
+
         if status["status"] == "healthy":
             return JSONResponse(
                 status_code=200,
@@ -144,12 +142,12 @@ def create_app() -> FastAPI:
     async def liveness_check() -> Response:
         """
         Liveness check endpoint (Kubernetes-style)
-        
+
         Retorna 200 OK si el agente está ejecutándose
         """
         health_checker = get_health_checker()
         status = health_checker.get_health_status()
-        
+
         return JSONResponse(
             status_code=200,
             content={
@@ -165,16 +163,16 @@ def create_app() -> FastAPI:
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     @app.get("/info", tags=["System"])
-    async def system_info(auth=Depends(require_api_key)) -> Dict[str, Any]:
+    async def system_info(auth=Depends(require_api_key)) -> dict[str, Any]:  # noqa: B008
         """
         System information endpoint
-        
+
         Retorna información general del sistema
         """
         settings = get_settings()
         health_checker = get_health_checker()
         status = health_checker.get_health_status()
-        
+
         return {
             "agent_name": settings.agent_name,
             "version": "2.0.0",
@@ -192,10 +190,10 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     settings = get_settings()
     logger.info(f"Iniciando servidor en {settings.api_host}:{settings.api_port}")
-    
+
     uvicorn.run(
         app,
         host=settings.api_host,

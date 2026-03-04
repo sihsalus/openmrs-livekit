@@ -61,8 +61,35 @@ class Settings(BaseSettings):
         description="Temperatura Inworld (0-2, controla variabilidad emocional)"
     )
 
-    # ============= Deepgram Configuration (Optional) =============
+    # ============= Deepgram Configuration =============
     deepgram_api_key: str | None = Field(default=None, description="API Key Deepgram")
+
+    # STT Provider
+    stt_provider: Literal["openai", "deepgram"] = Field(
+        default="deepgram", description="Proveedor de STT"
+    )
+
+    # Deepgram STT Settings
+    deepgram_model: str = Field(
+        default="nova-3",
+        description="Modelo Deepgram (nova-3, nova-2, nova-2-general)"
+    )
+    deepgram_language: str = Field(
+        default="es",
+        description="Idioma para Deepgram STT"
+    )
+    deepgram_smart_format: bool = Field(
+        default=True,
+        description="Habilitar smart formatting en Deepgram"
+    )
+    deepgram_punctuate: bool = Field(
+        default=True,
+        description="Habilitar puntuación automática"
+    )
+    deepgram_endpointing_ms: int = Field(
+        default=300,
+        description="Milisegundos de silencio para finalizar (200-1000ms)"
+    )
 
     # ============= Web Search Configuration =============
     web_search_provider: Literal["tavily", "brave", "serpapi", "duckduckgo"] | None = Field(
@@ -82,12 +109,38 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
     log_format: Literal["json", "text"] = Field(default="json")
 
-    # ============= VAD Settings =============
-    vad_min_silence_duration: float = Field(default=0.5, description="Silencio mínimo")
-    vad_threshold: float = Field(default=0.5, description="Threshold VAD (0.0-1.0)")
+    # ============= VAD Settings (Optimizadas para interrupciones rápidas) =============
+    vad_min_silence_duration: float = Field(
+        default=0.5,
+        description="Silencio mínimo para considerar fin de habla"
+    )
+    vad_activation_threshold: float = Field(
+        default=0.3,
+        description="Threshold VAD (0.0-1.0) - Más bajo = más sensible"
+    )
+    vad_min_speech_duration: float = Field(
+        default=0.2,
+        description="Duración mínima de habla para activar (evita ruido)"
+    )
 
-    # ============= Session Settings =============
+    # ============= Session Settings (Optimizadas para captura de interrupciones) =============
     allow_interruptions: bool = Field(default=True, description="Permitir interrupciones")
+    min_interruption_words: int = Field(
+        default=0,
+        description="Palabras mínimas para interrumpir (0 = cualquier sonido)"
+    )
+    min_interruption_duration: float = Field(
+        default=0.3,
+        description="Duración mínima para interrumpir (segundos)"
+    )
+    min_endpointing_delay: float = Field(
+        default=0.5,
+        description="Delay mínimo antes de considerar turno completo"
+    )
+    max_endpointing_delay: float = Field(
+        default=2.0,
+        description="Delay máximo para esperar continuación"
+    )
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
 
     # ============= API Settings =============
@@ -103,11 +156,11 @@ class Settings(BaseSettings):
         ],
         description="Lista de orígenes permitidos para CORS",
     )
-    @field_validator("vad_threshold")
+    @field_validator("vad_activation_threshold")
     @classmethod
     def validate_vad_threshold(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:
-            raise ValueError("vad_threshold debe estar entre 0.0 y 1.0")
+            raise ValueError("vad_activation_threshold debe estar entre 0.0 y 1.0")
         return v
 
     @field_validator("vad_min_silence_duration")

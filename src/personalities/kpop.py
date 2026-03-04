@@ -6,8 +6,8 @@ Personalidad K-pop Warrior -- Perfil de guerrero K-pop para peluche infantil.
 
 import random
 
-from src.personality import PersonalityProfile
 from src.knowledge.kpop import build_korean_knowledge_injection
+from src.personality import PersonalityProfile
 
 
 def _knowledge_injector(category_id: str) -> str:

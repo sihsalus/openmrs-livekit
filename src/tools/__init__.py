@@ -1,9 +1,10 @@
 """Tools module for Nebu agent function calling"""
-from .datetime_tool import get_current_datetime
-from .weather_tool import get_weather
-from .fun_fact_tool import get_fun_fact
-from .games import start_trivia, start_riddles, start_story, end_game
 from src.config import get_settings
+
+from .datetime_tool import get_current_datetime
+from .fun_fact_tool import get_fun_fact
+from .games import end_game, start_riddles, start_story, start_trivia
+from .weather_tool import get_weather
 
 ALL_TOOLS = [
     get_current_datetime,

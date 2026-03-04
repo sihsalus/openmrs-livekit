@@ -4,18 +4,17 @@ Health Check Module - Verificar estado del agente y sus componentes!
 
 import asyncio
 import time
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Any
 
 from src.config import get_settings
 from src.logger import get_logger
 
-
 logger = get_logger("nebu.health")
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """Estados de salud posibles"""
     HEALTHY = "healthy"
     DEGRADED = "degraded"
@@ -28,8 +27,8 @@ class HealthChecker:
     def __init__(self):
         self.settings = get_settings()
         self.start_time = time.time()
-        self.last_check: Optional[datetime] = None
-        self.component_status: Dict[str, HealthStatus] = {}
+        self.last_check: datetime | None = None
+        self.component_status: dict[str, HealthStatus] = {}
 
     async def check_openai_connection(self) -> bool:
         """Verifica la conexión a OpenAI"""
@@ -67,25 +66,25 @@ class HealthChecker:
                 "livekit_api_key",
                 "livekit_api_secret",
             ]
-            
+
             for field in required_fields:
                 value = getattr(self.settings, field, None)
                 if not value:
                     logger.warning(f"Missing required configuration: {field}")
                     return False
-            
+
             logger.debug("Configuration check passed")
             return True
         except Exception as e:
             logger.error(f"Configuration check failed: {e}")
             return False
 
-    async def run_all_checks(self) -> Dict[str, Any]:
+    async def run_all_checks(self) -> dict[str, Any]:
         """Ejecuta todos los checks de salud"""
-        self.last_check = datetime.now(timezone.utc)
-        
+        self.last_check = datetime.now(UTC)
+
         logger.debug("Starting health checks")
-        
+
         # Ejecutar checks en paralelo
         openai_ok, elevenlabs_ok, config_ok = await asyncio.gather(
             self.check_openai_connection(),
@@ -121,17 +120,17 @@ class HealthChecker:
         }
 
         logger.info(f"Health check completed: {overall_status}")
-        
+
         return health_report
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """Obtiene el estado de salud actual sin ejecutar nuevos checks"""
         uptime_seconds = time.time() - self.start_time
-        
+
         if not self.component_status:
             return {
                 "status": HealthStatus.HEALTHY,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "uptime_seconds": uptime_seconds,
                 "components": {
                     "openai": HealthStatus.HEALTHY.value,
@@ -150,7 +149,7 @@ class HealthChecker:
 
         return {
             "status": overall_status,
-            "timestamp": (self.last_check or datetime.now(timezone.utc)).isoformat(),
+            "timestamp": (self.last_check or datetime.now(UTC)).isoformat(),
             "uptime_seconds": uptime_seconds,
             "components": {
                 name: status.value for name, status in self.component_status.items()

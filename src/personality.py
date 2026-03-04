@@ -6,8 +6,8 @@ de PersonalityProfile con todo el contenido cultural parametrizado.
 El engine (variety.py) lee de self.profile en vez de constantes hardcodeadas.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Optional
 
 
 @dataclass
@@ -71,16 +71,16 @@ class PersonalityProfile:
     hype_growth: float = 0.01
     hype_boost_growth: float = 0.03
     hype_boost_categories: list[str] = field(default_factory=list)
-    hype_bias_mood: Optional[str] = None  # mood value to bias toward when hype is high
+    hype_bias_mood: str | None = None  # mood value to bias toward when hype is high
 
     # ── Chances ─────────────────────────────────────────────────────────
     rant_chance: float = 0.08
     slang_chance: float = 0.25
-    knowledge_injector: Optional[Callable[[str], str]] = field(default=None, repr=False)
+    knowledge_injector: Callable[[str], str] | None = field(default=None, repr=False)
 
     # ── FSM signal-to-mood mapping ──────────────────────────────────────
     # señal -> [mood values] o None (mantener actual)
-    signal_mood_map: dict[str, Optional[list[str]]] = field(default_factory=dict)
+    signal_mood_map: dict[str, list[str] | None] = field(default_factory=dict)
 
     # ── Story/Riddle mood preferences ───────────────────────────────────
     story_moods: list[str] = field(default_factory=list)

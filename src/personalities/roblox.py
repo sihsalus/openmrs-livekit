@@ -6,8 +6,8 @@ Personalidad Roblox Gamer — Perfil gamer para peluche infantil.
 
 import random
 
-from src.personality import PersonalityProfile
 from src.knowledge.roblox import build_gaming_knowledge_injection
+from src.personality import PersonalityProfile
 
 
 def _knowledge_injector(category_id: str) -> str:
