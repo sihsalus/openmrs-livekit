@@ -22,6 +22,7 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from src.config import Settings, get_settings
 from src.logger import get_logger, setup_logging
+from src.tracing import get_tracer
 from src.metrics import (
     ACTIVE_SESSIONS,
     CHILD_SIGNALS_TOTAL,
@@ -277,14 +278,24 @@ async def entrypoint(ctx: agents.JobContext):
         job_logger.info("VarietyEngine disabled - using hardcoded neutral profile")
     session.userdata["base_instructions"] = instructions
 
-    # Métricas: registrar inicio de sesión
+    # Métricas y tracing: registrar inicio de sesión
     _session_start = time.time()
     ACTIVE_SESSIONS.inc()
     SESSIONS_TOTAL.labels(personality=profile.id).inc()
 
+    tracer = get_tracer()
+    _session_span = tracer.start_span("voice_session")
+    _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
+    _session_span.set_attribute("session.personality", profile.id)
+    _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
+    _session_span.set_attribute("session.language", room_metadata.get("preferred_language", "es"))
+
     async def _on_session_end():
         ACTIVE_SESSIONS.dec()
-        SESSION_DURATION.observe(time.time() - _session_start)
+        duration = time.time() - _session_start
+        SESSION_DURATION.observe(duration)
+        _session_span.set_attribute("session.duration_seconds", duration)
+        _session_span.end()
 
     ctx.add_shutdown_callback(_on_session_end)
 

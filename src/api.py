@@ -16,6 +16,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_l
 from src.config import get_settings
 from src.health_check import HealthChecker
 from src.logger import get_logger
+from src.tracing import setup_tracing
 
 logger = get_logger("nebu.api")
 
@@ -63,6 +64,16 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Crea la aplicación FastAPI"""
+    setup_tracing()
+
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentation
+        from opentelemetry.instrumentation.aiohttp_client import AioHttpClientInstrumentation
+        FastAPIInstrumentation().instrument()
+        AioHttpClientInstrumentation().instrument()
+    except ImportError:
+        logger.warning("OpenTelemetry FastAPI/aiohttp instrumentation not available")
+
     app = FastAPI(
         title="Nebu Agent API",
         description="API REST para el Agente de voz Nebu",
