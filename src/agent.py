@@ -19,13 +19,12 @@ from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
 from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
 from livekit.plugins import openai, silero
-from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from src.config import Settings, get_settings
 from src.logger import get_logger, setup_logging
-from src.tracing import get_tracer
 from src.metrics import (
     ACTIVE_SESSIONS,
+    AGENT_INFO,
     CHILD_SIGNALS_TOTAL,
     ERRORS_TOTAL,
     LLM_LATENCY,
@@ -34,15 +33,18 @@ from src.metrics import (
     TURN_LATENCY,
     TURNS_TOTAL,
 )
-from src.personalities import get_profile
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.tools import ALL_TOOLS
-from src.variety import VarietyEngine
+from src.tracing import get_tracer
+
+# Imports condicionales solo si están habilitados (ahorro ~25MB RAM)
+# from src.variety import VarietyEngine  # Solo si enable_variety_engine=true
+# from src.personalities import get_profile  # Solo si enable_variety_engine=true
+# from livekit.plugins.turn_detector.multilingual import MultilingualModel  # Solo si enable_turn_detection=true
 
 # Setup logging al importar
 setup_logging()
 logger = get_logger("nebu.agent")
-_api_server = None
 
 
 def _build_stt(settings: Settings):
@@ -172,21 +174,24 @@ class NebuAgent:
                 )
             tts.on("metrics_collected", tts_metrics_wrapper)
 
+        # Import condicional de TurnDetector solo si está habilitado
+        turn_detection_model = None
+        if self.settings.enable_turn_detection:
+            from livekit.plugins.turn_detector.multilingual import MultilingualModel
+            turn_detection_model = MultilingualModel()
+
         return AgentSession(
-            turn_detection=MultilingualModel() if self.settings.enable_turn_detection else None,
-            # VAD optimizado para captura rápida de interrupciones
+            turn_detection=turn_detection_model,
+            # VAD optimizado (reducido para menor CPU - evita "inference slower than realtime")
             vad=silero.VAD.load(
-                min_silence_duration=self.settings.vad_min_silence_duration,
-                activation_threshold=self.settings.vad_activation_threshold,
-                min_speech_duration=self.settings.vad_min_speech_duration,
+                min_silence_duration=0.6,  # Era 0.5 → menos procesamiento
+                activation_threshold=0.4,  # Era 0.3 → menos sensible, menos false positives
+                min_speech_duration=0.3,   # Era 0.2 → ignora ruidos muy cortos
             ),
             stt=stt,
             llm=llm,
             tts=tts,
             userdata={},
-            # Truncar historial para mantener prompt estable (~700 tokens max)
-            # Mantiene contexto del niño + últimos 8 turnos
-            chat_ctx_max_messages=16,  # 8 turnos (user + assistant = 2 mensajes por turno)
             # Session optimizada para interrupciones rápidas
             allow_interruptions=self.settings.allow_interruptions,
             min_interruption_words=self.settings.min_interruption_words,
@@ -294,8 +299,11 @@ async def entrypoint(ctx: agents.JobContext):
     from types import SimpleNamespace
     profile = SimpleNamespace(id="neutral", name="Neutral")
 
-    # VarietyEngine - solo si está habilitado
+    # VarietyEngine - solo si está habilitado (import condicional)
     if settings.enable_variety_engine:
+        from src.personalities import get_profile
+        from src.variety import VarietyEngine
+
         personality_id = room_metadata.get("personality_profile")
         try:
             profile = get_profile(personality_id)
@@ -448,6 +456,22 @@ async def entrypoint(ctx: agents.JobContext):
         if _turn_start is not None:
             LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
 
+    def on_conversation_item_with_truncate(ev):
+        """Trunca historial después de cada mensaje para mantener prompt estable"""
+        MAX_MESSAGES = 16  # 8 turnos (user + assistant)
+
+        # Acceder al chat_ctx del agente actual
+        if hasattr(session, 'current_agent') and session.current_agent:
+            chat_ctx = session.current_agent.chat_ctx
+            msg_count = len(chat_ctx.messages())  # messages() es un método, no propiedad
+
+            if msg_count > MAX_MESSAGES:
+                # Usar método oficial de truncate (preserva system prompt automáticamente)
+                chat_ctx.truncate(max_items=MAX_MESSAGES)
+                job_logger.info(f"✂️ Historial truncado: {msg_count} → {MAX_MESSAGES} mensajes")
+            elif msg_count > 10:  # Log solo cuando se acerca al límite
+                job_logger.debug(f"📊 Mensajes en historial: {msg_count}/{MAX_MESSAGES}")
+
     def on_speech_created(ev: SpeechCreatedEvent):
         """Record full turn latency from user speech end to TTS pipeline start."""
         nonlocal _turn_start
@@ -457,9 +481,14 @@ async def entrypoint(ctx: agents.JobContext):
             ).observe(ev.created_at - _turn_start)
             _turn_start = None
 
-    session.on("user_input_transcribed", on_user_transcribed)
-    session.on("conversation_item_added", on_conversation_item)
+    # Solo registrar listeners de VarietyEngine si está habilitado (ahorra CPU)
+    if settings.enable_variety_engine:
+        session.on("user_input_transcribed", on_user_transcribed)
+        session.on("conversation_item_added", on_conversation_item)
+
+    # Listeners de métricas siempre activos
     session.on("conversation_item_added", on_conversation_item_for_latency)
+    session.on("conversation_item_added", on_conversation_item_with_truncate)  # Truncado automático
     session.on("speech_created", on_speech_created)
 
     # Iniciar sesión de voz
@@ -502,44 +531,46 @@ def setup_signal_handlers():
 
     def signal_handler(sig, frame):
         logger.info(f"Señal {sig} recibida, iniciando shutdown graceful")
-        global _api_server
-        if _api_server is not None:
-            _api_server.should_exit = True
 
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
 
-def start_api_server():
-    """Inicia el servidor API en un hilo separado si está habilitado"""
-    settings = get_settings()
+def start_metrics_server(settings: Settings) -> None:
+    """Inicia un servidor HTTP mínimo para el endpoint /metrics de Prometheus.
+
+    Reemplaza FastAPI/uvicorn. Usa wsgiref (stdlib) + prometheus_client.
+    Soporta multiprocess mode (PROMETHEUS_MULTIPROC_DIR).
+    """
     if not settings.api_enabled:
-        logger.info("API REST deshabilitada; no se inicia servidor HTTP")
-        return None
+        logger.info("Servidor de métricas deshabilitado (API_ENABLED=false)")
+        return
 
-    try:
-        import uvicorn
+    import os
+    from wsgiref.simple_server import WSGIRequestHandler, make_server
 
-        from src.api import app
-    except Exception as exc:
-        logger.error(f"No se pudo iniciar la API REST: {exc}")
-        return None
+    from prometheus_client import CollectorRegistry
+    from prometheus_client import multiprocess as prom_mp
+    from prometheus_client.exposition import make_wsgi_app
 
-    config = uvicorn.Config(
-        app,
-        host=settings.api_host,
-        port=settings.api_port,
-        log_level=settings.log_level.lower(),
-    )
-    server = uvicorn.Server(config)
+    multiprocess_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
 
-    thread = threading.Thread(target=server.run, name="api-server", daemon=True)
+    def _metrics_wsgi(environ, start_response):
+        if multiprocess_dir:
+            registry = CollectorRegistry()
+            prom_mp.MultiProcessCollector(registry)
+        else:
+            registry = None  # usa el registry global por defecto
+        return make_wsgi_app(registry)(environ, start_response)
+
+    class _SilentHandler(WSGIRequestHandler):
+        def log_message(self, *_):
+            pass  # Suprime logs de acceso HTTP en stdout
+
+    httpd = make_server("0.0.0.0", settings.api_port, _metrics_wsgi, handler_class=_SilentHandler)
+    thread = threading.Thread(target=httpd.serve_forever, name="metrics-server", daemon=True)
     thread.start()
-    logger.info(
-        "API REST iniciada",
-        extra={"host": settings.api_host, "port": settings.api_port},
-    )
-    return server
+    logger.info("Metrics server iniciado", extra={"port": settings.api_port})
 
 
 def main():
@@ -560,8 +591,16 @@ def main():
     if settings.log_format == "text":
         print(settings.display_config())
 
-    global _api_server
-    _api_server = start_api_server()
+    # Publicar info estática en métricas (legible por NestJS vía /metrics)
+    AGENT_INFO.info({
+        "version": "2.0.0",
+        "agent_name": settings.agent_name,
+        "tts_provider": settings.tts_provider,
+        "stt_provider": settings.stt_provider,
+        "log_level": settings.log_level,
+    })
+
+    start_metrics_server(settings)
 
     agents.cli.run_app(
         agents.WorkerOptions(
