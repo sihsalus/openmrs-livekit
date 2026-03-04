@@ -17,6 +17,7 @@ import time
 
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
+from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
 from livekit.plugins import openai, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
@@ -132,8 +133,52 @@ class NebuAgent:
         self.session: AgentSession | None = None
         self._shutdown_event = asyncio.Event()
 
-    async def create_session(self, instructions: str) -> AgentSession:
+    async def create_session(self, instructions: str, job_logger=None) -> AgentSession:
         """Crea una sesión de agente con la configuración actual"""
+        # Build components
+        stt = _build_stt(self.settings)
+        llm = openai.LLM(
+            model=self.settings.openai_model,
+            temperature=0.7,
+            parallel_tool_calls=False,
+        )
+        tts = _build_tts(self.settings)
+
+        # Attach metrics collectors if logger provided
+        if job_logger:
+            def llm_metrics_wrapper(metrics: LLMMetrics):
+                job_logger.info("🧠 LLM Metrics", extra={
+                    "ttft": f"{metrics.ttft:.3f}s",
+                    "tokens_per_sec": f"{metrics.tokens_per_second:.1f}",
+                    "prompt_tokens": metrics.prompt_tokens,
+                    "completion_tokens": metrics.completion_tokens,
+                })
+            llm.on("metrics_collected", llm_metrics_wrapper)
+
+            def stt_metrics_wrapper(metrics: STTMetrics):
+                job_logger.info("🎤 STT Metrics", extra={
+                    "duration": f"{metrics.duration:.3f}s",
+                    "audio_duration": f"{metrics.audio_duration:.3f}s",
+                    "streamed": metrics.streamed,
+                })
+            stt.on("metrics_collected", stt_metrics_wrapper)
+
+            def eou_metrics_wrapper(metrics: EOUMetrics):
+                job_logger.info("⏱️ EOU Metrics", extra={
+                    "eou_delay": f"{metrics.end_of_utterance_delay:.3f}s",
+                    "transcription_delay": f"{metrics.transcription_delay:.3f}s",
+                })
+            stt.on("eou_metrics_collected", eou_metrics_wrapper)
+
+            def tts_metrics_wrapper(metrics: TTSMetrics):
+                job_logger.info("🔊 TTS Metrics", extra={
+                    "ttfb": f"{metrics.ttfb:.3f}s",
+                    "duration": f"{metrics.duration:.3f}s",
+                    "audio_duration": f"{metrics.audio_duration:.3f}s",
+                    "streamed": metrics.streamed,
+                })
+            tts.on("metrics_collected", tts_metrics_wrapper)
+
         return AgentSession(
             turn_detection=MultilingualModel() if self.settings.enable_turn_detection else None,
             # VAD optimizado para captura rápida de interrupciones
@@ -142,16 +187,9 @@ class NebuAgent:
                 activation_threshold=self.settings.vad_activation_threshold,
                 min_speech_duration=self.settings.vad_min_speech_duration,
             ),
-            # STT configurable (Deepgram/OpenAI)
-            stt=_build_stt(self.settings),
-            # LLM
-            llm=openai.LLM(
-                model=self.settings.openai_model,
-                temperature=0.7,
-                parallel_tool_calls=False,
-            ),
-            # TTS configurable
-            tts=_build_tts(self.settings),
+            stt=stt,
+            llm=llm,
+            tts=tts,
             userdata={},
             # Session optimizada para interrupciones rápidas
             allow_interruptions=self.settings.allow_interruptions,
@@ -249,9 +287,9 @@ async def entrypoint(ctx: agents.JobContext):
     # Crear instancia del agente
     nebu = NebuAgent()
 
-    # Crear sesión con variety engine y prompt base
+    # Crear sesión con variety engine y prompt base (con metrics logger)
     try:
-        session = await nebu.create_session(instructions)
+        session = await nebu.create_session(instructions, job_logger=job_logger)
     except Exception as e:
         job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="session").inc()
