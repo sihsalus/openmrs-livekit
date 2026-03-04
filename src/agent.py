@@ -54,6 +54,7 @@ def _build_stt(settings: Settings):
 
     if provider == "deepgram":
         from livekit.plugins import deepgram
+
         return deepgram.STT(
             model=settings.deepgram_model,
             language=settings.deepgram_language,
@@ -79,6 +80,7 @@ def _build_tts(settings: Settings):
 
     if provider == "elevenlabs":
         from livekit.plugins import elevenlabs
+
         return elevenlabs.TTS(
             voice_id=settings.voice_id,
             api_key=settings.elevenlabs_api_key,
@@ -87,6 +89,7 @@ def _build_tts(settings: Settings):
 
     if provider == "cartesia":
         from livekit.plugins import cartesia
+
         return cartesia.TTS(
             api_key=settings.cartesia_api_key,
             model=settings.cartesia_model,
@@ -96,14 +99,17 @@ def _build_tts(settings: Settings):
 
     if provider == "google":
         from livekit.plugins import google
+
         return google.TTS(language="es-US")
 
     if provider == "deepgram":
         from livekit.plugins import deepgram
+
         return deepgram.TTS(api_key=settings.deepgram_api_key)
 
     if provider == "inworld":
         from livekit.plugins import inworld
+
         return inworld.TTS(
             api_key=settings.inworld_api_key,
             voice=settings.inworld_voice_id,
@@ -184,8 +190,7 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Crear logger con contexto del job
     job_logger = logger.with_context(
-        job_id=ctx.job.id if ctx.job else "unknown",
-        room=ctx.room.name if ctx.room else "unknown"
+        job_id=ctx.job.id if ctx.job else "unknown", room=ctx.room.name if ctx.room else "unknown"
     )
 
     job_logger.info("Iniciando entrypoint del agente")
@@ -195,7 +200,7 @@ async def entrypoint(ctx: agents.JobContext):
     if not room_name.startswith("iot-device-"):
         job_logger.info(
             "Sala ignorada - no es para agente",
-            extra={"room": room_name, "reason": "prefix_filter"}
+            extra={"room": room_name, "reason": "prefix_filter"},
         )
         return
 
@@ -214,10 +219,7 @@ async def entrypoint(ctx: agents.JobContext):
     if metadata_raw:
         try:
             room_metadata = json.loads(metadata_raw)
-            job_logger.info(
-                "Metadata parseada",
-                extra={"keys": list(room_metadata.keys())}
-            )
+            job_logger.info("Metadata parseada", extra={"keys": list(room_metadata.keys())})
         except json.JSONDecodeError as e:
             job_logger.error("Error parseando metadata", extra={"error": str(e)})
     else:
@@ -234,7 +236,9 @@ async def entrypoint(ctx: agents.JobContext):
         job_logger.info("Usando prompt por defecto")
         instructions = get_system_prompt()
         if owner_context:
-            instructions = instructions.replace(CAPABILITIES_BLOCK, owner_context + CAPABILITIES_BLOCK)
+            instructions = instructions.replace(
+                CAPABILITIES_BLOCK, owner_context + CAPABILITIES_BLOCK
+            )
 
     if owner_context:
         job_logger.info("Contexto del owner inyectado en prompt")
@@ -309,7 +313,7 @@ async def entrypoint(ctx: agents.JobContext):
         if _is_parent(participant):
             job_logger.info(
                 "Padre conectado - pausando AI para walkie-talkie",
-                extra={"parent_identity": participant.identity}
+                extra={"parent_identity": participant.identity},
             )
             asyncio.create_task(_pause_for_walkie_talkie())
 
@@ -319,7 +323,7 @@ async def entrypoint(ctx: agents.JobContext):
         if _is_parent(participant) and not _has_parent_in_room():
             job_logger.info(
                 "Padre desconectado - reanudando AI",
-                extra={"parent_identity": participant.identity}
+                extra={"parent_identity": participant.identity},
             )
             asyncio.create_task(_resume_from_walkie_talkie())
 
@@ -356,9 +360,7 @@ async def entrypoint(ctx: agents.JobContext):
                 extra += "\n" + anchor
             if summary:
                 extra += "\n" + summary
-            asyncio.create_task(
-                session.current_agent.update_instructions(base + extra)
-            )
+            asyncio.create_task(session.current_agent.update_instructions(base + extra))
 
     def on_conversation_item(ev):
         """Gap 2: Record what the LLM actually said for anti-repetition."""
@@ -412,6 +414,7 @@ async def entrypoint(ctx: agents.JobContext):
 
 def setup_signal_handlers():
     """Configura handlers para shutdown graceful"""
+
     def signal_handler(sig, frame):
         logger.info(f"Señal {sig} recibida, iniciando shutdown graceful")
         global _api_server
@@ -466,7 +469,7 @@ def main():
             "agent_name": settings.agent_name,
             "log_level": settings.log_level,
             "tts_provider": settings.tts_provider,
-        }
+        },
     )
 
     if settings.log_format == "text":

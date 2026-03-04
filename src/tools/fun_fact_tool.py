@@ -9,6 +9,7 @@ Usa el VarietyEngine para:
 El LLM genera el contenido - tiene miles de datos curiosos en su entrenamiento.
 Nosotros solo lo guiamos para que no se repita.
 """
+
 from livekit.agents import RunContext, function_tool
 
 

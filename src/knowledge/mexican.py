@@ -591,32 +591,93 @@ MITOS_MESOAMERICANOS = [
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 VOCABULARIO_NAHUATL = [
-    {"palabra": "Chocolate (xocolatl)", "significado": "Agua amarga — bebida sagrada de cacao", "uso": "alimento"},
+    {
+        "palabra": "Chocolate (xocolatl)",
+        "significado": "Agua amarga — bebida sagrada de cacao",
+        "uso": "alimento",
+    },
     {"palabra": "Tomate (tomatl)", "significado": "Fruto redondo y gordo", "uso": "alimento"},
-    {"palabra": "Aguacate (ahuacatl)", "significado": "Fruto del arbol de ahuacatl", "uso": "alimento"},
-    {"palabra": "Chile (chilli)", "significado": "Fruto picante, base de la cocina mesoamericana", "uso": "alimento"},
-    {"palabra": "Chicle (tzictli)", "significado": "Goma de mascar del arbol de chicozapote", "uso": "alimento"},
-    {"palabra": "Coyote (coyotl)", "significado": "El animal astuto, simbolo de picardía", "uso": "animal"},
+    {
+        "palabra": "Aguacate (ahuacatl)",
+        "significado": "Fruto del arbol de ahuacatl",
+        "uso": "alimento",
+    },
+    {
+        "palabra": "Chile (chilli)",
+        "significado": "Fruto picante, base de la cocina mesoamericana",
+        "uso": "alimento",
+    },
+    {
+        "palabra": "Chicle (tzictli)",
+        "significado": "Goma de mascar del arbol de chicozapote",
+        "uso": "alimento",
+    },
+    {
+        "palabra": "Coyote (coyotl)",
+        "significado": "El animal astuto, simbolo de picardía",
+        "uso": "animal",
+    },
     {"palabra": "Ocelote (ocelotl)", "significado": "Jaguar o felino manchado", "uso": "animal"},
-    {"palabra": "Chapulin (chapolin)", "significado": "Saltamontes, alimento prehispanico aun consumido", "uso": "animal"},
-    {"palabra": "Milpa", "significado": "Campo de cultivo con maiz, frijol y calabaza juntos", "uso": "agricultura"},
-    {"palabra": "Comal (comalli)", "significado": "Disco de barro para cocinar tortillas", "uso": "utensilio"},
-    {"palabra": "Metate (metatl)", "significado": "Piedra para moler maiz y hacer masa", "uso": "utensilio"},
-    {"palabra": "Tianguis (tianquiztli)", "significado": "Mercado al aire libre", "uso": "comercio"},
-    {"palabra": "Petate (petatl)", "significado": "Estera tejida de palma para dormir", "uso": "objeto cotidiano"},
+    {
+        "palabra": "Chapulin (chapolin)",
+        "significado": "Saltamontes, alimento prehispanico aun consumido",
+        "uso": "animal",
+    },
+    {
+        "palabra": "Milpa",
+        "significado": "Campo de cultivo con maiz, frijol y calabaza juntos",
+        "uso": "agricultura",
+    },
+    {
+        "palabra": "Comal (comalli)",
+        "significado": "Disco de barro para cocinar tortillas",
+        "uso": "utensilio",
+    },
+    {
+        "palabra": "Metate (metatl)",
+        "significado": "Piedra para moler maiz y hacer masa",
+        "uso": "utensilio",
+    },
+    {
+        "palabra": "Tianguis (tianquiztli)",
+        "significado": "Mercado al aire libre",
+        "uso": "comercio",
+    },
+    {
+        "palabra": "Petate (petatl)",
+        "significado": "Estera tejida de palma para dormir",
+        "uso": "objeto cotidiano",
+    },
     {"palabra": "Mecate (mecatl)", "significado": "Cuerda o soga", "uso": "objeto cotidiano"},
-    {"palabra": "Papalote (papalotl)", "significado": "Mariposa — hoy significa cometa de papel", "uso": "naturaleza"},
-    {"palabra": "Cenote (ts'onot, maya)", "significado": "Pozo natural sagrado de agua dulce", "uso": "geografia"},
+    {
+        "palabra": "Papalote (papalotl)",
+        "significado": "Mariposa — hoy significa cometa de papel",
+        "uso": "naturaleza",
+    },
+    {
+        "palabra": "Cenote (ts'onot, maya)",
+        "significado": "Pozo natural sagrado de agua dulce",
+        "uso": "geografia",
+    },
     {"palabra": "Atole (atolli)", "significado": "Bebida caliente de maiz", "uso": "alimento"},
     {"palabra": "Elote (elotl)", "significado": "Mazorca de maiz tierno", "uso": "alimento"},
-    {"palabra": "Cacahuate (tlalcacahuatl)", "significado": "Cacao de la tierra — el mani", "uso": "alimento"},
-    {"palabra": "Popote (popotl)", "significado": "Pajita o caña para beber", "uso": "objeto cotidiano"},
+    {
+        "palabra": "Cacahuate (tlalcacahuatl)",
+        "significado": "Cacao de la tierra — el mani",
+        "uso": "alimento",
+    },
+    {
+        "palabra": "Popote (popotl)",
+        "significado": "Pajita o caña para beber",
+        "uso": "objeto cotidiano",
+    },
 ]
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🛠️ FUNCIONES HELPER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 def get_random_cosmologia() -> dict:
     """Retorna una cosmologia mesoamericana aleatoria con su para_ninos."""
@@ -656,9 +717,15 @@ def build_mexican_knowledge_injection() -> str:
     blocks = []
 
     # Elegir 1 pieza de conocimiento aleatorio
-    source = random.choice([
-        "cosmologia", "principio", "deidad", "ciencia", "mito",
-    ])
+    source = random.choice(
+        [
+            "cosmologia",
+            "principio",
+            "deidad",
+            "ciencia",
+            "mito",
+        ]
+    )
 
     if source == "cosmologia":
         cosmo = get_random_cosmologia()
@@ -676,20 +743,16 @@ def build_mexican_knowledge_injection() -> str:
     elif source == "deidad":
         deity = get_random_deity()
         blocks.append(
-            f"PANTEON MESOAMERICANO — {deity['nombre']}, {deity['titulo']}: "
-            f"{deity['para_ninos']}"
+            f"PANTEON MESOAMERICANO — {deity['nombre']}, {deity['titulo']}: {deity['para_ninos']}"
         )
     elif source == "ciencia":
         sci = get_random_science()
         blocks.append(
-            f"CIENCIA MESOAMERICANA — {sci['nombre']} ({sci['campo']}): "
-            f"{sci['para_ninos']}"
+            f"CIENCIA MESOAMERICANA — {sci['nombre']} ({sci['campo']}): {sci['para_ninos']}"
         )
     elif source == "mito":
         myth = get_random_myth()
-        blocks.append(
-            f"MITO MESOAMERICANO — {myth['titulo']}: {myth['para_ninos']}"
-        )
+        blocks.append(f"MITO MESOAMERICANO — {myth['titulo']}: {myth['para_ninos']}")
 
     # Bonus: 40% de chance de agregar una palabra nahuatl
     if random.random() < 0.4:

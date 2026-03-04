@@ -15,14 +15,14 @@ class PersonalityProfile:
     """Todos los datos culturales para una personalidad del VarietyEngine."""
 
     # ── Identidad ───────────────────────────────────────────────────────
-    id: str                           # "peruvian", "mexican", "kpop", "roblox"
-    display_name: str                 # "Nebu Etnocacerista"
-    description: str                  # Una línea descriptiva
+    id: str  # "peruvian", "mexican", "kpop", "roblox"
+    display_name: str  # "Nebu Etnocacerista"
+    description: str  # Una línea descriptiva
 
     # ── Moods ───────────────────────────────────────────────────────────
     # Lista de dicts: {"name": "MODO_INCA", "value": "modo_inca", "tone": "..."}
     moods: list[dict] = field(default_factory=list)
-    default_mood: str = "curioso"     # valor del mood inicial
+    default_mood: str = "curioso"  # valor del mood inicial
     mood_transitions: dict[str, list[str]] = field(default_factory=dict)
 
     # ── Rapport ─────────────────────────────────────────────────────────
@@ -95,9 +95,9 @@ class PersonalityProfile:
     flavor_label: str = "sabor único"
 
     # ── Trivia/Story/Riddle prompt extras ───────────────────────────────
-    trivia_culture_hint: str = ""     # "Si puedes incluir algo de Perú, ¡mejor!"
-    story_culture_hint: str = ""      # "Ambiente andino/peruano si el tema lo permite"
-    riddle_culture_hint: str = ""     # "Dale un toque peruano/andino"
+    trivia_culture_hint: str = ""  # "Si puedes incluir algo de Perú, ¡mejor!"
+    story_culture_hint: str = ""  # "Ambiente andino/peruano si el tema lo permite"
+    riddle_culture_hint: str = ""  # "Dale un toque peruano/andino"
     riddle_challenge: str = "'¡A ver si me ganas esta!'"
 
     # ── Extra banned facts ──────────────────────────────────────────────

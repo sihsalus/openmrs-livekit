@@ -19,15 +19,15 @@ from src.config import get_settings
 
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 _PHONE_RE = re.compile(
-    r"(?:\+?\d{1,3}[-.\s]?)?"          # country code
-    r"(?:\(?\d{1,4}\)?[-.\s]?)?"        # area code
-    r"\d{3,4}[-.\s]?\d{3,4}"           # number
+    r"(?:\+?\d{1,3}[-.\s]?)?"  # country code
+    r"(?:\(?\d{1,4}\)?[-.\s]?)?"  # area code
+    r"\d{3,4}[-.\s]?\d{3,4}"  # number
 )
 _DNI_RE = re.compile(r"\b\d{8}[a-zA-Z]?\b")  # DNI/RUC peruano y similares
 _ADDRESS_RE = re.compile(
     r"(?:calle|avenida|av\.|jr\.|jirón|pasaje|manzana|lote|urbanización|urb\.)"
-    r"\s+[^\s,]{2,}(?:\s+[^\s,]+){0,2}"   # keyword + hasta 3 tokens (nombre + número)
-    r"(?:\s+\d+)?",                         # número opcional de puerta
+    r"\s+[^\s,]{2,}(?:\s+[^\s,]+){0,2}"  # keyword + hasta 3 tokens (nombre + número)
+    r"(?:\s+\d+)?",  # número opcional de puerta
     re.IGNORECASE,
 )
 
@@ -87,7 +87,7 @@ async def _search_tavily(
         results.append({"title": "Respuesta directa", "snippet": answer})
     for r in data.get("results", [])[:max_results]:
         results.append({"title": r.get("title", ""), "snippet": r.get("content", "")})
-    return results[:max_results + 1]
+    return results[: max_results + 1]
 
 
 async def _search_brave(
@@ -140,17 +140,21 @@ async def _search_duckduckgo(
     results = []
     # Abstract (respuesta principal)
     if data.get("AbstractText"):
-        results.append({
-            "title": data.get("Heading", "Resultado"),
-            "snippet": data["AbstractText"],
-        })
+        results.append(
+            {
+                "title": data.get("Heading", "Resultado"),
+                "snippet": data["AbstractText"],
+            }
+        )
     # Related topics
     for topic in data.get("RelatedTopics", [])[:max_results]:
         if isinstance(topic, dict) and topic.get("Text"):
-            results.append({
-                "title": topic.get("FirstURL", ""),
-                "snippet": topic["Text"],
-            })
+            results.append(
+                {
+                    "title": topic.get("FirstURL", ""),
+                    "snippet": topic["Text"],
+                }
+            )
     return results[:max_results]
 
 

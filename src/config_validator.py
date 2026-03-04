@@ -25,8 +25,7 @@ def validate_config() -> bool:
         # Validar URLs
         if not settings.livekit_url.startswith(("ws://", "wss://")):
             logger.error(
-                "LIVEKIT_URL debe comenzar con ws:// o wss://",
-                extra={"url": settings.livekit_url}
+                "LIVEKIT_URL debe comenzar con ws:// o wss://", extra={"url": settings.livekit_url}
             )
             return False
 
@@ -50,19 +49,14 @@ def validate_config() -> bool:
         # Validar voice_id
         if len(settings.voice_id) < 8:
             logger.warning(
-                "VOICE_ID parece ser inválido (muy corto)",
-                extra={"voice_id": settings.voice_id}
+                "VOICE_ID parece ser inválido (muy corto)", extra={"voice_id": settings.voice_id}
             )
 
         logger.info("✅ Configuración válida")
         return True
 
     except Exception as e:
-        logger.error(
-            "Error al validar configuración",
-            extra={"error": str(e)},
-            exc_info=True
-        )
+        logger.error("Error al validar configuración", extra={"error": str(e)}, exc_info=True)
         return False
 
 

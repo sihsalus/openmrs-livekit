@@ -676,6 +676,7 @@ VOCABULARIO_GAMER = [
 # FUNCIONES HELPER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+
 def get_random_gaming_history() -> dict:
     """Retorna un hito historico del gaming aleatorio."""
     return random.choice(HISTORIA_GAMING)
@@ -714,9 +715,15 @@ def build_gaming_knowledge_injection() -> str:
     blocks = []
 
     # Elegir 1 pieza de conocimiento aleatorio
-    source = random.choice([
-        "historia", "computacion", "figura", "ciencia", "hito",
-    ])
+    source = random.choice(
+        [
+            "historia",
+            "computacion",
+            "figura",
+            "ciencia",
+            "hito",
+        ]
+    )
 
     if source == "historia":
         item = get_random_gaming_history()
@@ -727,34 +734,26 @@ def build_gaming_knowledge_injection() -> str:
         )
     elif source == "computacion":
         item = get_random_computing_concept()
-        blocks.append(
-            f"COMPUTACION — {item['nombre']} ({item['concepto']}): "
-            f"{item['para_ninos']}"
-        )
+        blocks.append(f"COMPUTACION — {item['nombre']} ({item['concepto']}): {item['para_ninos']}")
     elif source == "figura":
         item = get_random_gaming_figure()
         blocks.append(
-            f"FIGURAS DEL GAMING — {item['nombre']}, {item['titulo']}: "
-            f"{item['para_ninos']}"
+            f"FIGURAS DEL GAMING — {item['nombre']}, {item['titulo']}: {item['para_ninos']}"
         )
     elif source == "ciencia":
         item = get_random_game_science()
         blocks.append(
-            f"CIENCIA DE JUEGOS — {item['nombre']} ({item['campo']}): "
-            f"{item['para_ninos']}"
+            f"CIENCIA DE JUEGOS — {item['nombre']} ({item['campo']}): {item['para_ninos']}"
         )
     elif source == "hito":
         item = get_random_gaming_milestone()
-        blocks.append(
-            f"HITO GAMING — {item['titulo']}: {item['para_ninos']}"
-        )
+        blocks.append(f"HITO GAMING — {item['titulo']}: {item['para_ninos']}")
 
     # Bonus: 40% de chance de agregar una palabra gamer
     if random.random() < 0.4:
         word = get_random_gamer_word()
         blocks.append(
-            f"PALABRA GAMER: '{word['palabra']}' = {word['significado']} "
-            f"Ejemplo: {word['uso']}"
+            f"PALABRA GAMER: '{word['palabra']}' = {word['significado']} Ejemplo: {word['uso']}"
         )
 
     return "\n".join(blocks)

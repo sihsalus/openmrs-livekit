@@ -376,84 +376,84 @@ CONCEPTOS_CLAVE = [
     {
         "nombre": "Pacha",
         "definicion": "No solo 'tierra' o 'mundo'. Es espacio-tiempo unido. "
-                      "Pacha es simultáneamente lugar y momento.",
+        "Pacha es simultáneamente lugar y momento.",
         "para_ninos": "Pacha no solo significa tierra — significa TODO: "
-                      "el espacio, el tiempo, la realidad. ¡Una sola palabra "
-                      "para decir 'todo lo que existe'!",
+        "el espacio, el tiempo, la realidad. ¡Una sola palabra "
+        "para decir 'todo lo que existe'!",
     },
     {
         "nombre": "Pachakuti",
         "definicion": "Inversión cósmica del tiempo-espacio. Un cambio de era. "
-                      "Lo de arriba pasa abajo, lo oculto se revela. "
-                      "La conquista española fue un pachakuti.",
+        "Lo de arriba pasa abajo, lo oculto se revela. "
+        "La conquista española fue un pachakuti.",
         "para_ninos": "Es cuando el mundo se da vuelta. Todo cambia. Lo que "
-                      "estaba arriba se va abajo y lo escondido sale a la luz. "
-                      "¡Como un terremoto del tiempo!",
+        "estaba arriba se va abajo y lo escondido sale a la luz. "
+        "¡Como un terremoto del tiempo!",
     },
     {
         "nombre": "Kamaq",
         "definicion": "Fuerza vital que anima las cosas. No es 'crear de la nada' "
-                      "sino dar vida, poner en movimiento lo que ya existe.",
+        "sino dar vida, poner en movimiento lo que ya existe.",
         "para_ninos": "Es la chispa que hace que las cosas estén VIVAS. "
-                      "No crear algo nuevo, sino despertar lo que ya estaba ahí.",
+        "No crear algo nuevo, sino despertar lo que ya estaba ahí.",
     },
     {
         "nombre": "Huaca",
         "definicion": "Cualquier cosa sagrada: una piedra, un manantial, una "
-                      "momia, un templo. Lo sagrado no está separado del mundo "
-                      "— está dentro de él.",
+        "momia, un templo. Lo sagrado no está separado del mundo "
+        "— está dentro de él.",
         "para_ninos": "¡Una huaca es algo sagrado! Puede ser una piedra especial, "
-                      "un río mágico, o un templo. Para los incas, lo sagrado "
-                      "estaba por todos lados.",
+        "un río mágico, o un templo. Para los incas, lo sagrado "
+        "estaba por todos lados.",
     },
     {
         "nombre": "Paqarina",
         "definicion": "Lugar de origen de un pueblo: cueva, lago, montaña. "
-                      "Cada ayllu tiene su paqarina de donde emergieron sus ancestros.",
+        "Cada ayllu tiene su paqarina de donde emergieron sus ancestros.",
         "para_ninos": "Cada pueblo tiene un lugar de donde nacieron sus abuelos "
-                      "más antiguos. Puede ser una cueva, un lago o una montaña. "
-                      "¡Es como el punto de respawn del pueblo!",
+        "más antiguos. Puede ser una cueva, un lago o una montaña. "
+        "¡Es como el punto de respawn del pueblo!",
     },
     {
         "nombre": "Ceques",
         "definicion": "Líneas sagradas que salían del Coricancha (templo del Sol en Cusco) "
-                      "hacia todas las direcciones. Eran 41 líneas con 328 huacas.",
+        "hacia todas las direcciones. Eran 41 líneas con 328 huacas.",
         "para_ninos": "Desde el templo del Sol en Cusco salían 41 líneas invisibles "
-                      "hacia todas las direcciones, con más de 300 lugares sagrados. "
-                      "¡Era como un GPS sagrado!",
+        "hacia todas las direcciones, con más de 300 lugares sagrados. "
+        "¡Era como un GPS sagrado!",
     },
     {
         "nombre": "Tinku",
         "definicion": "Encuentro ritual de fuerzas opuestas. Puede ser una danza, "
-                      "una pelea ritual, o el punto donde se encuentran dos ríos.",
+        "una pelea ritual, o el punto donde se encuentran dos ríos.",
         "para_ninos": "Es cuando dos fuerzas opuestas se encuentran. A veces es "
-                      "una pelea ritual, a veces una danza, a veces el punto "
-                      "donde se juntan dos ríos. ¡Los opuestos se encuentran!",
+        "una pelea ritual, a veces una danza, a veces el punto "
+        "donde se juntan dos ríos. ¡Los opuestos se encuentran!",
     },
     {
         "nombre": "Chakana",
         "definicion": "La cruz andina. Representa la conexión entre los tres Pachas "
-                      "y los cuatro suyos. Es el símbolo más importante de la "
-                      "cosmovisión andina.",
+        "y los cuatro suyos. Es el símbolo más importante de la "
+        "cosmovisión andina.",
         "para_ninos": "¡La cruz andina de cuatro escalones! Conecta el cielo, "
-                      "la tierra y el mundo de abajo. Es como el mapa del "
-                      "universo andino, y todavía la ves en artesanías por todo Perú.",
+        "la tierra y el mundo de abajo. Es como el mapa del "
+        "universo andino, y todavía la ves en artesanías por todo Perú.",
     },
     {
         "nombre": "Yanantin",
         "definicion": "Dualidad complementaria. Macho-hembra, sol-luna, "
-                      "arriba-abajo. Los opuestos no pelean, se necesitan.",
+        "arriba-abajo. Los opuestos no pelean, se necesitan.",
         "para_ninos": "Los opuestos son amigos. Día y noche, sol y luna, "
-                      "montaña y valle. Uno no puede existir sin el otro. "
-                      "¡Son un equipo!",
+        "montaña y valle. Uno no puede existir sin el otro. "
+        "¡Son un equipo!",
     },
     {
         "nombre": "Kuychi",
         "definicion": "El arcoíris. Considerado una serpiente de dos cabezas que "
-                      "conecta el cielo con la tierra. Era a la vez bello y temido.",
+        "conecta el cielo con la tierra. Era a la vez bello y temido.",
         "para_ninos": "¡El arcoíris era una serpiente mágica de dos cabezas! "
-                      "Una cabeza bebía agua de un río y la otra la soltaba en "
-                      "otro. Conectaba el cielo con la tierra.",
+        "Una cabeza bebía agua de un río y la otra la soltaba en "
+        "otro. Conectaba el cielo con la tierra.",
     },
 ]
 
@@ -645,6 +645,7 @@ VOCABULARIO_NEBU = [
 # 🛠️ FUNCIONES HELPER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+
 def get_random_pacha_wisdom() -> dict:
     """Retorna un Pacha aleatorio con su para_ninos."""
     return random.choice(TRES_PACHAS)
@@ -688,9 +689,16 @@ def build_andean_knowledge_injection() -> str:
     blocks = []
 
     # Elegir 1-2 piezas de conocimiento aleatorio
-    source = random.choice([
-        "pacha", "principio", "deidad", "ciencia", "mito", "concepto",
-    ])
+    source = random.choice(
+        [
+            "pacha",
+            "principio",
+            "deidad",
+            "ciencia",
+            "mito",
+            "concepto",
+        ]
+    )
 
     if source == "pacha":
         pacha = get_random_pacha_wisdom()
@@ -702,31 +710,22 @@ def build_andean_knowledge_injection() -> str:
     elif source == "principio":
         princ = get_random_principle()
         blocks.append(
-            f"SABIDURÍA ANDINA — {princ['nombre']} ({princ['quechua']}): "
-            f"{princ['para_ninos']}"
+            f"SABIDURÍA ANDINA — {princ['nombre']} ({princ['quechua']}): {princ['para_ninos']}"
         )
     elif source == "deidad":
         deity = get_random_deity()
         blocks.append(
-            f"PANTEÓN ANDINO — {deity['nombre']}, {deity['titulo']}: "
-            f"{deity['para_ninos']}"
+            f"PANTEÓN ANDINO — {deity['nombre']}, {deity['titulo']}: {deity['para_ninos']}"
         )
     elif source == "ciencia":
         sci = get_random_science()
-        blocks.append(
-            f"CIENCIA INCA — {sci['nombre']} ({sci['campo']}): "
-            f"{sci['para_ninos']}"
-        )
+        blocks.append(f"CIENCIA INCA — {sci['nombre']} ({sci['campo']}): {sci['para_ninos']}")
     elif source == "mito":
         myth = get_huarochiri_myth()
-        blocks.append(
-            f"MITO ANDINO — {myth['titulo']}: {myth['para_ninos']}"
-        )
+        blocks.append(f"MITO ANDINO — {myth['titulo']}: {myth['para_ninos']}")
     elif source == "concepto":
         concept = random.choice(CONCEPTOS_CLAVE)
-        blocks.append(
-            f"PALABRA ANDINA — {concept['nombre']}: {concept['para_ninos']}"
-        )
+        blocks.append(f"PALABRA ANDINA — {concept['nombre']}: {concept['para_ninos']}")
 
     # Bonus: 40% de chance de agregar una palabra quechua
     if random.random() < 0.4:

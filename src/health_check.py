@@ -16,6 +16,7 @@ logger = get_logger("nebu.health")
 
 class HealthStatus(StrEnum):
     """Estados de salud posibles"""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -113,9 +114,7 @@ class HealthChecker:
             "status": overall_status,
             "timestamp": self.last_check.isoformat(),
             "uptime_seconds": uptime_seconds,
-            "components": {
-                name: status.value for name, status in self.component_status.items()
-            },
+            "components": {name: status.value for name, status in self.component_status.items()},
             "version": "2.0.0",
         }
 
@@ -151,8 +150,6 @@ class HealthChecker:
             "status": overall_status,
             "timestamp": (self.last_check or datetime.now(UTC)).isoformat(),
             "uptime_seconds": uptime_seconds,
-            "components": {
-                name: status.value for name, status in self.component_status.items()
-            },
+            "components": {name: status.value for name, status in self.component_status.items()},
             "version": "2.0.0",
         }

@@ -1,4 +1,5 @@
 """Tool: Hora y fecha actual"""
+
 import datetime
 from zoneinfo import ZoneInfo
 
@@ -26,8 +27,18 @@ async def get_current_datetime(
     now = datetime.datetime.now(tz)
     days = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
     months = [
-        "enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+        "enero",
+        "febrero",
+        "marzo",
+        "abril",
+        "mayo",
+        "junio",
+        "julio",
+        "agosto",
+        "septiembre",
+        "octubre",
+        "noviembre",
+        "diciembre",
     ]
 
     return (

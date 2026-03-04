@@ -27,38 +27,42 @@ class Settings(BaseSettings):
     openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
 
     # ============= TTS Configuration =============
-    tts_provider: Literal["elevenlabs", "openai", "cartesia", "google", "deepgram", "inworld"] = Field(
-        default="inworld", description="Proveedor de TTS"
+    tts_provider: Literal["elevenlabs", "openai", "cartesia", "google", "deepgram", "inworld"] = (
+        Field(default="inworld", description="Proveedor de TTS")
     )
     elevenlabs_api_key: str | None = Field(default=None, description="API Key de ElevenLabs")
     voice_id: str = Field(default="wnQAQM2xwHFeVXM7PQOq", description="Voice ID (ElevenLabs)")
-    openai_tts_voice: str = Field(default="nova", description="Voz de OpenAI TTS (alloy, echo, fable, onyx, nova, shimmer)")
-    openai_tts_model: str = Field(default="tts-1", description="Modelo OpenAI TTS (tts-1, tts-1-hd)")
+    openai_tts_voice: str = Field(
+        default="nova", description="Voz de OpenAI TTS (alloy, echo, fable, onyx, nova, shimmer)"
+    )
+    openai_tts_model: str = Field(
+        default="tts-1", description="Modelo OpenAI TTS (tts-1, tts-1-hd)"
+    )
     cartesia_api_key: str | None = Field(default=None, description="API Key de Cartesia")
     cartesia_voice_id: str = Field(
         default="ccfea4bf-b3f4-421e-87ed-dd05dae01431",
         description="Voice ID de Cartesia (default: Alondra - Reassuring Sister)",
     )
     cartesia_model: str = Field(default="sonic-2", description="Modelo Cartesia (sonic-2, sonic-3)")
-    google_credentials_file: str | None = Field(default=None, description="Path a credenciales Google")
+    google_credentials_file: str | None = Field(
+        default=None, description="Path a credenciales Google"
+    )
 
     # ============= Inworld Configuration =============
     inworld_api_key: str | None = Field(default=None, description="API Key de Inworld")
     inworld_voice_id: str = Field(
         default="default-oklrorszoxbwzfdj8zjhng__nebucherry",
-        description="Voice ID de Inworld (voz clonada NEBUCherry)"
+        description="Voice ID de Inworld (voz clonada NEBUCherry)",
     )
     inworld_model: str = Field(
         default="inworld-tts-1.5-max",
-        description="Modelo Inworld (inworld-tts-1, inworld-tts-1.5-max)"
+        description="Modelo Inworld (inworld-tts-1, inworld-tts-1.5-max)",
     )
     inworld_speaking_rate: float = Field(
-        default=1.0,
-        description="Velocidad de habla Inworld (0.5-1.5, 1.0 = normal)"
+        default=1.0, description="Velocidad de habla Inworld (0.5-1.5, 1.0 = normal)"
     )
     inworld_temperature: float = Field(
-        default=1.1,
-        description="Temperatura Inworld (0-2, controla variabilidad emocional)"
+        default=1.1, description="Temperatura Inworld (0-2, controla variabilidad emocional)"
     )
 
     # ============= Deepgram Configuration =============
@@ -71,24 +75,15 @@ class Settings(BaseSettings):
 
     # Deepgram STT Settings
     deepgram_model: str = Field(
-        default="nova-3",
-        description="Modelo Deepgram (nova-3, nova-2, nova-2-general)"
+        default="nova-3", description="Modelo Deepgram (nova-3, nova-2, nova-2-general)"
     )
-    deepgram_language: str = Field(
-        default="es",
-        description="Idioma para Deepgram STT"
-    )
+    deepgram_language: str = Field(default="es", description="Idioma para Deepgram STT")
     deepgram_smart_format: bool = Field(
-        default=True,
-        description="Habilitar smart formatting en Deepgram"
+        default=True, description="Habilitar smart formatting en Deepgram"
     )
-    deepgram_punctuate: bool = Field(
-        default=True,
-        description="Habilitar puntuación automática"
-    )
+    deepgram_punctuate: bool = Field(default=True, description="Habilitar puntuación automática")
     deepgram_endpointing_ms: int = Field(
-        default=300,
-        description="Milisegundos de silencio para finalizar (200-1000ms)"
+        default=300, description="Milisegundos de silencio para finalizar (200-1000ms)"
     )
 
     # ============= Web Search Configuration =============
@@ -111,35 +106,28 @@ class Settings(BaseSettings):
 
     # ============= VAD Settings (Optimizadas para interrupciones rápidas) =============
     vad_min_silence_duration: float = Field(
-        default=0.5,
-        description="Silencio mínimo para considerar fin de habla"
+        default=0.5, description="Silencio mínimo para considerar fin de habla"
     )
     vad_activation_threshold: float = Field(
-        default=0.3,
-        description="Threshold VAD (0.0-1.0) - Más bajo = más sensible"
+        default=0.3, description="Threshold VAD (0.0-1.0) - Más bajo = más sensible"
     )
     vad_min_speech_duration: float = Field(
-        default=0.2,
-        description="Duración mínima de habla para activar (evita ruido)"
+        default=0.2, description="Duración mínima de habla para activar (evita ruido)"
     )
 
     # ============= Session Settings (Optimizadas para captura de interrupciones) =============
     allow_interruptions: bool = Field(default=True, description="Permitir interrupciones")
     min_interruption_words: int = Field(
-        default=0,
-        description="Palabras mínimas para interrumpir (0 = cualquier sonido)"
+        default=0, description="Palabras mínimas para interrumpir (0 = cualquier sonido)"
     )
     min_interruption_duration: float = Field(
-        default=0.3,
-        description="Duración mínima para interrumpir (segundos)"
+        default=0.3, description="Duración mínima para interrumpir (segundos)"
     )
     min_endpointing_delay: float = Field(
-        default=0.5,
-        description="Delay mínimo antes de considerar turno completo"
+        default=0.5, description="Delay mínimo antes de considerar turno completo"
     )
     max_endpointing_delay: float = Field(
-        default=2.0,
-        description="Delay máximo para esperar continuación"
+        default=2.0, description="Delay máximo para esperar continuación"
     )
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
 
@@ -156,6 +144,7 @@ class Settings(BaseSettings):
         ],
         description="Lista de orígenes permitidos para CORS",
     )
+
     @field_validator("vad_activation_threshold")
     @classmethod
     def validate_vad_threshold(cls, v: float) -> float:

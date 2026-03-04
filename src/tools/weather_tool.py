@@ -1,4 +1,5 @@
 """Tool: Clima actual via Open-Meteo (geocoding + forecast)"""
+
 import aiohttp
 from livekit.agents import RunContext, function_tool
 
@@ -47,7 +48,9 @@ async def get_weather(
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             # Step 1: Geocode city name to coordinates
-            async with session.get(_GEOCODE_URL, params={"name": city, "count": 1, "language": "es"}) as resp:
+            async with session.get(
+                _GEOCODE_URL, params={"name": city, "count": 1, "language": "es"}
+            ) as resp:
                 if resp.status != 200:
                     return f"No pude encontrar la ubicación de {city}."
                 geo = await resp.json()

@@ -74,7 +74,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_allowed_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["*"]
+        allow_headers=["*"],
     )
 
     @app.exception_handler(Exception)
@@ -129,13 +129,11 @@ def create_app() -> FastAPI:
 
         if status["status"] == "healthy":
             return JSONResponse(
-                status_code=200,
-                content={"ready": True, "status": status["status"]}
+                status_code=200, content={"ready": True, "status": status["status"]}
             )
         else:
             return JSONResponse(
-                status_code=503,
-                content={"ready": False, "status": status["status"]}
+                status_code=503, content={"ready": False, "status": status["status"]}
             )
 
     @app.get("/alive", tags=["Health"])
@@ -154,7 +152,7 @@ def create_app() -> FastAPI:
                 "alive": True,
                 "uptime_seconds": status["uptime_seconds"],
                 "version": status["version"],
-            }
+            },
         )
 
     @app.get("/metrics", tags=["Metrics"], include_in_schema=False)

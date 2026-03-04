@@ -557,31 +557,84 @@ TRADICIONES_COREANAS = [
 
 VOCABULARIO_COREANO = [
     {"palabra": "Annyeonghaseyo (안녕하세요)", "significado": "Hola (formal)", "uso": "saludo"},
-    {"palabra": "Kamsahamnida (감사합니다)", "significado": "Gracias (formal)", "uso": "agradecimiento"},
+    {
+        "palabra": "Kamsahamnida (감사합니다)",
+        "significado": "Gracias (formal)",
+        "uso": "agradecimiento",
+    },
     {"palabra": "Daebak (대박)", "significado": "Increible / genial", "uso": "exclamacion"},
     {"palabra": "Hwaiting (화이팅)", "significado": "Tu puedes / animo", "uso": "motivacion"},
-    {"palabra": "Aegyo (애교)", "significado": "Actuar de forma tierna y adorable", "uso": "concepto cultural"},
-    {"palabra": "Oppa (오빠)", "significado": "Hermano mayor (dicho por una chica)", "uso": "termino familiar"},
-    {"palabra": "Unnie (언니)", "significado": "Hermana mayor (dicho por una chica)", "uso": "termino familiar"},
-    {"palabra": "Hyung (형)", "significado": "Hermano mayor (dicho por un chico)", "uso": "termino familiar"},
-    {"palabra": "Noona (누나)", "significado": "Hermana mayor (dicho por un chico)", "uso": "termino familiar"},
-    {"palabra": "Sunbae (선배)", "significado": "Senior / persona con mas experiencia", "uso": "termino de respeto"},
-    {"palabra": "Maknae (막내)", "significado": "El mas joven del grupo", "uso": "termino de grupo"},
-    {"palabra": "Hallyu (한류)", "significado": "La ola coreana (expansion cultural)", "uso": "concepto cultural"},
-    {"palabra": "Mukbang (먹방)", "significado": "Transmision en vivo comiendo", "uso": "concepto cultural"},
-    {"palabra": "Selca (셀카)", "significado": "Selfie (abreviacion coreana)", "uso": "palabra moderna"},
-    {"palabra": "Aigoo (아이고)", "significado": "Expresion de sorpresa o frustacion", "uso": "exclamacion"},
+    {
+        "palabra": "Aegyo (애교)",
+        "significado": "Actuar de forma tierna y adorable",
+        "uso": "concepto cultural",
+    },
+    {
+        "palabra": "Oppa (오빠)",
+        "significado": "Hermano mayor (dicho por una chica)",
+        "uso": "termino familiar",
+    },
+    {
+        "palabra": "Unnie (언니)",
+        "significado": "Hermana mayor (dicho por una chica)",
+        "uso": "termino familiar",
+    },
+    {
+        "palabra": "Hyung (형)",
+        "significado": "Hermano mayor (dicho por un chico)",
+        "uso": "termino familiar",
+    },
+    {
+        "palabra": "Noona (누나)",
+        "significado": "Hermana mayor (dicho por un chico)",
+        "uso": "termino familiar",
+    },
+    {
+        "palabra": "Sunbae (선배)",
+        "significado": "Senior / persona con mas experiencia",
+        "uso": "termino de respeto",
+    },
+    {
+        "palabra": "Maknae (막내)",
+        "significado": "El mas joven del grupo",
+        "uso": "termino de grupo",
+    },
+    {
+        "palabra": "Hallyu (한류)",
+        "significado": "La ola coreana (expansion cultural)",
+        "uso": "concepto cultural",
+    },
+    {
+        "palabra": "Mukbang (먹방)",
+        "significado": "Transmision en vivo comiendo",
+        "uso": "concepto cultural",
+    },
+    {
+        "palabra": "Selca (셀카)",
+        "significado": "Selfie (abreviacion coreana)",
+        "uso": "palabra moderna",
+    },
+    {
+        "palabra": "Aigoo (아이고)",
+        "significado": "Expresion de sorpresa o frustacion",
+        "uso": "exclamacion",
+    },
     {"palabra": "Omo (어머)", "significado": "Oh Dios mio / que sorpresa", "uso": "exclamacion"},
     {"palabra": "Saranghae (사랑해)", "significado": "Te quiero", "uso": "sentimiento"},
     {"palabra": "Jjang (짱)", "significado": "El mejor / lo maximo", "uso": "exclamacion"},
     {"palabra": "Gamsahae (감사해)", "significado": "Gracias (informal)", "uso": "agradecimiento"},
-    {"palabra": "Bap meogeosse? (밥 먹었어?)", "significado": "Has comido? (forma de decir como estas)", "uso": "saludo"},
+    {
+        "palabra": "Bap meogeosse? (밥 먹었어?)",
+        "significado": "Has comido? (forma de decir como estas)",
+        "uso": "saludo",
+    },
 ]
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # FUNCIONES HELPER
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 def get_random_korean_history() -> dict:
     """Retorna un hecho historico coreano aleatorio."""
@@ -621,10 +674,16 @@ def build_korean_knowledge_injection() -> str:
     blocks = []
 
     # Elegir 1 pieza de conocimiento aleatorio
-    source = random.choice([
-        "historia", "filosofia", "figura", "innovacion",
-        "tradicion", "vocabulario_concepto",
-    ])
+    source = random.choice(
+        [
+            "historia",
+            "filosofia",
+            "figura",
+            "innovacion",
+            "tradicion",
+            "vocabulario_concepto",
+        ]
+    )
 
     if source == "historia":
         hist = get_random_korean_history()
@@ -636,26 +695,19 @@ def build_korean_knowledge_injection() -> str:
     elif source == "filosofia":
         phil = get_random_korean_philosophy()
         blocks.append(
-            f"FILOSOFIA COREANA — {phil['nombre']} ({phil['hangul']}): "
-            f"{phil['para_ninos']}"
+            f"FILOSOFIA COREANA — {phil['nombre']} ({phil['hangul']}): {phil['para_ninos']}"
         )
     elif source == "figura":
         fig = get_random_cultural_figure()
-        blocks.append(
-            f"FIGURA COREANA — {fig['nombre']}, {fig['titulo']}: "
-            f"{fig['para_ninos']}"
-        )
+        blocks.append(f"FIGURA COREANA — {fig['nombre']}, {fig['titulo']}: {fig['para_ninos']}")
     elif source == "innovacion":
         inno = get_random_korean_innovation()
         blocks.append(
-            f"INNOVACION COREANA — {inno['nombre']} ({inno['campo']}): "
-            f"{inno['para_ninos']}"
+            f"INNOVACION COREANA — {inno['nombre']} ({inno['campo']}): {inno['para_ninos']}"
         )
     elif source == "tradicion":
         trad = get_random_korean_tradition()
-        blocks.append(
-            f"TRADICION COREANA — {trad['titulo']}: {trad['para_ninos']}"
-        )
+        blocks.append(f"TRADICION COREANA — {trad['titulo']}: {trad['para_ninos']}")
     elif source == "vocabulario_concepto":
         word = get_korean_word()
         blocks.append(

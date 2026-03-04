@@ -11,6 +11,7 @@ Usa session.userdata["base_instructions"] como prompt base para:
 - Nunca appendar infinitamente al prompt actual
 - Restaurar correctamente al terminar un juego
 """
+
 from livekit.agents import RunContext, function_tool
 
 TRIVIA_INSTRUCTIONS = """
@@ -78,8 +79,7 @@ async def start_trivia(context: RunContext) -> str:
         cat = variety.pick_trivia_category()
         category_hint = f"\nCATEGORIA PARA LA PRIMERA PREGUNTA: {cat}"
         personality_block = (
-            f"\n\n{variety.get_mood_instruction()}"
-            f"\n{variety.get_rapport_instruction()}"
+            f"\n\n{variety.get_mood_instruction()}\n{variety.get_rapport_instruction()}"
         )
         variety.tick()
 
@@ -105,8 +105,7 @@ async def start_riddles(context: RunContext) -> str:
         riddle_prompt = variety.build_riddle_prompt()
         riddle_context = f"\n\n{riddle_prompt}"
         personality_block = (
-            f"\n\n{variety.get_mood_instruction()}"
-            f"\n{variety.get_rapport_instruction()}"
+            f"\n\n{variety.get_mood_instruction()}\n{variety.get_rapport_instruction()}"
         )
         variety.tick()
 

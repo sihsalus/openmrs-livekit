@@ -25,8 +25,7 @@ def get_profile(profile_id: str | None = None) -> PersonalityProfile:
     pid = profile_id or DEFAULT_PROFILE_ID
     if pid not in REGISTRY:
         raise ValueError(
-            f"Unknown personality profile: {pid!r}. "
-            f"Available: {list(REGISTRY.keys())}"
+            f"Unknown personality profile: {pid!r}. Available: {list(REGISTRY.keys())}"
         )
     return REGISTRY[pid]
 

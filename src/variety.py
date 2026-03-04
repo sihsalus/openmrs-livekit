@@ -58,6 +58,7 @@ IMPERFECTION_CHANCE = 0.18
 # 🎯 VARIETY ENGINE v4 — Motor parametrizable
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+
 @dataclass
 class VarietyEngine:
     """
@@ -84,10 +85,12 @@ class VarietyEngine:
     _trivia_categories_used: deque = field(default_factory=lambda: deque(maxlen=8))
     _story_themes_used: deque = field(default_factory=lambda: deque(maxlen=8))
     _riddles_told: list = field(default_factory=list)
-    _catchphrases_used: dict = field(default_factory=lambda: {
-        "pre_fact": deque(maxlen=4),
-        "post_fact": deque(maxlen=4),
-    })
+    _catchphrases_used: dict = field(
+        default_factory=lambda: {
+            "pre_fact": deque(maxlen=4),
+            "post_fact": deque(maxlen=4),
+        }
+    )
 
     # ── Personalidad ────────────────────────────────────────────────────
     _mood_value: str = ""
@@ -119,6 +122,7 @@ class VarietyEngine:
     def __post_init__(self):
         if self.profile is None:
             from src.personalities import get_profile
+
             self.profile = get_profile()
         if not self._mood_value:
             self._mood_value = self.profile.default_mood
@@ -315,9 +319,7 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def _track_category(self, category_id: str):
-        self._favorite_categories[category_id] = (
-            self._favorite_categories.get(category_id, 0) + 1
-        )
+        self._favorite_categories[category_id] = self._favorite_categories.get(category_id, 0) + 1
 
     @property
     def favorite_category(self) -> str | None:
@@ -332,9 +334,7 @@ class VarietyEngine:
         fav = self.favorite_category
         if not fav or random.random() > 0.2:
             return ""
-        cat_label = next(
-            (c["label"] for c in self.profile.fact_categories if c["id"] == fav), fav
-        )
+        cat_label = next((c["label"] for c in self.profile.fact_categories if c["id"] == fav), fav)
         return (
             f"\nNOTA: Al niño le gustan los datos de {cat_label}. "
             f"Menciona algo como {self.profile.favorite_mention}"
@@ -376,9 +376,7 @@ class VarietyEngine:
         pattern = self._pick_narrative_pattern()
         if not pattern:
             return ""
-        instruction = self.profile.pattern_instructions.get(
-            pattern, "Cuéntalo de forma original."
-        )
+        instruction = self.profile.pattern_instructions.get(pattern, "Cuéntalo de forma original.")
         return f"\nPATRÓN NARRATIVO (varía la forma): {instruction}"
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -415,10 +413,7 @@ class VarietyEngine:
             self._last_imperfection = False
             return ""
         self._last_imperfection = True
-        return (
-            f"\nIMPERFECCIÓN (hazla natural): "
-            f"'{random.choice(self.profile.imperfections)}'"
-        )
+        return f"\nIMPERFECCIÓN (hazla natural): '{random.choice(self.profile.imperfections)}'"
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # 🌙 TIME-AWARE
@@ -443,10 +438,7 @@ class VarietyEngine:
 
     def pick_fact_category(self) -> dict:
         categories = self.profile.fact_categories
-        available = [
-            c for c in categories
-            if c["id"] not in self._fact_categories_used
-        ]
+        available = [c for c in categories if c["id"] not in self._fact_categories_used]
         if not available:
             self._fact_categories_used.clear()
             available = categories
@@ -480,12 +472,9 @@ class VarietyEngine:
         specific_options = self.profile.category_specifics.get(category_id, [])
         if not specific_options:
             return ""
-        used_in_cat = [
-            s for s in self._facts_told if f"[{category_id}]" in s
-        ]
+        used_in_cat = [s for s in self._facts_told if f"[{category_id}]" in s]
         available = [
-            s for s in specific_options
-            if not any(s.lower() in u.lower() for u in used_in_cat)
+            s for s in specific_options if not any(s.lower() in u.lower() for u in used_in_cat)
         ]
         if not available:
             available = specific_options
@@ -628,7 +617,7 @@ class VarietyEngine:
             lines.append("")
             lines.append("═══ LO QUE YA DIJISTE TEXTUALMENTE (no repitas) ═══")
             for i, resp in enumerate(self._agent_responses, 1):
-                lines.append(f"  {i}. \"{resp}\"")
+                lines.append(f'  {i}. "{resp}"')
 
         # 12) Reglas finales
         lines.append("")
@@ -643,9 +632,7 @@ class VarietyEngine:
         lines.append(f"• Usa lenguaje simple pero con {self.profile.flavor_label}.")
 
         # Registrar para tracking
-        self.record_fact(
-            f"[{category['id']}] sobre {specific or category['label']}"
-        )
+        self.record_fact(f"[{category['id']}] sobre {specific or category['label']}")
         self._last_category_label = category["label"]
         self._last_specific_topic = specific
 
@@ -657,10 +644,7 @@ class VarietyEngine:
 
     def pick_trivia_category(self) -> str:
         categories = self.profile.trivia_categories
-        available = [
-            c for c in categories
-            if c not in self._trivia_categories_used
-        ]
+        available = [c for c in categories if c not in self._trivia_categories_used]
         if not available:
             self._trivia_categories_used.clear()
             available = categories
@@ -692,10 +676,7 @@ class VarietyEngine:
 
     def pick_story_theme(self) -> str:
         themes = self.profile.story_themes
-        available = [
-            t for t in themes
-            if t not in self._story_themes_used
-        ]
+        available = [t for t in themes if t not in self._story_themes_used]
         if not available:
             self._story_themes_used.clear()
             available = themes
@@ -774,11 +755,7 @@ class VarietyEngine:
 
     @property
     def last_fact_category(self) -> str:
-        return (
-            self._fact_categories_used[-1]
-            if self._fact_categories_used
-            else "general"
-        )
+        return self._fact_categories_used[-1] if self._fact_categories_used else "general"
 
     @property
     def session_minutes(self) -> float:
