@@ -139,8 +139,9 @@ class NebuAgent:
         stt = _build_stt(self.settings)
         llm = openai.LLM(
             model=self.settings.openai_model,
-            temperature=0.7,
+            temperature=0.6,  # Más directo
             parallel_tool_calls=False,
+            max_completion_tokens=200,  # Respuestas cortas para reducir latencia
         )
         tts = _build_tts(self.settings)
 
@@ -183,6 +184,9 @@ class NebuAgent:
             llm=llm,
             tts=tts,
             userdata={},
+            # Truncar historial para mantener prompt estable (~700 tokens max)
+            # Mantiene contexto del niño + últimos 8 turnos
+            chat_ctx_max_messages=16,  # 8 turnos (user + assistant = 2 mensajes por turno)
             # Session optimizada para interrupciones rápidas
             allow_interruptions=self.settings.allow_interruptions,
             min_interruption_words=self.settings.min_interruption_words,

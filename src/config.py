@@ -23,7 +23,7 @@ class Settings(BaseSettings):
 
     # ============= OpenAI Configuration =============
     openai_api_key: str = Field(..., description="API Key de OpenAI")
-    openai_model: str = Field(default="gpt-4.1-mini", description="Modelo de OpenAI para LLM")
+    openai_model: str = Field(default="gpt-4o-mini", description="Modelo de OpenAI para LLM")
     openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
 
     # ============= TTS Configuration =============
