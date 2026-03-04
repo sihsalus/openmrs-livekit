@@ -127,25 +127,29 @@ class NebuAgent:
         """Crea una sesión de agente con la configuración actual"""
         return AgentSession(
             turn_detection=MultilingualModel(),
+            # VAD optimizado para captura rápida de interrupciones
             vad=silero.VAD.load(
-                min_silence_duration=0.5,
-                activation_threshold=0.5,
+                min_silence_duration=self.settings.vad_min_silence_duration,
+                activation_threshold=self.settings.vad_activation_threshold,
+                min_speech_duration=self.settings.vad_min_speech_duration,
             ),
-            stt=openai.STT(
-                model=self.settings.openai_stt_model,
-                language="es",
-                noise_reduction_type="far_field",
-            ),
+            # STT configurable (Deepgram/OpenAI)
+            stt=_build_stt(self.settings),
+            # LLM
             llm=openai.LLM(
                 model=self.settings.openai_model,
                 temperature=0.7,
                 parallel_tool_calls=False,
             ),
+            # TTS configurable
             tts=_build_tts(self.settings),
             userdata={},
-            min_endpointing_delay=0.8,
-            max_endpointing_delay=4.0,
-            min_interruption_words=2,
+            # Session optimizada para interrupciones rápidas
+            allow_interruptions=self.settings.allow_interruptions,
+            min_interruption_words=self.settings.min_interruption_words,
+            min_interruption_duration=self.settings.min_interruption_duration,
+            min_endpointing_delay=self.settings.min_endpointing_delay,
+            max_endpointing_delay=self.settings.max_endpointing_delay,
             user_away_timeout=30.0,
         )
 
