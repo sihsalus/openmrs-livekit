@@ -132,7 +132,7 @@ class NebuAgent:
     async def create_session(self, instructions: str) -> AgentSession:
         """Crea una sesión de agente con la configuración actual"""
         return AgentSession(
-            turn_detection=MultilingualModel(),
+            turn_detection=MultilingualModel() if self.settings.enable_turn_detection else None,
             # VAD optimizado para captura rápida de interrupciones
             vad=silero.VAD.load(
                 min_silence_duration=self.settings.vad_min_silence_duration,
@@ -253,17 +253,26 @@ async def entrypoint(ctx: agents.JobContext):
         job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="session").inc()
         return
-    personality_id = room_metadata.get("personality_profile")
-    try:
-        profile = get_profile(personality_id)
-    except ValueError:
-        job_logger.warning(
-            "Unknown personality profile, using default",
-            extra={"requested": personality_id},
-        )
-        profile = get_profile()
-    session.userdata["variety"] = VarietyEngine(profile=profile)
-    job_logger.info("Personality loaded", extra={"profile": profile.id})
+    # Hardcoded simple personality (no module loading)
+    from types import SimpleNamespace
+    profile = SimpleNamespace(id="neutral", name="Neutral")
+
+    # VarietyEngine - solo si está habilitado
+    if settings.enable_variety_engine:
+        personality_id = room_metadata.get("personality_profile")
+        try:
+            profile = get_profile(personality_id)
+        except ValueError:
+            job_logger.warning(
+                "Unknown personality profile, using default",
+                extra={"requested": personality_id},
+            )
+            profile = get_profile()
+        session.userdata["variety"] = VarietyEngine(profile=profile)
+        job_logger.info("VarietyEngine enabled", extra={"profile": profile.id})
+    else:
+        session.userdata["variety"] = None
+        job_logger.info("VarietyEngine disabled - using hardcoded neutral profile")
     session.userdata["base_instructions"] = instructions
 
     # Métricas: registrar inicio de sesión
@@ -280,52 +289,57 @@ async def entrypoint(ctx: agents.JobContext):
     # Crear agente con instrucciones y tools
     agent = Agent(instructions=instructions, tools=ALL_TOOLS)
 
-    # Walkie-talkie mode: pause AI when a parent joins the room
-    walkie_talkie_active = False
-
-    def _is_parent(participant: rtc.RemoteParticipant) -> bool:
-        return participant.identity.startswith("user-parent-")
-
-    def _has_parent_in_room() -> bool:
-        for p in ctx.room.remote_participants.values():
-            if _is_parent(p):
-                return True
-        return False
-
-    async def _pause_for_walkie_talkie():
-        nonlocal walkie_talkie_active
-        walkie_talkie_active = True
-        session.interrupt()
-        session.input.set_audio_enabled(False)
-        session.output.set_audio_enabled(False)
-        job_logger.info("AI pausado - modo walkie-talkie activo")
-
-    async def _resume_from_walkie_talkie():
-        nonlocal walkie_talkie_active
+    # Walkie-talkie mode: pause AI when a parent joins the room (OPTIONAL)
+    if settings.enable_walkie_talkie:
         walkie_talkie_active = False
-        session.input.set_audio_enabled(True)
-        session.output.set_audio_enabled(True)
-        job_logger.info("AI reanudado - modo walkie-talkie finalizado")
 
-    @ctx.room.on("participant_connected")
-    def on_participant_connected(participant: rtc.RemoteParticipant):
-        job_logger.info("Nuevo participante", extra={"participant": participant.identity})
-        if _is_parent(participant):
-            job_logger.info(
-                "Padre conectado - pausando AI para walkie-talkie",
-                extra={"parent_identity": participant.identity},
-            )
-            asyncio.create_task(_pause_for_walkie_talkie())
+        def _is_parent(participant: rtc.RemoteParticipant) -> bool:
+            return participant.identity.startswith("user-parent-")
 
-    @ctx.room.on("participant_disconnected")
-    def on_participant_disconnected(participant: rtc.RemoteParticipant):
-        job_logger.info("Participante desconectado", extra={"participant": participant.identity})
-        if _is_parent(participant) and not _has_parent_in_room():
-            job_logger.info(
-                "Padre desconectado - reanudando AI",
-                extra={"parent_identity": participant.identity},
-            )
-            asyncio.create_task(_resume_from_walkie_talkie())
+        def _has_parent_in_room() -> bool:
+            for p in ctx.room.remote_participants.values():
+                if _is_parent(p):
+                    return True
+            return False
+
+        async def _pause_for_walkie_talkie():
+            nonlocal walkie_talkie_active
+            walkie_talkie_active = True
+            session.interrupt()
+            session.input.set_audio_enabled(False)
+            session.output.set_audio_enabled(False)
+            job_logger.info("AI pausado - modo walkie-talkie activo")
+
+        async def _resume_from_walkie_talkie():
+            nonlocal walkie_talkie_active
+            walkie_talkie_active = False
+            session.input.set_audio_enabled(True)
+            session.output.set_audio_enabled(True)
+            job_logger.info("AI reanudado - modo walkie-talkie finalizado")
+
+        @ctx.room.on("participant_connected")
+        def on_participant_connected(participant: rtc.RemoteParticipant):
+            job_logger.info("Nuevo participante", extra={"participant": participant.identity})
+            if _is_parent(participant):
+                job_logger.info(
+                    "Padre conectado - pausando AI para walkie-talkie",
+                    extra={"parent_identity": participant.identity},
+                )
+                asyncio.create_task(_pause_for_walkie_talkie())
+
+        @ctx.room.on("participant_disconnected")
+        def on_participant_disconnected(participant: rtc.RemoteParticipant):
+            job_logger.info("Participante desconectado", extra={"participant": participant.identity})
+            if _is_parent(participant) and not _has_parent_in_room():
+                job_logger.info(
+                    "Padre desconectado - reanudando AI",
+                    extra={"parent_identity": participant.identity},
+                )
+                asyncio.create_task(_resume_from_walkie_talkie())
+
+        job_logger.info("Walkie-talkie mode enabled")
+    else:
+        job_logger.info("Walkie-talkie mode disabled")
 
     # ── Event listeners: conectar VarietyEngine al flujo real ──────────
     def on_user_transcribed(ev):

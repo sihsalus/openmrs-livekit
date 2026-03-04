@@ -145,6 +145,24 @@ class Settings(BaseSettings):
         description="Lista de orígenes permitidos para CORS",
     )
 
+    # ═══════════════════════════════════════════════════════════════
+    # Feature Flags - Optimización para ESP32
+    # ═══════════════════════════════════════════════════════════════
+    enable_turn_detection: bool = Field(
+        default=False,
+        description="Enable semantic turn detection model (~20MB RAM overhead)",
+    )
+
+    enable_variety_engine: bool = Field(
+        default=False,
+        description="Enable anti-repetition FSM and sliding context (~10MB RAM overhead)",
+    )
+
+    enable_walkie_talkie: bool = Field(
+        default=False,
+        description="Enable parent pause mode for multi-participant rooms",
+    )
+
     @field_validator("vad_activation_threshold")
     @classmethod
     def validate_vad_threshold(cls, v: float) -> float:
