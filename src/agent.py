@@ -147,36 +147,28 @@ class NebuAgent:
         # Attach metrics collectors if logger provided
         if job_logger:
             def llm_metrics_wrapper(metrics: LLMMetrics):
-                job_logger.info("🧠 LLM Metrics", extra={
-                    "ttft": f"{metrics.ttft:.3f}s",
-                    "tokens_per_sec": f"{metrics.tokens_per_second:.1f}",
-                    "prompt_tokens": metrics.prompt_tokens,
-                    "completion_tokens": metrics.completion_tokens,
-                })
+                job_logger.info(
+                    f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
+                    f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}"
+                )
             llm.on("metrics_collected", llm_metrics_wrapper)
 
             def stt_metrics_wrapper(metrics: STTMetrics):
-                job_logger.info("🎤 STT Metrics", extra={
-                    "duration": f"{metrics.duration:.3f}s",
-                    "audio_duration": f"{metrics.audio_duration:.3f}s",
-                    "streamed": metrics.streamed,
-                })
+                job_logger.info(
+                    f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
+                )
             stt.on("metrics_collected", stt_metrics_wrapper)
 
             def eou_metrics_wrapper(metrics: EOUMetrics):
-                job_logger.info("⏱️ EOU Metrics", extra={
-                    "eou_delay": f"{metrics.end_of_utterance_delay:.3f}s",
-                    "transcription_delay": f"{metrics.transcription_delay:.3f}s",
-                })
+                job_logger.info(
+                    f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s"
+                )
             stt.on("eou_metrics_collected", eou_metrics_wrapper)
 
             def tts_metrics_wrapper(metrics: TTSMetrics):
-                job_logger.info("🔊 TTS Metrics", extra={
-                    "ttfb": f"{metrics.ttfb:.3f}s",
-                    "duration": f"{metrics.duration:.3f}s",
-                    "audio_duration": f"{metrics.audio_duration:.3f}s",
-                    "streamed": metrics.streamed,
-                })
+                job_logger.info(
+                    f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
+                )
             tts.on("metrics_collected", tts_metrics_wrapper)
 
         return AgentSession(
