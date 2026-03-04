@@ -16,7 +16,7 @@ import threading
 import time
 
 from livekit import agents, rtc
-from livekit.agents import Agent, AgentSession
+from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
 from livekit.plugins import openai, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
@@ -26,8 +26,10 @@ from src.metrics import (
     ACTIVE_SESSIONS,
     CHILD_SIGNALS_TOTAL,
     ERRORS_TOTAL,
+    LLM_LATENCY,
     SESSION_DURATION,
     SESSIONS_TOTAL,
+    TURN_LATENCY,
     TURNS_TOTAL,
 )
 from src.personalities import get_profile
@@ -342,10 +344,15 @@ async def entrypoint(ctx: agents.JobContext):
         job_logger.info("Walkie-talkie mode disabled")
 
     # ── Event listeners: conectar VarietyEngine al flujo real ──────────
+    _turn_start: float | None = None
+
     def on_user_transcribed(ev):
         """Gap 1+3: FSM Mood Lite + Persona Anchor/Sliding Summary."""
+        nonlocal _turn_start
         if not ev.is_final:
             return
+
+        _turn_start = time.time()
 
         # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
         text = ev.transcript.strip()
@@ -388,8 +395,27 @@ async def entrypoint(ctx: agents.JobContext):
         if variety:
             variety.record_agent_response(text)
 
+    def on_conversation_item_for_latency(ev):
+        """Record LLM latency from user speech end to assistant item ready."""
+        nonlocal _turn_start
+        if not hasattr(ev.item, "role") or ev.item.role != "assistant":
+            return
+        if _turn_start is not None:
+            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
+
+    def on_speech_created(ev: SpeechCreatedEvent):
+        """Record full turn latency from user speech end to TTS pipeline start."""
+        nonlocal _turn_start
+        if _turn_start is not None:
+            TURN_LATENCY.labels(
+                personality=profile.id, tts_provider=settings.tts_provider
+            ).observe(ev.created_at - _turn_start)
+            _turn_start = None
+
     session.on("user_input_transcribed", on_user_transcribed)
     session.on("conversation_item_added", on_conversation_item)
+    session.on("conversation_item_added", on_conversation_item_for_latency)
+    session.on("speech_created", on_speech_created)
 
     # Iniciar sesión de voz
     try:

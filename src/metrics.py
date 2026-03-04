@@ -49,3 +49,21 @@ CHILD_SIGNALS_TOTAL = Counter(
     "Señales detectadas en el input del niño",
     ["signal"],
 )
+
+# Latencia LLM: desde transcripción final hasta respuesta completa del modelo
+# (conversation_item_added con role=assistant)
+LLM_LATENCY = Histogram(
+    "nebu_agent_llm_latency_seconds",
+    "Latencia LLM: desde transcripción final hasta respuesta completa del modelo",
+    ["personality"],
+    buckets=[0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 3.0, 5.0],
+)
+
+# Latencia de turno percibida: desde transcripción final hasta inicio de audio TTS
+# (speech_created — momento en que el niño comenzará a escuchar audio)
+TURN_LATENCY = Histogram(
+    "nebu_agent_turn_latency_seconds",
+    "Latencia de turno percibida: desde transcripción final hasta inicio de audio TTS",
+    ["personality", "tts_provider"],
+    buckets=[0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 3.0, 5.0],
+)
