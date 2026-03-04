@@ -13,6 +13,7 @@ import asyncio
 import json
 import signal
 import threading
+import time
 from typing import Optional
 
 from livekit import agents, rtc
@@ -22,6 +23,10 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from src.config import get_settings, Settings
 from src.logger import setup_logging, get_logger
+from src.metrics import (
+    ACTIVE_SESSIONS, SESSIONS_TOTAL, SESSION_DURATION,
+    ERRORS_TOTAL, TURNS_TOTAL, CHILD_SIGNALS_TOTAL,
+)
 from src.prompts import get_system_prompt, get_greeting, CAPABILITIES_BLOCK
 from src.tools import ALL_TOOLS
 from src.variety import VarietyEngine
@@ -167,6 +172,7 @@ async def entrypoint(ctx: agents.JobContext):
         await ctx.connect()
     except Exception as e:
         job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
+        ERRORS_TOTAL.labels(type="connect").inc()
         return
     job_logger.info("Conectado al room", extra={"room": ctx.room.name})
 
@@ -209,6 +215,7 @@ async def entrypoint(ctx: agents.JobContext):
         session = await nebu.create_session(instructions)
     except Exception as e:
         job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
+        ERRORS_TOTAL.labels(type="session").inc()
         return
     personality_id = room_metadata.get("personality_profile")
     try:
@@ -222,6 +229,17 @@ async def entrypoint(ctx: agents.JobContext):
     session.userdata["variety"] = VarietyEngine(profile=profile)
     job_logger.info("Personality loaded", extra={"profile": profile.id})
     session.userdata["base_instructions"] = instructions
+
+    # Métricas: registrar inicio de sesión
+    _session_start = time.time()
+    ACTIVE_SESSIONS.inc()
+    SESSIONS_TOTAL.labels(personality=profile.id).inc()
+
+    async def _on_session_end():
+        ACTIVE_SESSIONS.dec()
+        SESSION_DURATION.observe(time.time() - _session_start)
+
+    ctx.add_shutdown_callback(_on_session_end)
 
     # Crear agente con instrucciones y tools
     agent = Agent(instructions=instructions, tools=ALL_TOOLS)
@@ -290,11 +308,13 @@ async def entrypoint(ctx: agents.JobContext):
             return
 
         # Gap 1: Detectar señal del niño y adaptar mood
-        signal = variety.detect_child_signal(ev.transcript)
-        variety.react_to_signal(signal)
+        child_signal = variety.detect_child_signal(ev.transcript)
+        variety.react_to_signal(child_signal)
+        CHILD_SIGNALS_TOTAL.labels(signal=child_signal).inc()
 
         # Gap 3: Tick conversacional + refresh periódico de instrucciones
         variety.tick()
+        TURNS_TOTAL.labels(personality=profile.id).inc()
         anchor = variety.build_persona_anchor()
         summary = variety.build_sliding_summary()
         if anchor or summary:
@@ -304,7 +324,7 @@ async def entrypoint(ctx: agents.JobContext):
                 extra += "\n" + anchor
             if summary:
                 extra += "\n" + summary
-            asyncio.ensure_future(
+            asyncio.create_task(
                 session.current_agent.update_instructions(base + extra)
             )
 
@@ -353,6 +373,7 @@ async def entrypoint(ctx: agents.JobContext):
                 await session.say(greeting_text)
             except Exception as e:
                 job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
+                ERRORS_TOTAL.labels(type="greeting").inc()
 
     job_logger.info("Agente activo y escuchando")
 

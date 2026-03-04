@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 from src.config import get_settings
 from src.logger import get_logger
@@ -157,6 +158,11 @@ def create_app() -> FastAPI:
                 "version": status["version"],
             }
         )
+
+    @app.get("/metrics", tags=["Metrics"], include_in_schema=False)
+    async def prometheus_metrics() -> Response:
+        """Endpoint de métricas Prometheus."""
+        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     @app.get("/info", tags=["System"])
     async def system_info(auth=Depends(require_api_key)) -> Dict[str, Any]:
