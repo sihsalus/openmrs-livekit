@@ -71,7 +71,7 @@ def display_config_sources():
     if env_path.exists():
         print(f".env encontrado: {env_path.absolute()}")
     else:
-        print("❌ .env no encontrado")
+        print(".env no encontrado")
 
     # Verificar env.example
     env_example = Path("env.example")
@@ -105,7 +105,7 @@ def main():
         print(settings.display_config())
         sys.exit(0)
     else:
-        print("\n❌ La configuración tiene errores. Por favor revisa los logs.\n")
+        print("\nLa configuración tiene errores. Por favor revisa los logs.\n")
         sys.exit(1)
 
 
