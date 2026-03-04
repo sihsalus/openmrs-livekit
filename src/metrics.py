@@ -8,9 +8,11 @@ Singleton — importar y usar directamente:
 from prometheus_client import Counter, Gauge, Histogram
 
 # Sesiones LiveKit activas en este momento
+# multiprocess_mode='liveall' — suma solo procesos vivos (correcto para gauges de conteo)
 ACTIVE_SESSIONS = Gauge(
     "nebu_agent_active_sessions",
     "Sesiones LiveKit activas ahora mismo",
+    multiprocess_mode="liveall",
 )
 
 # Total de sesiones iniciadas (por personalidad)

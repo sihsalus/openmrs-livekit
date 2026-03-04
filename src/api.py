@@ -6,10 +6,12 @@ import traceback
 from contextlib import asynccontextmanager
 from typing import Any
 
+import os
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, generate_latest, multiprocess as prom_multiprocess
 
 from src.config import get_settings
 from src.health_check import HealthChecker
@@ -157,8 +159,14 @@ def create_app() -> FastAPI:
 
     @app.get("/metrics", tags=["Metrics"], include_in_schema=False)
     async def prometheus_metrics() -> Response:
-        """Endpoint de métricas Prometheus."""
-        return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+        """Endpoint de métricas Prometheus (multiprocess-aware)."""
+        if os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+            registry = CollectorRegistry()
+            prom_multiprocess.MultiProcessCollector(registry)
+            data = generate_latest(registry)
+        else:
+            data = generate_latest()
+        return Response(data, media_type=CONTENT_TYPE_LATEST)
 
     @app.get("/info", tags=["System"])
     async def system_info(auth=Depends(require_api_key)) -> dict[str, Any]:  # noqa: B008

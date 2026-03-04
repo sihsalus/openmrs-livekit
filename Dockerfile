@@ -48,7 +48,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app:/app/deps \
     PATH="/app/deps/bin:$PATH" \
-    HF_HOME=/app/.cache/huggingface
+    HF_HOME=/app/.cache/huggingface \
+    PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
 
 # Crear usuario no privilegiado
 ARG UID=10001
@@ -67,6 +68,9 @@ COPY --from=builder /build/deps /app/deps
 
 # Copiar código fuente
 COPY src/ ./src/
+
+# Crear directorio para métricas multiprocess de Prometheus (debe existir antes de download-files)
+RUN mkdir -p /tmp/prometheus_multiproc && chmod 777 /tmp/prometheus_multiproc
 
 # Download turn detector model files from HuggingFace
 RUN OPENAI_API_KEY=dummy \
