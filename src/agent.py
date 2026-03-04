@@ -402,8 +402,8 @@ async def entrypoint(ctx: agents.JobContext):
         return
     job_logger.info("Sesión iniciada y escuchando")
 
-    # Check if a parent is already in the room (joined before agent)
-    if _has_parent_in_room():
+    # Check if a parent is already in the room (joined before agent) - only if walkie-talkie enabled
+    if settings.enable_walkie_talkie and _has_parent_in_room():
         job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
         await _pause_for_walkie_talkie()
     else:
