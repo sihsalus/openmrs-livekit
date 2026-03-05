@@ -15,9 +15,9 @@ def _build_llm_provider(provider: str, settings: Settings):
     if provider == "openai":
         return openai.LLM(
             model=settings.openai_model,
-            temperature=settings.openai_temperature,
+            temperature=settings.llm_temperature,
             parallel_tool_calls=False,
-            max_completion_tokens=settings.openai_max_completion_tokens,
+            max_completion_tokens=settings.llm_max_tokens,
         )
 
     if provider == "anthropic":
@@ -26,8 +26,8 @@ def _build_llm_provider(provider: str, settings: Settings):
         return anthropic.LLM(
             model=settings.anthropic_model,
             api_key=settings.anthropic_api_key,
-            temperature=settings.openai_temperature,
-            max_tokens=settings.openai_max_completion_tokens,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
         )
 
     if provider == "groq":
@@ -36,8 +36,8 @@ def _build_llm_provider(provider: str, settings: Settings):
             model=settings.groq_model,
             api_key=settings.groq_api_key,
             base_url="https://api.groq.com/openai/v1",
-            temperature=settings.openai_temperature,
-            max_completion_tokens=settings.openai_max_completion_tokens,
+            temperature=settings.llm_temperature,
+            max_completion_tokens=settings.llm_max_tokens,
         )
 
     if provider == "xai":
@@ -46,8 +46,8 @@ def _build_llm_provider(provider: str, settings: Settings):
             model=settings.xai_model,
             api_key=settings.xai_api_key,
             base_url="https://api.x.ai/v1",
-            temperature=settings.openai_temperature,
-            max_completion_tokens=settings.openai_max_completion_tokens,
+            temperature=settings.llm_temperature,
+            max_completion_tokens=settings.llm_max_tokens,
         )
 
     raise ValueError(f"LLM provider desconocido: {provider}")

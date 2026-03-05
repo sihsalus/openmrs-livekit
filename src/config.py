@@ -138,10 +138,10 @@ class Settings(BaseSettings):
     log_format: Literal["json", "text"] = Field(default="json")
 
     # ============= LLM Settings =============
-    openai_temperature: float = Field(
+    llm_temperature: float = Field(
         default=0.6, description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva"
     )
-    openai_max_completion_tokens: int = Field(
+    llm_max_tokens: int = Field(
         default=200, description="Tokens máximos de respuesta — 200 = respuestas cortas, menor latencia"
     )
 
