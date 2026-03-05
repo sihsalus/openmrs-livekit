@@ -214,6 +214,10 @@ class Settings(BaseSettings):
     api_enabled: bool = Field(default=True, description="Habilitar API REST")
     api_port: int = Field(default=8000, description="Puerto del servidor API")
 
+    # ============= Backend Integration =============
+    agent_backend_url: str | None = Field(default=None, description="URL interna del backend NestJS (ej: http://localhost:3001/api/v1)")
+    agent_internal_secret: str | None = Field(default=None, description="Secret compartido para llamadas internas agente→backend")
+
     # ═══════════════════════════════════════════════════════════════
     # Feature Flags - Optimización para ESP32
     # ═══════════════════════════════════════════════════════════════
