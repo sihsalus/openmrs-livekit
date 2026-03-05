@@ -74,7 +74,8 @@ RUN mkdir -p /tmp/prometheus_multiproc && chmod 777 /tmp/prometheus_multiproc
 
 # Download turn detector model files from HuggingFace
 RUN OPENAI_API_KEY=dummy \
-    ELEVENLABS_API_KEY=dummy \
+    TTS_PROVIDER=openai \
+    STT_PROVIDER=openai \
     LIVEKIT_URL=ws://dummy \
     LIVEKIT_API_KEY=dummy \
     LIVEKIT_API_SECRET=dummy \
