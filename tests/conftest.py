@@ -1,8 +1,7 @@
 """Shared fixtures for Nebu agent tests."""
 
-import os
 from dataclasses import dataclass, field
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
