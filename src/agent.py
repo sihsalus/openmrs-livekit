@@ -18,12 +18,11 @@ from types import SimpleNamespace
 
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
-from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
+from livekit.agents.metrics import EOUMetrics, LLMMetrics, STTMetrics, TTSMetrics
 from livekit.plugins import silero
 
 from src.config import Settings
 from src.logger import get_logger, setup_logging
-from src.providers import build_llm, build_stt, build_tts
 from src.metrics import (
     ACTIVE_SESSIONS,
     AGENT_INFO,
@@ -40,6 +39,7 @@ from src.metrics import (
     TTS_TTFB,
 )
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
+from src.providers import build_llm, build_stt, build_tts
 from src.tools import get_tools
 from src.tracing import get_tracer
 
@@ -95,7 +95,9 @@ class NebuAgent:
                     f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
                 )
             TTS_TTFB.labels(tts_provider=self.settings.tts_provider).observe(metrics.ttfb)
-            TTS_AUDIO_DURATION.labels(tts_provider=self.settings.tts_provider).observe(metrics.audio_duration)
+            TTS_AUDIO_DURATION.labels(tts_provider=self.settings.tts_provider).observe(
+                metrics.audio_duration
+            )
 
         llm.on("metrics_collected", llm_metrics_wrapper)
         stt.on("metrics_collected", stt_metrics_wrapper)
