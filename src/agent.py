@@ -444,8 +444,6 @@ async def _save_transcript(
         job_logger.warning("No se pudo acceder a history", extra={"error": str(exc)})
         return
 
-    job_logger.info("history inspeccionado", extra={"total_msgs": len(messages)})
-
     lines = []
     for msg in messages:
         role = getattr(msg, "role", None)
@@ -457,7 +455,6 @@ async def _save_transcript(
             lines.append(f"[{label}]: {text.strip()}")
 
     if not lines:
-        job_logger.warning("Transcript vacío — history sin mensajes user/assistant con texto")
         return
 
     transcript = "\n".join(lines)
