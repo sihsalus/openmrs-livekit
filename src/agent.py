@@ -13,7 +13,6 @@ Características:
 import asyncio
 import functools
 import json
-import signal
 import threading
 import time
 from types import SimpleNamespace
@@ -267,8 +266,6 @@ def _setup_walkie_talkie(
         job_logger.info("Walkie-talkie mode disabled")
         return None
 
-    walkie_talkie_active = False
-
     def _is_parent(participant: rtc.RemoteParticipant) -> bool:
         return participant.identity.startswith(PARENT_IDENTITY_PREFIX)
 
@@ -276,16 +273,12 @@ def _setup_walkie_talkie(
         return any(_is_parent(p) for p in ctx.room.remote_participants.values())
 
     async def _pause_for_walkie_talkie():
-        nonlocal walkie_talkie_active
-        walkie_talkie_active = True
         session.interrupt()
         session.input.set_audio_enabled(False)
         session.output.set_audio_enabled(False)
         job_logger.info("AI pausado - modo walkie-talkie activo")
 
     async def _resume_from_walkie_talkie():
-        nonlocal walkie_talkie_active
-        walkie_talkie_active = False
         session.input.set_audio_enabled(True)
         session.output.set_audio_enabled(True)
         job_logger.info("AI reanudado - modo walkie-talkie finalizado")
@@ -406,10 +399,15 @@ async def _send_initial_greeting(
     session: AgentSession, settings: Settings, room_metadata: dict, job_logger
 ) -> None:
     """Envía el saludo inicial tras el delay configurado."""
-    await asyncio.sleep(settings.greeting_delay)
     if not settings.greeting_enabled:
         return
-    greeting_text = room_metadata.get("greeting") or get_greeting()
+    await asyncio.sleep(settings.greeting_delay)
+    raw_greeting = room_metadata.get("greeting")
+    greeting_text = (
+        _sanitize_custom_prompt(raw_greeting, settings.max_custom_prompt_chars)
+        if raw_greeting
+        else get_greeting()
+    )
     job_logger.info("Enviando greeting inicial")
     try:
         await session.say(greeting_text)
@@ -554,15 +552,6 @@ def make_entrypoint(settings: Settings):
     return functools.partial(_entrypoint, settings=settings)
 
 
-def setup_signal_handlers():
-    """Configura handlers para shutdown graceful"""
-
-    def signal_handler(sig, frame):
-        logger.info(f"Señal {sig} recibida, iniciando shutdown graceful")
-
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
 
 def start_metrics_server(settings: Settings) -> None:
     """Inicia un servidor HTTP mínimo para el endpoint /metrics de Prometheus.
@@ -603,7 +592,6 @@ def start_metrics_server(settings: Settings) -> None:
 
 def main():
     """Función principal para ejecutar el agente"""
-    setup_signal_handlers()
     settings = Settings()
     setup_logging(settings)
 
