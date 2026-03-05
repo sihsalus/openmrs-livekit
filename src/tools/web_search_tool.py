@@ -172,14 +172,17 @@ _KIDS_SAFE_INSTRUCTION = (
 )
 
 
+_MAX_SNIPPET_CHARS = 300  # ~75 tokens por snippet
+
+
 def _format_results(results: list[dict]) -> str:
     """Formatea resultados de búsqueda para el LLM con instrucción kids-safe."""
     if not results:
         return "No encontré resultados relevantes para esa búsqueda."
     lines = []
     for i, r in enumerate(results, 1):
-        title = r.get("title", "Sin título")
-        snippet = r.get("snippet", "")
+        title = r.get("title", "Sin título")[:80]
+        snippet = r.get("snippet", "")[:_MAX_SNIPPET_CHARS]
         lines.append(f"{i}. {title}: {snippet}")
     return "Resultados de búsqueda:\n" + "\n".join(lines) + _KIDS_SAFE_INSTRUCTION
 
