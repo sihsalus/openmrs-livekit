@@ -42,9 +42,10 @@ def validate_config() -> bool:
             logger.error("OPENAI_API_KEY parece ser inválida (muy corta)")
             return False
 
-        if len(settings.elevenlabs_api_key) < 8:
-            logger.error("ELEVEN_API_KEY parece ser inválida (muy corta)")
-            return False
+        if settings.tts_provider == "elevenlabs":
+            if not settings.elevenlabs_api_key or len(settings.elevenlabs_api_key) < 8:
+                logger.error("ELEVEN_API_KEY parece ser inválida (muy corta o ausente)")
+                return False
 
         # Validar voice_id
         if len(settings.voice_id) < 8:

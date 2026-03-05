@@ -135,7 +135,9 @@ class NebuAgent:
         self.session: AgentSession | None = None
         self._shutdown_event = asyncio.Event()
 
-    async def create_session(self, instructions: str, job_logger=None) -> AgentSession:
+    async def create_session(
+        self, instructions: str, job_logger=None, turn_detection_model=None
+    ) -> AgentSession:
         """Crea una sesión de agente con la configuración actual"""
         # Build components
         stt = _build_stt(self.settings)
@@ -179,13 +181,6 @@ class NebuAgent:
 
             tts.on("metrics_collected", tts_metrics_wrapper)
 
-        # Import condicional de TurnDetector solo si está habilitado
-        turn_detection_model = None
-        if self.settings.enable_turn_detection:
-            from livekit.plugins.turn_detector.multilingual import MultilingualModel
-
-            turn_detection_model = MultilingualModel()
-
         return AgentSession(
             turn_detection=turn_detection_model,
             # VAD optimizado (reducido para menor CPU - evita "inference slower than realtime")
@@ -226,10 +221,26 @@ def _build_owner_context(room_metadata: dict) -> str:
     return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)
 
 
+_MAX_CUSTOM_PROMPT = 4096
+
+
+def _sanitize_custom_prompt(prompt: str) -> str:
+    """Trunca y elimina bytes de control de prompts externos (anti-injection)."""
+    prompt = prompt[:_MAX_CUSTOM_PROMPT]
+    return "".join(c for c in prompt if c >= " " or c in "\n\t")
+
+
 def prewarm_models(proc: agents.JobProcess):
     """Precarga los modelos para mejor rendimiento inicial"""
     silero.VAD.load()
-    logger.info("Modelos precargados: Silero VAD")
+    settings = get_settings()
+    if settings.enable_turn_detection:
+        from livekit.plugins.turn_detector.multilingual import MultilingualModel
+
+        proc.userdata["turn_detection"] = MultilingualModel()
+        logger.info("Modelos precargados: Silero VAD + Turn Detection")
+    else:
+        logger.info("Modelos precargados: Silero VAD")
 
 
 async def entrypoint(ctx: agents.JobContext):
@@ -279,7 +290,8 @@ async def entrypoint(ctx: agents.JobContext):
         job_logger.warning("Room metadata vacia")
 
     # Obtener prompt personalizado desde metadata o usar default
-    custom_prompt = room_metadata.get("agent_prompt")
+    raw_prompt = room_metadata.get("agent_prompt")
+    custom_prompt = _sanitize_custom_prompt(raw_prompt) if raw_prompt else None
     owner_context = _build_owner_context(room_metadata)
 
     if custom_prompt:
@@ -302,8 +314,11 @@ async def entrypoint(ctx: agents.JobContext):
     nebu = NebuAgent()
 
     # Crear sesión con variety engine y prompt base (con metrics logger)
+    prewarmed_td = ctx.proc.userdata.get("turn_detection") if settings.enable_turn_detection else None
     try:
-        session = await nebu.create_session(instructions, job_logger=job_logger)
+        session = await nebu.create_session(
+            instructions, job_logger=job_logger, turn_detection_model=prewarmed_td
+        )
     except Exception as e:
         job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="session").inc()

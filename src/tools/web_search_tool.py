@@ -32,11 +32,15 @@ _ADDRESS_RE = re.compile(
 )
 
 
+_MAX_QUERY_LEN = 1500
+
+
 def _sanitize_query(query: str) -> str:
     """Elimina patrones de PII del query antes de enviarlo a APIs externas.
 
     Remueve emails, teléfonos, DNIs y direcciones para cumplir con COPPA.
     """
+    query = query[:_MAX_QUERY_LEN]
     sanitized = _EMAIL_RE.sub("", query)
     sanitized = _PHONE_RE.sub("", sanitized)
     sanitized = _DNI_RE.sub("", sanitized)
