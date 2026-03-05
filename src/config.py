@@ -104,7 +104,6 @@ class Settings(BaseSettings):
     deepgram_model: str = Field(
         default="nova-3", description="Modelo Deepgram (nova-3, nova-2, nova-2-general)"
     )
-    deepgram_language: str = Field(default="es", description="Idioma para Deepgram STT")
     deepgram_smart_format: bool = Field(
         default=True, description="Habilitar smart formatting en Deepgram"
     )

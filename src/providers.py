@@ -98,7 +98,7 @@ def _build_stt_provider(provider: str, settings: Settings):
 
         return deepgram.STT(
             model=settings.deepgram_model,
-            language=settings.deepgram_language,
+            language=settings.stt_language,
             interim_results=True,
             smart_format=settings.deepgram_smart_format,
             punctuate=settings.deepgram_punctuate,
