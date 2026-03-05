@@ -4,7 +4,7 @@ Nebu Agent - Agente de voz LiveKit mejorado
 Características:
 - Greeting automático al conectar
 - Manejo de interrupciones
-- pERSONALIA
+- Personalidad configurable
 - Eventos de ciclo de vida
 - Graceful shutdown
 - Logging estructurado
