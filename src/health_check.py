@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from src.config import get_settings
+from src.config import Settings
 from src.logger import get_logger
 
 logger = get_logger("nebu.health")
@@ -25,8 +25,8 @@ class HealthStatus(StrEnum):
 class HealthChecker:
     """Verifica la salud del agente y sus componentes"""
 
-    def __init__(self):
-        self.settings = get_settings()
+    def __init__(self, settings: Settings):
+        self.settings = settings
         self.start_time = time.time()
         self.last_check: datetime | None = None
         self.component_status: dict[str, HealthStatus] = {}

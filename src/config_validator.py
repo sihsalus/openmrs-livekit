@@ -5,11 +5,11 @@ Utilidades para validar y mostrar la configuración del agente.
 import sys
 from pathlib import Path
 
-from src.config import get_settings
+from src.config import Settings
 from src.logger import get_logger, setup_logging
 
 
-def validate_config() -> bool:
+def validate_config(settings: Settings) -> bool:
     """
     Valida la configuración y retorna True si es válida.
 
@@ -20,7 +20,6 @@ def validate_config() -> bool:
 
     try:
         logger.info("Validando configuración...")
-        settings = get_settings()
 
         # Validar URLs
         if not settings.livekit_url.startswith(("ws://", "wss://")):
@@ -90,7 +89,8 @@ def display_config_sources():
 
 def main():
     """Función principal para CLI"""
-    setup_logging()
+    settings = Settings()
+    setup_logging(settings)
 
     print("\n" + "🔍 VALIDADOR DE CONFIGURACIÓN NEBU AGENT" + "\n")
 
@@ -98,11 +98,9 @@ def main():
     display_config_sources()
 
     # Validar configuración
-    is_valid = validate_config()
+    is_valid = validate_config(settings)
 
     if is_valid:
-        # Mostrar configuración
-        settings = get_settings()
         print(settings.display_config())
         sys.exit(0)
     else:

@@ -6,7 +6,7 @@ import sys
 from datetime import UTC, datetime
 from typing import Any
 
-from src.config import get_settings
+from src.config import Settings
 
 
 class JSONFormatter(logging.Formatter):
@@ -91,9 +91,8 @@ class AgentLogger(logging.LoggerAdapter):
         return AgentLogger(self.logger, new_extra)
 
 
-def setup_logging() -> logging.Logger:
+def setup_logging(settings: Settings) -> logging.Logger:
     """Configura el sistema de logging según la configuración"""
-    settings = get_settings()
 
     # Crear logger raíz para la aplicación
     logger = logging.getLogger("nebu")

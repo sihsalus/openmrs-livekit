@@ -13,7 +13,7 @@ import re
 import aiohttp
 from livekit.agents import RunContext, function_tool
 
-from src.config import get_settings
+from src.config import Settings
 
 # ── PII patterns para sanitización COPPA ─────────────────────────────────────
 
@@ -201,7 +201,7 @@ async def web_search(
     Args:
         query: The search query, e.g. 'noticias Peru hoy' or 'presidente de Peru 2025'.
     """
-    settings = get_settings()
+    settings = Settings()
     provider = settings.web_search_provider
 
     if not provider:

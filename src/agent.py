@@ -21,7 +21,7 @@ from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
 from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
 from livekit.plugins import openai, silero
 
-from src.config import Settings, get_settings
+from src.config import Settings
 from src.logger import get_logger, setup_logging
 from src.providers import build_stt, build_tts
 from src.metrics import (
@@ -36,7 +36,7 @@ from src.metrics import (
     TURNS_TOTAL,
 )
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
-from src.tools import ALL_TOOLS
+from src.tools import get_tools
 from src.tracing import get_tracer
 
 # Imports condicionales solo si están habilitados (ahorro ~25MB RAM)
@@ -44,16 +44,14 @@ from src.tracing import get_tracer
 # from src.personalities import get_profile  # Solo si enable_variety_engine=true
 # from livekit.plugins.turn_detector.multilingual import MultilingualModel  # Solo si enable_turn_detection=true
 
-# Setup logging al importar
-setup_logging()
 logger = get_logger("nebu.agent")
 
 
 class NebuAgent:
     """Agente Nebu con funcionalidades mejoradas"""
 
-    def __init__(self):
-        self.settings = get_settings()
+    def __init__(self, settings: Settings):
+        self.settings = settings
         self.session: AgentSession | None = None
         self._shutdown_event = asyncio.Event()
 
@@ -152,308 +150,313 @@ def _sanitize_custom_prompt(prompt: str) -> str:
     return "".join(c for c in prompt if c >= " " or c in "\n\t")
 
 
-def prewarm_models(proc: agents.JobProcess):
-    """Precarga los modelos para mejor rendimiento inicial"""
-    silero.VAD.load()
-    settings = get_settings()
-    if settings.enable_turn_detection:
-        from livekit.plugins.turn_detector.multilingual import MultilingualModel
+def make_prewarm(settings: Settings):
+    """Devuelve la función de precarga con settings inyectadas via closure."""
 
-        proc.userdata["turn_detection"] = MultilingualModel()
-        logger.info("Modelos precargados: Silero VAD + Turn Detection")
-    else:
-        logger.info("Modelos precargados: Silero VAD")
+    def prewarm_models(proc: agents.JobProcess):
+        silero.VAD.load()
+        if settings.enable_turn_detection:
+            from livekit.plugins.turn_detector.multilingual import MultilingualModel
+
+            proc.userdata["turn_detection"] = MultilingualModel()
+            logger.info("Modelos precargados: Silero VAD + Turn Detection")
+        else:
+            logger.info("Modelos precargados: Silero VAD")
+
+    return prewarm_models
 
 
-async def entrypoint(ctx: agents.JobContext):
-    """Punto de entrada principal del agente"""
-    settings = get_settings()
+def make_entrypoint(settings: Settings):
+    """Devuelve el entrypoint del agente con settings inyectadas via closure."""
 
-    # Crear logger con contexto del job
-    job_logger = logger.with_context(
-        job_id=ctx.job.id if ctx.job else "unknown",
-        room=ctx.room.name if ctx.room else "unknown",
-    )
-
-    job_logger.info("Iniciando entrypoint del agente")
-
-    # FILTRO: Solo procesar rooms que NO sean para humano-a-humano
-    room_name = ctx.room.name if ctx.room else ""
-    if not room_name.startswith("iot-device-"):
-        job_logger.info(
-            "Sala ignorada - no es para agente",
-            extra={"room": room_name, "reason": "prefix_filter"},
+    async def entrypoint(ctx: agents.JobContext):
+        # Crear logger con contexto del job
+        job_logger = logger.with_context(
+            job_id=ctx.job.id if ctx.job else "unknown",
+            room=ctx.room.name if ctx.room else "unknown",
         )
-        return
 
-    # Conectar al room
-    try:
-        await ctx.connect()
-    except Exception as e:
-        job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
-        ERRORS_TOTAL.labels(type="connect").inc()
-        return
-    job_logger.info("Conectado al room", extra={"room": ctx.room.name})
+        job_logger.info("Iniciando entrypoint del agente")
 
-    # Leer metadata del room para obtener prompt personalizado
-    room_metadata = {}
-    metadata_raw = ctx.room.metadata
-    if metadata_raw:
-        try:
-            room_metadata = json.loads(metadata_raw)
-            job_logger.info("Metadata parseada", extra={"keys": list(room_metadata.keys())})
-        except json.JSONDecodeError as e:
-            job_logger.error("Error parseando metadata", extra={"error": str(e)})
-    else:
-        job_logger.warning("Room metadata vacia")
-
-    # Obtener prompt personalizado desde metadata o usar default
-    raw_prompt = room_metadata.get("agent_prompt")
-    custom_prompt = _sanitize_custom_prompt(raw_prompt) if raw_prompt else None
-    owner_context = _build_owner_context(room_metadata)
-
-    if custom_prompt:
-        job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
-        instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
-    else:
-        job_logger.info("Usando prompt por defecto")
-        instructions = get_system_prompt()
-        if owner_context:
-            instructions = instructions.replace(
-                CAPABILITIES_BLOCK, owner_context + CAPABILITIES_BLOCK
-            )
-
-    if owner_context:
-        job_logger.info("Contexto del owner inyectado en prompt")
-
-    # Crear instancia del agente
-    nebu = NebuAgent()
-
-    # Crear sesión con variety engine y prompt base (con metrics logger)
-    prewarmed_td = (
-        ctx.proc.userdata.get("turn_detection") if settings.enable_turn_detection else None
-    )
-    try:
-        session = await nebu.create_session(
-            instructions, job_logger=job_logger, turn_detection_model=prewarmed_td
-        )
-    except Exception as e:
-        job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
-        ERRORS_TOTAL.labels(type="session").inc()
-        return
-    # Hardcoded simple personality (no module loading)
-    profile = SimpleNamespace(id="neutral", name="Neutral")
-
-    # VarietyEngine - solo si está habilitado (import condicional)
-    if settings.enable_variety_engine:
-        from src.personalities import get_profile
-        from src.variety import VarietyEngine
-
-        personality_id = room_metadata.get("personality_profile")
-        try:
-            profile = get_profile(personality_id)
-        except ValueError:
-            job_logger.warning(
-                "Unknown personality profile, using default",
-                extra={"requested": personality_id},
-            )
-            profile = get_profile()
-        session.userdata["variety"] = VarietyEngine(profile=profile)
-        job_logger.info("VarietyEngine enabled", extra={"profile": profile.id})
-    else:
-        session.userdata["variety"] = None
-        job_logger.info("VarietyEngine disabled - using hardcoded neutral profile")
-    session.userdata["base_instructions"] = instructions
-
-    # Métricas y tracing: registrar inicio de sesión
-    _session_start = time.time()
-    ACTIVE_SESSIONS.inc()
-    SESSIONS_TOTAL.labels(personality=profile.id).inc()
-
-    tracer = get_tracer()
-    _session_span = tracer.start_span("voice_session")
-    _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
-    _session_span.set_attribute("session.personality", profile.id)
-    _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
-    _session_span.set_attribute("session.language", room_metadata.get("preferred_language", "es"))
-
-    async def _on_session_end():
-        ACTIVE_SESSIONS.dec()
-        duration = time.time() - _session_start
-        SESSION_DURATION.observe(duration)
-        _session_span.set_attribute("session.duration_seconds", duration)
-        _session_span.end()
-
-    ctx.add_shutdown_callback(_on_session_end)
-
-    # Crear agente con instrucciones y tools
-    agent = Agent(instructions=instructions, tools=ALL_TOOLS)
-
-    # Walkie-talkie mode: pause AI when a parent joins the room (OPTIONAL)
-    if settings.enable_walkie_talkie:
-        walkie_talkie_active = False
-
-        def _is_parent(participant: rtc.RemoteParticipant) -> bool:
-            return participant.identity.startswith("user-parent-")
-
-        def _has_parent_in_room() -> bool:
-            for p in ctx.room.remote_participants.values():
-                if _is_parent(p):
-                    return True
-            return False
-
-        async def _pause_for_walkie_talkie():
-            nonlocal walkie_talkie_active
-            walkie_talkie_active = True
-            session.interrupt()
-            session.input.set_audio_enabled(False)
-            session.output.set_audio_enabled(False)
-            job_logger.info("AI pausado - modo walkie-talkie activo")
-
-        async def _resume_from_walkie_talkie():
-            nonlocal walkie_talkie_active
-            walkie_talkie_active = False
-            session.input.set_audio_enabled(True)
-            session.output.set_audio_enabled(True)
-            job_logger.info("AI reanudado - modo walkie-talkie finalizado")
-
-        @ctx.room.on("participant_connected")
-        def on_participant_connected(participant: rtc.RemoteParticipant):
-            job_logger.info("Nuevo participante", extra={"participant": participant.identity})
-            if _is_parent(participant):
-                job_logger.info(
-                    "Padre conectado - pausando AI para walkie-talkie",
-                    extra={"parent_identity": participant.identity},
-                )
-                asyncio.create_task(_pause_for_walkie_talkie())
-
-        @ctx.room.on("participant_disconnected")
-        def on_participant_disconnected(participant: rtc.RemoteParticipant):
+        # FILTRO: Solo procesar rooms que NO sean para humano-a-humano
+        room_name = ctx.room.name if ctx.room else ""
+        if not room_name.startswith("iot-device-"):
             job_logger.info(
-                "Participante desconectado", extra={"participant": participant.identity}
+                "Sala ignorada - no es para agente",
+                extra={"room": room_name, "reason": "prefix_filter"},
             )
-            if _is_parent(participant) and not _has_parent_in_room():
-                job_logger.info(
-                    "Padre desconectado - reanudando AI",
-                    extra={"parent_identity": participant.identity},
-                )
-                asyncio.create_task(_resume_from_walkie_talkie())
-
-        job_logger.info("Walkie-talkie mode enabled")
-    else:
-        job_logger.info("Walkie-talkie mode disabled")
-
-    # ── Event listeners: conectar VarietyEngine al flujo real ──────────
-    _turn_start: float | None = None
-
-    def on_user_transcribed(ev):
-        """Gap 1+3: FSM Mood Lite + Persona Anchor/Sliding Summary."""
-        nonlocal _turn_start
-        if not ev.is_final:
             return
 
-        _turn_start = time.time()
-
-        # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
-        text = ev.transcript.strip()
-        if len(text) < 4 or not any(c.isalpha() for c in text):
-            job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
+        # Conectar al room
+        try:
+            await ctx.connect()
+        except Exception as e:
+            job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
+            ERRORS_TOTAL.labels(type="connect").inc()
             return
+        job_logger.info("Conectado al room", extra={"room": ctx.room.name})
 
-        variety = session.userdata.get("variety")
-        if not variety:
-            return
-
-        # Gap 1: Detectar señal del niño y adaptar mood
-        child_signal = variety.detect_child_signal(ev.transcript)
-        variety.react_to_signal(child_signal)
-        CHILD_SIGNALS_TOTAL.labels(signal=child_signal).inc()
-
-        # Gap 3: Tick conversacional + refresh periódico de instrucciones
-        variety.tick()
-        TURNS_TOTAL.labels(personality=profile.id).inc()
-        anchor = variety.build_persona_anchor()
-        summary = variety.build_sliding_summary()
-        if anchor or summary:
-            base = session.userdata.get("base_instructions", "")
-            extra = ""
-            if anchor:
-                extra += "\n" + anchor
-            if summary:
-                extra += "\n" + summary
-            asyncio.create_task(session.current_agent.update_instructions(base + extra))
-
-    def on_conversation_item(ev):
-        """Gap 2: Record what the LLM actually said for anti-repetition."""
-        item = ev.item
-        if not hasattr(item, "role") or item.role != "assistant":
-            return
-        text = item.text_content
-        if not text:
-            return
-        variety = session.userdata.get("variety")
-        if variety:
-            variety.record_agent_response(text)
-
-    def on_conversation_item_for_latency(ev):
-        """Record LLM latency from user speech end to assistant item ready."""
-        nonlocal _turn_start
-        if not hasattr(ev.item, "role") or ev.item.role != "assistant":
-            return
-        if _turn_start is not None:
-            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
-
-    def on_speech_created(ev: SpeechCreatedEvent):
-        """Record full turn latency from user speech end to TTS pipeline start."""
-        nonlocal _turn_start
-        if _turn_start is not None:
-            TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
-                ev.created_at - _turn_start
-            )
-            _turn_start = None
-
-    # Solo registrar listeners de VarietyEngine si está habilitado (ahorra CPU)
-    if settings.enable_variety_engine:
-        session.on("user_input_transcribed", on_user_transcribed)
-        session.on("conversation_item_added", on_conversation_item)
-
-    # Listeners de métricas siempre activos
-    session.on("conversation_item_added", on_conversation_item_for_latency)
-    session.on("speech_created", on_speech_created)
-
-    # Iniciar sesión de voz
-    try:
-        await session.start(
-            room=ctx.room,
-            agent=agent,
-        )
-    except Exception as e:
-        job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
-        return
-    job_logger.info("Sesión iniciada y escuchando")
-
-    # Check if a parent is already in the room (joined before agent) - only if walkie-talkie enabled
-    if settings.enable_walkie_talkie and _has_parent_in_room():
-        job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
-        await _pause_for_walkie_talkie()
-    else:
-        # Enviar greeting inicial
-        await asyncio.sleep(0.5)
-        if settings.greeting_enabled:
-            custom_greeting = room_metadata.get("greeting")
-            if custom_greeting:
-                greeting_text = custom_greeting
-            else:
-                greeting_text = get_greeting()
-
-            job_logger.info("Enviando greeting inicial")
+        # Leer metadata del room para obtener prompt personalizado
+        room_metadata = {}
+        metadata_raw = ctx.room.metadata
+        if metadata_raw:
             try:
-                await session.say(greeting_text)
-            except Exception as e:
-                job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
-                ERRORS_TOTAL.labels(type="greeting").inc()
+                room_metadata = json.loads(metadata_raw)
+                job_logger.info("Metadata parseada", extra={"keys": list(room_metadata.keys())})
+            except json.JSONDecodeError as e:
+                job_logger.error("Error parseando metadata", extra={"error": str(e)})
+        else:
+            job_logger.warning("Room metadata vacia")
 
-    job_logger.info("Agente activo y escuchando")
+        # Obtener prompt personalizado desde metadata o usar default
+        raw_prompt = room_metadata.get("agent_prompt")
+        custom_prompt = _sanitize_custom_prompt(raw_prompt) if raw_prompt else None
+        owner_context = _build_owner_context(room_metadata)
+
+        if custom_prompt:
+            job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
+            instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
+        else:
+            job_logger.info("Usando prompt por defecto")
+            instructions = get_system_prompt()
+            if owner_context:
+                instructions = instructions.replace(
+                    CAPABILITIES_BLOCK, owner_context + CAPABILITIES_BLOCK
+                )
+
+        if owner_context:
+            job_logger.info("Contexto del owner inyectado en prompt")
+
+        # Crear instancia del agente
+        nebu = NebuAgent(settings)
+
+        # Crear sesión con variety engine y prompt base (con metrics logger)
+        prewarmed_td = (
+            ctx.proc.userdata.get("turn_detection") if settings.enable_turn_detection else None
+        )
+        try:
+            session = await nebu.create_session(
+                instructions, job_logger=job_logger, turn_detection_model=prewarmed_td
+            )
+        except Exception as e:
+            job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
+            ERRORS_TOTAL.labels(type="session").inc()
+            return
+        # Hardcoded simple personality (no module loading)
+        profile = SimpleNamespace(id="neutral", name="Neutral")
+
+        # VarietyEngine - solo si está habilitado (import condicional)
+        if settings.enable_variety_engine:
+            from src.personalities import get_profile
+            from src.variety import VarietyEngine
+
+            personality_id = room_metadata.get("personality_profile")
+            try:
+                profile = get_profile(personality_id)
+            except ValueError:
+                job_logger.warning(
+                    "Unknown personality profile, using default",
+                    extra={"requested": personality_id},
+                )
+                profile = get_profile()
+            session.userdata["variety"] = VarietyEngine(profile=profile)
+            job_logger.info("VarietyEngine enabled", extra={"profile": profile.id})
+        else:
+            session.userdata["variety"] = None
+            job_logger.info("VarietyEngine disabled - using hardcoded neutral profile")
+        session.userdata["base_instructions"] = instructions
+
+        # Métricas y tracing: registrar inicio de sesión
+        _session_start = time.time()
+        ACTIVE_SESSIONS.inc()
+        SESSIONS_TOTAL.labels(personality=profile.id).inc()
+
+        tracer = get_tracer()
+        _session_span = tracer.start_span("voice_session")
+        _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
+        _session_span.set_attribute("session.personality", profile.id)
+        _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
+        _session_span.set_attribute("session.language", room_metadata.get("preferred_language", "es"))
+
+        async def _on_session_end():
+            ACTIVE_SESSIONS.dec()
+            duration = time.time() - _session_start
+            SESSION_DURATION.observe(duration)
+            _session_span.set_attribute("session.duration_seconds", duration)
+            _session_span.end()
+
+        ctx.add_shutdown_callback(_on_session_end)
+
+        # Crear agente con instrucciones y tools
+        agent = Agent(instructions=instructions, tools=get_tools(settings))
+
+        # Walkie-talkie mode: pause AI when a parent joins the room (OPTIONAL)
+        if settings.enable_walkie_talkie:
+            walkie_talkie_active = False
+
+            def _is_parent(participant: rtc.RemoteParticipant) -> bool:
+                return participant.identity.startswith("user-parent-")
+
+            def _has_parent_in_room() -> bool:
+                for p in ctx.room.remote_participants.values():
+                    if _is_parent(p):
+                        return True
+                return False
+
+            async def _pause_for_walkie_talkie():
+                nonlocal walkie_talkie_active
+                walkie_talkie_active = True
+                session.interrupt()
+                session.input.set_audio_enabled(False)
+                session.output.set_audio_enabled(False)
+                job_logger.info("AI pausado - modo walkie-talkie activo")
+
+            async def _resume_from_walkie_talkie():
+                nonlocal walkie_talkie_active
+                walkie_talkie_active = False
+                session.input.set_audio_enabled(True)
+                session.output.set_audio_enabled(True)
+                job_logger.info("AI reanudado - modo walkie-talkie finalizado")
+
+            @ctx.room.on("participant_connected")
+            def on_participant_connected(participant: rtc.RemoteParticipant):
+                job_logger.info("Nuevo participante", extra={"participant": participant.identity})
+                if _is_parent(participant):
+                    job_logger.info(
+                        "Padre conectado - pausando AI para walkie-talkie",
+                        extra={"parent_identity": participant.identity},
+                    )
+                    asyncio.create_task(_pause_for_walkie_talkie())
+
+            @ctx.room.on("participant_disconnected")
+            def on_participant_disconnected(participant: rtc.RemoteParticipant):
+                job_logger.info(
+                    "Participante desconectado", extra={"participant": participant.identity}
+                )
+                if _is_parent(participant) and not _has_parent_in_room():
+                    job_logger.info(
+                        "Padre desconectado - reanudando AI",
+                        extra={"parent_identity": participant.identity},
+                    )
+                    asyncio.create_task(_resume_from_walkie_talkie())
+
+            job_logger.info("Walkie-talkie mode enabled")
+        else:
+            job_logger.info("Walkie-talkie mode disabled")
+
+        # ── Event listeners: conectar VarietyEngine al flujo real ──────────
+        _turn_start: float | None = None
+
+        def on_user_transcribed(ev):
+            """Gap 1+3: FSM Mood Lite + Persona Anchor/Sliding Summary."""
+            nonlocal _turn_start
+            if not ev.is_final:
+                return
+
+            _turn_start = time.time()
+
+            # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
+            text = ev.transcript.strip()
+            if len(text) < 4 or not any(c.isalpha() for c in text):
+                job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
+                return
+
+            variety = session.userdata.get("variety")
+            if not variety:
+                return
+
+            # Gap 1: Detectar señal del niño y adaptar mood
+            child_signal = variety.detect_child_signal(ev.transcript)
+            variety.react_to_signal(child_signal)
+            CHILD_SIGNALS_TOTAL.labels(signal=child_signal).inc()
+
+            # Gap 3: Tick conversacional + refresh periódico de instrucciones
+            variety.tick()
+            TURNS_TOTAL.labels(personality=profile.id).inc()
+            anchor = variety.build_persona_anchor()
+            summary = variety.build_sliding_summary()
+            if anchor or summary:
+                base = session.userdata.get("base_instructions", "")
+                extra = ""
+                if anchor:
+                    extra += "\n" + anchor
+                if summary:
+                    extra += "\n" + summary
+                asyncio.create_task(session.current_agent.update_instructions(base + extra))
+
+        def on_conversation_item(ev):
+            """Gap 2: Record what the LLM actually said for anti-repetition."""
+            item = ev.item
+            if not hasattr(item, "role") or item.role != "assistant":
+                return
+            text = item.text_content
+            if not text:
+                return
+            variety = session.userdata.get("variety")
+            if variety:
+                variety.record_agent_response(text)
+
+        def on_conversation_item_for_latency(ev):
+            """Record LLM latency from user speech end to assistant item ready."""
+            nonlocal _turn_start
+            if not hasattr(ev.item, "role") or ev.item.role != "assistant":
+                return
+            if _turn_start is not None:
+                LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
+
+        def on_speech_created(ev: SpeechCreatedEvent):
+            """Record full turn latency from user speech end to TTS pipeline start."""
+            nonlocal _turn_start
+            if _turn_start is not None:
+                TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
+                    ev.created_at - _turn_start
+                )
+                _turn_start = None
+
+        # Solo registrar listeners de VarietyEngine si está habilitado (ahorra CPU)
+        if settings.enable_variety_engine:
+            session.on("user_input_transcribed", on_user_transcribed)
+            session.on("conversation_item_added", on_conversation_item)
+
+        # Listeners de métricas siempre activos
+        session.on("conversation_item_added", on_conversation_item_for_latency)
+        session.on("speech_created", on_speech_created)
+
+        # Iniciar sesión de voz
+        try:
+            await session.start(
+                room=ctx.room,
+                agent=agent,
+            )
+        except Exception as e:
+            job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
+            return
+        job_logger.info("Sesión iniciada y escuchando")
+
+        # Check if a parent is already in the room (joined before agent) - only if walkie-talkie enabled
+        if settings.enable_walkie_talkie and _has_parent_in_room():
+            job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
+            await _pause_for_walkie_talkie()
+        else:
+            # Enviar greeting inicial
+            await asyncio.sleep(0.5)
+            if settings.greeting_enabled:
+                custom_greeting = room_metadata.get("greeting")
+                if custom_greeting:
+                    greeting_text = custom_greeting
+                else:
+                    greeting_text = get_greeting()
+
+                job_logger.info("Enviando greeting inicial")
+                try:
+                    await session.say(greeting_text)
+                except Exception as e:
+                    job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
+                    ERRORS_TOTAL.labels(type="greeting").inc()
+
+        job_logger.info("Agente activo y escuchando")
+
+    return entrypoint
 
 
 def setup_signal_handlers():
@@ -506,7 +509,8 @@ def start_metrics_server(settings: Settings) -> None:
 def main():
     """Función principal para ejecutar el agente"""
     setup_signal_handlers()
-    settings = get_settings()
+    settings = Settings()
+    setup_logging(settings)
 
     logger.info(
         "Iniciando Nebu Agent",
@@ -536,8 +540,8 @@ def main():
 
     agents.cli.run_app(
         agents.WorkerOptions(
-            entrypoint_fnc=entrypoint,
-            prewarm_fnc=prewarm_models,
+            entrypoint_fnc=make_entrypoint(settings),
+            prewarm_fnc=make_prewarm(settings),
         )
     )
 

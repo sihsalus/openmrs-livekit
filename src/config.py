@@ -182,19 +182,3 @@ class Settings(BaseSettings):
 """
 
 
-# Singleton
-_settings: Settings | None = None
-
-
-def get_settings(reload: bool = False) -> Settings:
-    """Obtiene la instancia de configuración (singleton)"""
-    global _settings
-    if _settings is None or reload:
-        _settings = Settings()
-    return _settings
-
-
-def reset_settings():
-    """Resetea el singleton (útil para testing)"""
-    global _settings
-    _settings = None
