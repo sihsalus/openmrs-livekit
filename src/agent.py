@@ -173,9 +173,12 @@ def make_prewarm(settings: Settings):
 async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     """Entrypoint del agente — función top-level para ser picklable por forkserver."""
     # Crear logger con contexto del job
+    room_name_ctx = ctx.room.name if ctx.room else "unknown"
+    session_id = f"{room_name_ctx}_{int(time.time())}"
     job_logger = logger.with_context(
         job_id=ctx.job.id if ctx.job else "unknown",
-        room=ctx.room.name if ctx.room else "unknown",
+        room=room_name_ctx,
+        session_id=session_id,
     )
 
     job_logger.info("Iniciando entrypoint del agente")
