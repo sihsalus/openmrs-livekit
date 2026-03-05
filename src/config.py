@@ -44,9 +44,6 @@ class Settings(BaseSettings):
         description="Voice ID de Cartesia (default: Alondra - Reassuring Sister)",
     )
     cartesia_model: str = Field(default="sonic-2", description="Modelo Cartesia (sonic-2, sonic-3)")
-    google_credentials_file: str | None = Field(
-        default=None, description="Path a credenciales Google"
-    )
 
     # ============= Inworld Configuration =============
     inworld_api_key: str | None = Field(default=None, description="API Key de Inworld")
@@ -133,17 +130,7 @@ class Settings(BaseSettings):
 
     # ============= API Settings =============
     api_enabled: bool = Field(default=True, description="Habilitar API REST")
-    api_host: str = Field(default="0.0.0.0", description="Host del servidor API")
     api_port: int = Field(default=8000, description="Puerto del servidor API")
-    api_key: str | None = Field(default=None, description="API key para endpoints protegidos")
-    cors_allowed_origins: list[str] = Field(
-        default_factory=lambda: [
-            "https://api.flow-telligence.com",
-            "http://localhost:3000",
-            "http://localhost:8000",
-        ],
-        description="Lista de orígenes permitidos para CORS",
-    )
 
     # ═══════════════════════════════════════════════════════════════
     # Feature Flags - Optimización para ESP32
