@@ -43,9 +43,6 @@ from src.metrics import (
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.providers import build_llm, build_stt, build_tts
 from src.tools import get_tools
-from opentelemetry import trace
-from src.tracing import get_tracer
-
 # Imports condicionales solo si están habilitados (ahorro ~25MB RAM)
 # from src.variety import VarietyEngine  # Solo si enable_variety_engine=true
 # from src.personalities import get_profile  # Solo si enable_variety_engine=true
@@ -62,7 +59,7 @@ class NebuAgent:
         self.session: AgentSession | None = None
 
     async def create_session(
-        self, instructions: str, job_logger=None, turn_detection_model=None
+        self, instructions: str, job_logger=None, turn_detection_model=None, turn_context=None
     ) -> AgentSession:
         """Crea una sesión de agente con la configuración actual"""
         # Build components
@@ -71,31 +68,43 @@ class NebuAgent:
         tts = build_tts(self.settings)
 
         # Attach metrics collectors (always active; log only if job_logger provided)
+        def _tid() -> str | None:
+            return turn_context["turn_id"] if turn_context else None
+
         def llm_metrics_wrapper(metrics: LLMMetrics):
             if job_logger:
                 job_logger.info(
                     f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
-                    f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}"
+                    f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}",
+                    extra={"turn_id": _tid()},
                 )
 
         def stt_metrics_wrapper(metrics: STTMetrics):
             if job_logger:
                 job_logger.info(
-                    f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
+                    f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
+                    extra={"turn_id": _tid()},
                 )
             STT_DURATION.labels(stt_provider=self.settings.stt_provider).observe(metrics.duration)
 
         def eou_metrics_wrapper(metrics: EOUMetrics):
+            # Incrementar turn_id en EOU — dispara ANTES de STT/LLM/TTS metrics,
+            # garantizando que los cuatro eventos de un mismo turno comparten el mismo turn_id.
+            if turn_context is not None:
+                turn_context["turn_num"] += 1
+                turn_context["turn_id"] = f"t{turn_context['turn_num']:03d}"
             if job_logger:
                 job_logger.info(
-                    f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s"
+                    f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s",
+                    extra={"turn_id": _tid()},
                 )
             EOU_DELAY.observe(metrics.end_of_utterance_delay)
 
         def tts_metrics_wrapper(metrics: TTSMetrics):
             if job_logger:
                 job_logger.info(
-                    f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
+                    f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
+                    extra={"turn_id": _tid()},
                 )
             TTS_TTFB.labels(tts_provider=self.settings.tts_provider).observe(metrics.ttfb)
             TTS_AUDIO_DURATION.labels(tts_provider=self.settings.tts_provider).observe(
@@ -207,7 +216,15 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     if metadata_raw:
         try:
             room_metadata = json.loads(metadata_raw)
-            job_logger.info("Metadata parseada", extra={"keys": list(room_metadata.keys())})
+            job_logger.info(
+                "Metadata parseada",
+                extra={
+                    "keys": list(room_metadata.keys()),
+                    "owner_age": room_metadata.get("owner_age"),
+                    "language": room_metadata.get("preferred_language", "es"),
+                    "personality": room_metadata.get("personality_profile"),
+                },
+            )
         except json.JSONDecodeError as e:
             job_logger.error("Error parseando metadata", extra={"error": str(e)})
     else:
@@ -234,6 +251,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         job_logger.info("Contexto del owner inyectado en prompt")
 
     # Crear instancia del agente
+    turn_context: dict = {"turn_id": None, "turn_num": 0}
     nebu = NebuAgent(settings)
 
     # Crear sesión con variety engine y prompt base (con metrics logger)
@@ -242,7 +260,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     )
     try:
         session = await nebu.create_session(
-            instructions, job_logger=job_logger, turn_detection_model=prewarmed_td
+            instructions, job_logger=job_logger, turn_detection_model=prewarmed_td, turn_context=turn_context
         )
     except Exception as e:
         job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
@@ -277,21 +295,10 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     ACTIVE_SESSIONS.inc()
     SESSIONS_TOTAL.labels(personality=profile.id).inc()
 
-    tracer = get_tracer()
-    _session_span = tracer.start_span("voice_session")
-    _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
-    _session_span.set_attribute("session.personality", profile.id)
-    _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
-    _session_span.set_attribute(
-        "session.language", room_metadata.get("preferred_language", "es")
-    )
-
     async def _on_session_end():
         ACTIVE_SESSIONS.dec()
         duration = time.time() - _session_start
         SESSION_DURATION.observe(duration)
-        _session_span.set_attribute("session.duration_seconds", duration)
-        _session_span.end()
 
     ctx.add_shutdown_callback(_on_session_end)
 
@@ -355,26 +362,24 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     # ── Event listeners: conectar VarietyEngine + filler al flujo real ──
     _turn_start: float | None = None
     _filler_task: asyncio.Task | None = None
-    _response_span = None
-
     def on_user_transcribed(ev):
         """Filler sound + FSM Mood Lite + Persona Anchor/Sliding Summary."""
-        nonlocal _turn_start, _filler_task, _response_span
+        nonlocal _turn_start, _filler_task
         if not ev.is_final:
             return
 
         _turn_start = time.time()
-        _response_span = tracer.start_span(
-            "agent.response_latency",
-            context=trace.set_span_in_context(_session_span),
-        )
-        _response_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
 
         # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
         text = ev.transcript.strip()
         if len(text) < 4 or not any(c.isalpha() for c in text):
             job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
             return
+
+        job_logger.info(
+            "Turno iniciado",
+            extra={"turn_id": turn_context["turn_id"], "transcript_len": len(text)},
+        )
 
         # Filler sound: reproducir "mmm..." si el LLM tarda más de filler_delay
         if settings.filler_sound_enabled:
@@ -432,27 +437,20 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     def on_speech_created(ev: SpeechCreatedEvent):
         """Cancela el filler si el LLM respondió a tiempo; registra latencia de turno."""
-        nonlocal _turn_start, _filler_task, _response_span
+        nonlocal _turn_start, _filler_task
         # Cancelar filler pendiente — el agente ya tiene su respuesta real
         if _filler_task and not _filler_task.done():
             _filler_task.cancel()
             _filler_task = None
-        latency: float | None = None
         if _turn_start is not None:
             latency = ev.created_at - _turn_start
             TURN_LATENCY.labels(
                 personality=profile.id, tts_provider=settings.tts_provider
             ).observe(latency)
             _turn_start = None
-        if _response_span is not None:
-            if latency is not None:
-                _response_span.set_attribute("agent.latency_seconds", latency)
-            _response_span.end()
-            _response_span = None
 
-    # Registrar listener de transcripción si alguna feature lo necesita
-    if settings.enable_variety_engine or settings.filler_sound_enabled:
-        session.on("user_input_transcribed", on_user_transcribed)
+    # Siempre activo: turn_id correlation + filler + variety (cada uno guarda su propio guard interno)
+    session.on("user_input_transcribed", on_user_transcribed)
 
     # Siempre activo: métricas de latencia + anti-repetición (si variety activo)
     session.on("conversation_item_added", on_conversation_item)
