@@ -21,9 +21,9 @@ def get_tools(settings: Settings) -> list:
     ]
 
     if settings.web_search_provider is not None and settings.web_search_parental_consent:
-        from .web_search_tool import web_search
+        from .web_search_tool import make_web_search
 
-        tools.append(web_search)
+        tools.append(make_web_search(settings))
 
     return tools
 

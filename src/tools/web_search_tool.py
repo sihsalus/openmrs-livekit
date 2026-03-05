@@ -14,14 +14,23 @@ import aiohttp
 from livekit.agents import RunContext, function_tool
 
 from src.config import Settings
+from src.logger import get_logger
+from src.metrics import ERRORS_TOTAL
+
+logger = get_logger("nebu.tools.web_search")
 
 # ── PII patterns para sanitización COPPA ─────────────────────────────────────
 
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 _PHONE_RE = re.compile(
-    r"(?:\+?\d{1,3}[-.\s]?)?"  # country code
-    r"(?:\(?\d{1,4}\)?[-.\s]?)?"  # area code
-    r"\d{3,4}[-.\s]?\d{3,4}"  # number
+    # Internacional con + explícito: +51 999 123 456
+    r"\+\d{1,3}[\s.\-]?\(?\d{1,4}\)?[\s.\-]?\d{3,4}[\s.\-]?\d{3,4}"
+    r"|"
+    # Área entre paréntesis: (01) 234-5678
+    r"\(\d{1,4}\)\s*\d{3,4}[\s.\-]\d{3,4}"
+    r"|"
+    # Separadores explícitos en todos los grupos: 999-123-4567
+    r"\b\d{2,4}[\-\.]\d{3,4}[\-\.]\d{3,4}\b"
 )
 _DNI_RE = re.compile(r"\b\d{8}[a-zA-Z]?\b")  # DNI/RUC peruano y similares
 _ADDRESS_RE = re.compile(
@@ -187,66 +196,64 @@ def _format_results(results: list[dict]) -> str:
     return "Resultados de búsqueda:\n" + "\n".join(lines) + _KIDS_SAFE_INSTRUCTION
 
 
-@function_tool(
-    name="web_search",
-    description=(
-        "Search the internet for current information. "
-        "Use when the user asks about recent news, current events, "
-        "people in the news, or anything that requires up-to-date information."
-    ),
-)
-async def web_search(
-    context: RunContext,
-    query: str,
-) -> str:
-    """Search the web for current information.
-
-    Args:
-        query: The search query, e.g. 'noticias Peru hoy' or 'presidente de Peru 2025'.
-    """
-    settings = Settings()
+def make_web_search(settings: Settings):
+    """Factory que retorna la tool web_search con settings capturadas en closure."""
     provider = settings.web_search_provider
-
-    if not provider:
-        return "La búsqueda web no está habilitada en este momento."
-
-    if not settings.web_search_parental_consent:
-        return "La búsqueda web requiere consentimiento parental habilitado."
-
     max_results = settings.web_search_max_results
+    tavily_api_key = settings.tavily_api_key
+    brave_api_key = settings.brave_search_api_key
+    serpapi_api_key = settings.serpapi_api_key
 
-    # COPPA: Sanitizar PII del query antes de enviar a terceros
-    safe_query = _sanitize_query(query)
-    if not safe_query:
-        return "No pude procesar esa búsqueda."
+    @function_tool(
+        name="web_search",
+        description=(
+            "Search the internet for current information. "
+            "Use when the user asks about recent news, current events, "
+            "people in the news, or anything that requires up-to-date information."
+        ),
+    )
+    async def web_search(
+        _context: RunContext,
+        query: str,
+    ) -> str:
+        """Search the web for current information.
 
-    timeout = aiohttp.ClientTimeout(total=10)
-    try:
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            if provider == "tavily":
-                api_key = settings.tavily_api_key
-                if not api_key:
-                    return "Falta la API key de Tavily para realizar búsquedas."
-                results = await _search_tavily(session, safe_query, api_key, max_results)
+        Args:
+            query: The search query, e.g. 'noticias Peru hoy' or 'presidente de Peru 2025'.
+        """
+        # COPPA: Sanitizar PII del query antes de enviar a terceros
+        safe_query = _sanitize_query(query)
+        if not safe_query:
+            return "No pude procesar esa búsqueda."
 
-            elif provider == "brave":
-                api_key = settings.brave_search_api_key
-                if not api_key:
-                    return "Falta la API key de Brave Search para realizar búsquedas."
-                results = await _search_brave(session, safe_query, api_key, max_results)
+        timeout = aiohttp.ClientTimeout(total=10)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                if provider == "tavily":
+                    if not tavily_api_key:
+                        return "Falta la API key de Tavily para realizar búsquedas."
+                    results = await _search_tavily(session, safe_query, tavily_api_key, max_results)
 
-            elif provider == "serpapi":
-                api_key = settings.serpapi_api_key
-                if not api_key:
-                    return "Falta la API key de SerpAPI para realizar búsquedas."
-                results = await _search_serpapi(session, safe_query, api_key, max_results)
+                elif provider == "brave":
+                    if not brave_api_key:
+                        return "Falta la API key de Brave Search para realizar búsquedas."
+                    results = await _search_brave(session, safe_query, brave_api_key, max_results)
 
-            elif provider == "duckduckgo":
-                results = await _search_duckduckgo(session, safe_query, max_results)
+                elif provider == "serpapi":
+                    if not serpapi_api_key:
+                        return "Falta la API key de SerpAPI para realizar búsquedas."
+                    results = await _search_serpapi(session, safe_query, serpapi_api_key, max_results)
 
-            else:
-                return f"Proveedor de búsqueda desconocido: {provider}"
+                elif provider == "duckduckgo":
+                    results = await _search_duckduckgo(session, safe_query, max_results)
 
-        return _format_results(results)
-    except Exception:
-        return "No pude realizar la búsqueda en este momento."
+                else:
+                    return f"Proveedor de búsqueda desconocido: {provider}"
+
+            return _format_results(results)
+        except Exception:
+            ERRORS_TOTAL.labels(type="web_search").inc()
+            logger.error("Error en búsqueda web", extra={"provider": provider})
+            return "No pude realizar la búsqueda en este momento."
+
+    return web_search
