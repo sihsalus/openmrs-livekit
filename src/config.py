@@ -21,14 +21,40 @@ class Settings(BaseSettings):
     livekit_api_key: str = Field(..., description="API Key de LiveKit")
     livekit_api_secret: str = Field(..., description="API Secret de LiveKit")
 
+    # ============= LLM Configuration =============
+    llm_provider: Literal["openai", "anthropic", "groq", "xai"] = Field(
+        default="openai", description="Proveedor LLM principal"
+    )
+    llm_fallback_providers: str = Field(
+        default="",
+        description="Proveedores LLM de fallback separados por coma (ej: 'anthropic,openai')",
+    )
+
     # ============= OpenAI Configuration =============
     openai_api_key: str = Field(..., description="API Key de OpenAI")
-    openai_model: str = Field(default="gpt-4o-mini", description="Modelo de OpenAI para LLM")
-    openai_fallback_model: str | None = Field(
-        default=None,
-        description="Modelo LLM de fallback si el primario falla al inicializar (ej: 'gpt-4o-mini')",
-    )
+    openai_model: str = Field(default="gpt-4o-mini", description="Modelo OpenAI para LLM")
     openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
+
+    # ============= Anthropic Configuration =============
+    anthropic_api_key: str | None = Field(default=None, description="API Key de Anthropic")
+    anthropic_model: str = Field(
+        default="claude-haiku-4-5-20251001",
+        description="Modelo Anthropic (claude-haiku-4-5-20251001, claude-sonnet-4-6, claude-opus-4-6)",
+    )
+
+    # ============= Groq Configuration =============
+    groq_api_key: str | None = Field(default=None, description="API Key de Groq")
+    groq_model: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="Modelo Groq (llama-3.3-70b-versatile, llama-3.1-8b-instant, gemma2-9b-it)",
+    )
+
+    # ============= xAI (Grok) Configuration =============
+    xai_api_key: str | None = Field(default=None, description="API Key de xAI (platform.x.ai)")
+    xai_model: str = Field(
+        default="grok-3-mini",
+        description="Modelo xAI (grok-3-mini, grok-3, grok-2-1212)",
+    )
 
     # ============= TTS Configuration =============
     tts_provider: Literal["elevenlabs", "openai", "cartesia", "google", "deepgram", "inworld"] = (

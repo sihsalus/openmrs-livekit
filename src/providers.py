@@ -10,41 +10,78 @@ from livekit.plugins import openai
 from src.config import Settings
 
 
-def build_llm(settings: Settings):
-    """Construye el LLM con fallback automático si el modelo primario falla al inicializar.
+def _build_llm_provider(provider: str, settings: Settings):
+    """Construye una instancia LLM para un proveedor específico."""
+    if provider == "openai":
+        return openai.LLM(
+            model=settings.openai_model,
+            temperature=settings.openai_temperature,
+            parallel_tool_calls=False,
+            max_completion_tokens=settings.openai_max_completion_tokens,
+        )
 
-    Orden de intento: openai_model → openai_fallback_model.
-    Nota: el fallback opera en tiempo de inicialización. Los fallos runtime (429, 503)
-    requieren manejo en el SDK o un wrapper de LLM personalizado.
+    if provider == "anthropic":
+        from livekit.plugins import anthropic
+
+        return anthropic.LLM(
+            model=settings.anthropic_model,
+            api_key=settings.anthropic_api_key,
+            temperature=settings.openai_temperature,
+            max_tokens=settings.openai_max_completion_tokens,
+        )
+
+    if provider == "groq":
+        # Groq es compatible con la API de OpenAI — se usa el plugin de OpenAI con base_url diferente
+        return openai.LLM(
+            model=settings.groq_model,
+            api_key=settings.groq_api_key,
+            base_url="https://api.groq.com/openai/v1",
+            temperature=settings.openai_temperature,
+            max_completion_tokens=settings.openai_max_completion_tokens,
+        )
+
+    if provider == "xai":
+        # xAI (Grok) también es compatible con la API de OpenAI
+        return openai.LLM(
+            model=settings.xai_model,
+            api_key=settings.xai_api_key,
+            base_url="https://api.x.ai/v1",
+            temperature=settings.openai_temperature,
+            max_completion_tokens=settings.openai_max_completion_tokens,
+        )
+
+    raise ValueError(f"LLM provider desconocido: {provider}")
+
+
+def build_llm(settings: Settings):
+    """Construye el LLM con fallback automático si el proveedor primario falla.
+
+    Orden de intento: llm_provider → llm_fallback_providers (comma-separated).
+    Registra un warning si se activa el fallback.
     """
     from src.logger import get_logger
 
     logger = get_logger("nebu.providers")
 
-    models = [settings.openai_model]
-    if settings.openai_fallback_model:
-        models.append(settings.openai_fallback_model)
+    chain = [settings.llm_provider]
+    if settings.llm_fallback_providers:
+        chain += [p.strip() for p in settings.llm_fallback_providers.split(",") if p.strip()]
 
     last_error: Exception | None = None
-    for model in models:
+    for provider in chain:
         try:
-            llm = openai.LLM(
-                model=model,
-                temperature=settings.openai_temperature,
-                parallel_tool_calls=False,
-                max_completion_tokens=settings.openai_max_completion_tokens,
-            )
-            if model != settings.openai_model:
+            llm = _build_llm_provider(provider, settings)
+            if provider != settings.llm_provider:
                 logger.warning(
                     "LLM fallback activo",
-                    extra={"using": model, "primary": settings.openai_model},
+                    extra={"using": provider, "primary": settings.llm_provider},
                 )
             return llm
         except Exception as e:
-            logger.error("LLM model falló al inicializar", extra={"model": model, "error": str(e)})
+            logger.error("LLM provider falló", extra={"provider": provider, "error": str(e)})
             last_error = e
 
-    raise ValueError(f"Todos los modelos LLM fallaron. Último error: {last_error}") from last_error
+    raise ValueError(f"Todos los proveedores LLM fallaron. Último error: {last_error}") from last_error
 
 
 def build_stt(settings: Settings):
