@@ -268,9 +268,7 @@ async def entrypoint(ctx: agents.JobContext):
     try:
         await ctx.connect()
     except Exception as e:
-        job_logger.error(
-            "Error conectando al room", extra={"error": str(e)}, exc_info=True
-        )
+        job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="connect").inc()
         return
     job_logger.info("Conectado al room", extra={"room": ctx.room.name})
@@ -281,9 +279,7 @@ async def entrypoint(ctx: agents.JobContext):
     if metadata_raw:
         try:
             room_metadata = json.loads(metadata_raw)
-            job_logger.info(
-                "Metadata parseada", extra={"keys": list(room_metadata.keys())}
-            )
+            job_logger.info("Metadata parseada", extra={"keys": list(room_metadata.keys())})
         except json.JSONDecodeError as e:
             job_logger.error("Error parseando metadata", extra={"error": str(e)})
     else:
@@ -295,9 +291,7 @@ async def entrypoint(ctx: agents.JobContext):
     owner_context = _build_owner_context(room_metadata)
 
     if custom_prompt:
-        job_logger.info(
-            "Usando prompt personalizado", extra={"length": len(custom_prompt)}
-        )
+        job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
         instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
     else:
         job_logger.info("Usando prompt por defecto")
@@ -314,7 +308,9 @@ async def entrypoint(ctx: agents.JobContext):
     nebu = NebuAgent()
 
     # Crear sesión con variety engine y prompt base (con metrics logger)
-    prewarmed_td = ctx.proc.userdata.get("turn_detection") if settings.enable_turn_detection else None
+    prewarmed_td = (
+        ctx.proc.userdata.get("turn_detection") if settings.enable_turn_detection else None
+    )
     try:
         session = await nebu.create_session(
             instructions, job_logger=job_logger, turn_detection_model=prewarmed_td
@@ -356,16 +352,10 @@ async def entrypoint(ctx: agents.JobContext):
 
     tracer = get_tracer()
     _session_span = tracer.start_span("voice_session")
-    _session_span.set_attribute(
-        "session.room", ctx.room.name if ctx.room else "unknown"
-    )
+    _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
     _session_span.set_attribute("session.personality", profile.id)
-    _session_span.set_attribute(
-        "session.owner_age", str(room_metadata.get("owner_age", ""))
-    )
-    _session_span.set_attribute(
-        "session.language", room_metadata.get("preferred_language", "es")
-    )
+    _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
+    _session_span.set_attribute("session.language", room_metadata.get("preferred_language", "es"))
 
     async def _on_session_end():
         ACTIVE_SESSIONS.dec()
@@ -409,9 +399,7 @@ async def entrypoint(ctx: agents.JobContext):
 
         @ctx.room.on("participant_connected")
         def on_participant_connected(participant: rtc.RemoteParticipant):
-            job_logger.info(
-                "Nuevo participante", extra={"participant": participant.identity}
-            )
+            job_logger.info("Nuevo participante", extra={"participant": participant.identity})
             if _is_parent(participant):
                 job_logger.info(
                     "Padre conectado - pausando AI para walkie-talkie",
@@ -493,17 +481,15 @@ async def entrypoint(ctx: agents.JobContext):
         if not hasattr(ev.item, "role") or ev.item.role != "assistant":
             return
         if _turn_start is not None:
-            LLM_LATENCY.labels(personality=profile.id).observe(
-                time.time() - _turn_start
-            )
+            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
 
     def on_speech_created(ev: SpeechCreatedEvent):
         """Record full turn latency from user speech end to TTS pipeline start."""
         nonlocal _turn_start
         if _turn_start is not None:
-            TURN_LATENCY.labels(
-                personality=profile.id, tts_provider=settings.tts_provider
-            ).observe(ev.created_at - _turn_start)
+            TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
+                ev.created_at - _turn_start
+            )
             _turn_start = None
 
     # Solo registrar listeners de VarietyEngine si está habilitado (ahorra CPU)
@@ -522,17 +508,13 @@ async def entrypoint(ctx: agents.JobContext):
             agent=agent,
         )
     except Exception as e:
-        job_logger.error(
-            "Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True
-        )
+        job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
         return
     job_logger.info("Sesión iniciada y escuchando")
 
     # Check if a parent is already in the room (joined before agent) - only if walkie-talkie enabled
     if settings.enable_walkie_talkie and _has_parent_in_room():
-        job_logger.info(
-            "Padre ya presente en la sala - iniciando en modo walkie-talkie"
-        )
+        job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
         await _pause_for_walkie_talkie()
     else:
         # Enviar greeting inicial
@@ -548,9 +530,7 @@ async def entrypoint(ctx: agents.JobContext):
             try:
                 await session.say(greeting_text)
             except Exception as e:
-                job_logger.error(
-                    "Error enviando greeting", extra={"error": str(e)}, exc_info=True
-                )
+                job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
                 ERRORS_TOTAL.labels(type="greeting").inc()
 
     job_logger.info("Agente activo y escuchando")
@@ -597,12 +577,8 @@ def start_metrics_server(settings: Settings) -> None:
         def log_message(self, *_):
             pass  # Suprime logs de acceso HTTP en stdout
 
-    httpd = make_server(
-        "0.0.0.0", settings.api_port, _metrics_wsgi, handler_class=_SilentHandler
-    )
-    thread = threading.Thread(
-        target=httpd.serve_forever, name="metrics-server", daemon=True
-    )
+    httpd = make_server("0.0.0.0", settings.api_port, _metrics_wsgi, handler_class=_SilentHandler)
+    thread = threading.Thread(target=httpd.serve_forever, name="metrics-server", daemon=True)
     thread.start()
     logger.info("Metrics server iniciado", extra={"port": settings.api_port})
 
