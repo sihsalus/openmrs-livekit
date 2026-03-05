@@ -1,4 +1,5 @@
 """Shared fixtures for Nebu agent tests."""
+
 import os
 from dataclasses import dataclass, field
 from unittest.mock import AsyncMock, MagicMock
@@ -25,6 +26,7 @@ def _env_defaults(monkeypatch):
 @dataclass
 class FakeAgent:
     """Minimal mock of livekit Agent with update_instructions."""
+
     instructions: str = ""
     update_instructions: AsyncMock = field(default_factory=AsyncMock)
 
@@ -32,6 +34,7 @@ class FakeAgent:
 @dataclass
 class FakeSession:
     """Minimal mock of AgentSession."""
+
     userdata: dict = field(default_factory=dict)
     current_agent: FakeAgent = field(default_factory=FakeAgent)
 
