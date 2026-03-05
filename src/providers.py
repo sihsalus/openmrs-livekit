@@ -11,13 +11,40 @@ from src.config import Settings
 
 
 def build_llm(settings: Settings):
-    """Construye el LLM según la configuración."""
-    return openai.LLM(
-        model=settings.openai_model,
-        temperature=settings.openai_temperature,
-        parallel_tool_calls=False,
-        max_completion_tokens=settings.openai_max_completion_tokens,
-    )
+    """Construye el LLM con fallback automático si el modelo primario falla al inicializar.
+
+    Orden de intento: openai_model → openai_fallback_model.
+    Nota: el fallback opera en tiempo de inicialización. Los fallos runtime (429, 503)
+    requieren manejo en el SDK o un wrapper de LLM personalizado.
+    """
+    from src.logger import get_logger
+
+    logger = get_logger("nebu.providers")
+
+    models = [settings.openai_model]
+    if settings.openai_fallback_model:
+        models.append(settings.openai_fallback_model)
+
+    last_error: Exception | None = None
+    for model in models:
+        try:
+            llm = openai.LLM(
+                model=model,
+                temperature=settings.openai_temperature,
+                parallel_tool_calls=False,
+                max_completion_tokens=settings.openai_max_completion_tokens,
+            )
+            if model != settings.openai_model:
+                logger.warning(
+                    "LLM fallback activo",
+                    extra={"using": model, "primary": settings.openai_model},
+                )
+            return llm
+        except Exception as e:
+            logger.error("LLM model falló al inicializar", extra={"model": model, "error": str(e)})
+            last_error = e
+
+    raise ValueError(f"Todos los modelos LLM fallaron. Último error: {last_error}") from last_error
 
 
 def build_stt(settings: Settings):
@@ -77,7 +104,7 @@ def _build_tts_provider(provider: str, settings: Settings):
     if provider == "google":
         from livekit.plugins import google
 
-        return google.TTS(language=f"{settings.tts_language}-US")
+        return google.TTS(language=settings.tts_google_language)
 
     if provider == "deepgram":
         from livekit.plugins import deepgram

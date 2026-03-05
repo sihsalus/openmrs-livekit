@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     # ============= OpenAI Configuration =============
     openai_api_key: str = Field(..., description="API Key de OpenAI")
     openai_model: str = Field(default="gpt-4o-mini", description="Modelo de OpenAI para LLM")
+    openai_fallback_model: str | None = Field(
+        default=None,
+        description="Modelo LLM de fallback si el primario falla al inicializar (ej: 'gpt-4o-mini')",
+    )
     openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
 
     # ============= TTS Configuration =============
@@ -145,6 +149,26 @@ class Settings(BaseSettings):
     # ============= Language Settings =============
     tts_language: str = Field(
         default="es", description="Idioma para TTS (BCP-47 base: 'es', 'en', 'fr', etc.)"
+    )
+    tts_google_language: str = Field(
+        default="es-US", description="Locale BCP-47 completo para Google TTS (ej: 'es-US', 'es-MX', 'en-US')"
+    )
+
+    # ============= Filler Sound =============
+    filler_sound_enabled: bool = Field(
+        default=True, description="Reproducir sonido de 'pensar' mientras el LLM genera respuesta"
+    )
+    filler_sound_text: str = Field(
+        default="mmm...", description="Texto del filler sound (pronunciado por TTS)"
+    )
+    filler_delay: float = Field(
+        default=0.4,
+        description="Segundos antes de reproducir el filler — si el LLM responde antes, se cancela",
+    )
+
+    # ============= Security =============
+    max_custom_prompt_chars: int = Field(
+        default=4096, description="Tamaño máximo en caracteres para prompts personalizados (anti-injection)"
     )
 
     # ============= TTS Fallback =============

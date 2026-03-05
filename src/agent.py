@@ -53,7 +53,6 @@ class NebuAgent:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.session: AgentSession | None = None
-        self._shutdown_event = asyncio.Event()
 
     async def create_session(
         self, instructions: str, job_logger=None, turn_detection_model=None
@@ -136,12 +135,9 @@ def _build_owner_context(room_metadata: dict) -> str:
     return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)
 
 
-_MAX_CUSTOM_PROMPT = 4096
-
-
-def _sanitize_custom_prompt(prompt: str) -> str:
+def _sanitize_custom_prompt(prompt: str, max_chars: int) -> str:
     """Trunca y elimina bytes de control de prompts externos (anti-injection)."""
-    prompt = prompt.strip()[:_MAX_CUSTOM_PROMPT]
+    prompt = prompt.strip()[:max_chars]
     return "".join(c for c in prompt if c >= " " or c in "\n\t")
 
 
@@ -205,7 +201,7 @@ def make_entrypoint(settings: Settings):
 
         # Obtener prompt personalizado desde metadata o usar default
         raw_prompt = room_metadata.get("agent_prompt")
-        custom_prompt = _sanitize_custom_prompt(raw_prompt) if raw_prompt else None
+        custom_prompt = _sanitize_custom_prompt(raw_prompt, settings.max_custom_prompt_chars) if raw_prompt else None
         owner_context = _build_owner_context(room_metadata)
 
         if custom_prompt:
@@ -336,12 +332,13 @@ def make_entrypoint(settings: Settings):
         else:
             job_logger.info("Walkie-talkie mode disabled")
 
-        # ── Event listeners: conectar VarietyEngine al flujo real ──────────
+        # ── Event listeners: conectar VarietyEngine + filler al flujo real ──
         _turn_start: float | None = None
+        _filler_task: asyncio.Task | None = None
 
         def on_user_transcribed(ev):
-            """Gap 1+3: FSM Mood Lite + Persona Anchor/Sliding Summary."""
-            nonlocal _turn_start
+            """Filler sound + FSM Mood Lite + Persona Anchor/Sliding Summary."""
+            nonlocal _turn_start, _filler_task
             if not ev.is_final:
                 return
 
@@ -353,6 +350,21 @@ def make_entrypoint(settings: Settings):
                 job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
                 return
 
+            # Filler sound: reproducir "mmm..." si el LLM tarda más de filler_delay
+            if settings.filler_sound_enabled:
+                if _filler_task and not _filler_task.done():
+                    _filler_task.cancel()
+
+                async def _maybe_filler():
+                    await asyncio.sleep(settings.filler_delay)
+                    try:
+                        await session.say(settings.filler_sound_text)
+                    except (asyncio.CancelledError, Exception):
+                        pass
+
+                _filler_task = asyncio.create_task(_maybe_filler())
+
+            # VarietyEngine — solo si está habilitado
             variety = session.userdata.get("variety")
             if not variety:
                 return
@@ -393,20 +405,23 @@ def make_entrypoint(settings: Settings):
                     variety.record_agent_response(text)
 
         def on_speech_created(ev: SpeechCreatedEvent):
-            """Record full turn latency from user speech end to TTS pipeline start."""
-            nonlocal _turn_start
+            """Cancela el filler si el LLM respondió a tiempo; registra latencia de turno."""
+            nonlocal _turn_start, _filler_task
+            # Cancelar filler pendiente — el agente ya tiene su respuesta real
+            if _filler_task and not _filler_task.done():
+                _filler_task.cancel()
+                _filler_task = None
             if _turn_start is not None:
                 TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
                     ev.created_at - _turn_start
                 )
                 _turn_start = None
 
-        # Solo registrar listeners de VarietyEngine si está habilitado (ahorra CPU)
-        if settings.enable_variety_engine:
+        # Registrar listener de transcripción si alguna feature lo necesita
+        if settings.enable_variety_engine or settings.filler_sound_enabled:
             session.on("user_input_transcribed", on_user_transcribed)
-            session.on("conversation_item_added", on_conversation_item)
 
-        # Listener de métricas siempre activo (unificado con anti-repetición)
+        # Siempre activo: métricas de latencia + anti-repetición (si variety activo)
         session.on("conversation_item_added", on_conversation_item)
         session.on("speech_created", on_speech_created)
 
