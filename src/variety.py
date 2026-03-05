@@ -20,6 +20,7 @@ import random
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 from src.personality import PersonalityProfile
 
@@ -55,6 +56,78 @@ IMPERFECTION_CHANCE = 0.18
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧠 MEMORY TRACKER — Estado anti-repetición de la sesión
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+@dataclass
+class MemoryTracker:
+    """
+    Estado anti-repetición para una sesión de conversación.
+
+    Separado de VarietyEngine para que FSM/mood/cultura no mezclen
+    responsabilidades con el tracking de lo ya dicho.
+
+    Maxlens justificados:
+    - fact_categories_used  maxlen=10: ~2 rotaciones completas antes del reset;
+                                       suficiente para evitar clustering de temas
+    - styles_used           maxlen=4:  ~mitad de los estilos disponibles;
+                                       fuerza alternancia sin sobre-restringir
+    - trivia_categories_used maxlen=8: cubre la mayoría de categorías de trivia
+                                       antes de reciclar
+    - story_themes_used     maxlen=8:  ídem trivia
+    - catchphrases_used     maxlen=4:  por slot (pre/post); ventana pequeña
+                                       para que las frases se sientan frescas
+    - pattern_history       maxlen=6:  cubre los arquetipos narrativos comunes
+                                       antes de ciclar (Patch 2)
+    - agent_responses       maxlen=8:  ~8 turnos de output real del LLM
+                                       realimentados para dedup textual
+
+    Listas con truncado manual:
+    - facts_told    MAX_FACTS=25:    balance costo de contexto LLM vs. cobertura
+    - riddles_told  MAX_RIDDLES=15:  las adivinanzas tienen menos variedad;
+                                     ventana más pequeña es suficiente
+    """
+
+    MAX_FACTS: ClassVar[int] = 25
+    MAX_RIDDLES: ClassVar[int] = 15
+
+    # Rotating deques — Python evicts oldest entries automatically at maxlen
+    fact_categories_used: deque = field(default_factory=lambda: deque(maxlen=10))
+    styles_used: deque = field(default_factory=lambda: deque(maxlen=4))
+    trivia_categories_used: deque = field(default_factory=lambda: deque(maxlen=8))
+    story_themes_used: deque = field(default_factory=lambda: deque(maxlen=8))
+    catchphrases_used: dict = field(
+        default_factory=lambda: {
+            "pre_fact": deque(maxlen=4),
+            "post_fact": deque(maxlen=4),
+        }
+    )
+    pattern_history: deque = field(default_factory=lambda: deque(maxlen=6))
+    agent_responses: deque = field(default_factory=lambda: deque(maxlen=8))
+
+    # Manually-capped lists
+    facts_told: list = field(default_factory=list)
+    riddles_told: list = field(default_factory=list)
+
+    def record_fact(self, summary: str):
+        self.facts_told.append(summary)
+        if len(self.facts_told) > self.MAX_FACTS:
+            self.facts_told.pop(0)
+
+    def record_riddle(self, summary: str):
+        self.riddles_told.append(summary)
+        if len(self.riddles_told) > self.MAX_RIDDLES:
+            self.riddles_told.pop(0)
+
+    def record_agent_response(self, text: str):
+        """Record what the LLM actually said (first ~150 chars) for anti-repetition."""
+        condensed = text.strip()[:150]
+        if condensed:
+            self.agent_responses.append(condensed)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🎯 VARIETY ENGINE v4 — Motor parametrizable
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -78,19 +151,8 @@ class VarietyEngine:
     # ── Profile (fuente de todo el contenido cultural) ────────────────
     profile: PersonalityProfile | None = field(default=None, repr=False)
 
-    # ── Tracking anti-repetición ────────────────────────────────────────
-    _fact_categories_used: deque = field(default_factory=lambda: deque(maxlen=10))
-    _styles_used: deque = field(default_factory=lambda: deque(maxlen=4))
-    _facts_told: list = field(default_factory=list)
-    _trivia_categories_used: deque = field(default_factory=lambda: deque(maxlen=8))
-    _story_themes_used: deque = field(default_factory=lambda: deque(maxlen=8))
-    _riddles_told: list = field(default_factory=list)
-    _catchphrases_used: dict = field(
-        default_factory=lambda: {
-            "pre_fact": deque(maxlen=4),
-            "post_fact": deque(maxlen=4),
-        }
-    )
+    # ── Anti-repetición memory ──────────────────────────────────────────
+    memory: MemoryTracker = field(default_factory=MemoryTracker)
 
     # ── Personalidad ────────────────────────────────────────────────────
     _mood_value: str = ""
@@ -110,14 +172,8 @@ class VarietyEngine:
     # ── Culture Hype ────────────────────────────────────────────────────
     culture_hype: float = 0.0
 
-    # ── Patch 2: Pattern tracking ───────────────────────────────────────
-    _pattern_history: deque = field(default_factory=lambda: deque(maxlen=6))
-
     # ── Patch 4: Imperfection tracking ──────────────────────────────────
     _last_imperfection: bool = False
-
-    # ── Feedback loop: what the LLM actually said ────────────────────────
-    _agent_responses: deque = field(default_factory=lambda: deque(maxlen=8))
 
     def __post_init__(self):
         if self.profile is None:
@@ -199,8 +255,8 @@ class VarietyEngine:
         options = self.profile.catchphrases.get(kind, [])
         if not options:
             return ""
-        if kind in self._catchphrases_used:
-            used = self._catchphrases_used[kind]
+        if kind in self.memory.catchphrases_used:
+            used = self.memory.catchphrases_used[kind]
             available = [c for c in options if c not in used]
             if not available:
                 used.clear()
@@ -363,7 +419,7 @@ class VarietyEngine:
         patterns = self.profile.narrative_patterns
         if not patterns:
             return ""
-        return self._pick_unique(patterns, self._pattern_history)
+        return self._pick_unique(patterns, self.memory.pattern_history)
 
     def _build_pattern_instruction(self) -> str:
         """Genera instrucción de patrón narrativo para variedad semántica."""
@@ -381,8 +437,8 @@ class VarietyEngine:
         """Cada 10 turnos, comprimir el historial en un resumen."""
         if self.turn_count < 10 or self.turn_count % 10 != 0:
             return ""
-        recent_cats = list(self._fact_categories_used)[-5:]
-        recent_patterns = list(self._pattern_history)[-5:]
+        recent_cats = list(self.memory.fact_categories_used)[-5:]
+        recent_patterns = list(self.memory.pattern_history)[-5:]
         engagement = "enganchado" if self._consecutive_facts > 2 else "explorando"
         return (
             f"\n[RESUMEN turnos {self.turn_count - 10}-{self.turn_count}]: "
@@ -442,34 +498,29 @@ class VarietyEngine:
 
     def pick_fact_category(self) -> dict:
         categories = self.profile.fact_categories
-        available = [c for c in categories if c["id"] not in self._fact_categories_used]
+        available = [c for c in categories if c["id"] not in self.memory.fact_categories_used]
         if not available:
-            self._fact_categories_used.clear()
+            self.memory.fact_categories_used.clear()
             available = categories
         chosen = random.choice(available)
-        self._fact_categories_used.append(chosen["id"])
+        self.memory.fact_categories_used.append(chosen["id"])
         self._track_category(chosen["id"])
         return chosen
 
     def pick_delivery_style(self) -> str:
-        return self._pick_unique(self.profile.delivery_styles, self._styles_used)
+        return self._pick_unique(self.profile.delivery_styles, self.memory.styles_used)
 
     def record_fact(self, summary: str):
-        self._facts_told.append(summary)
-        if len(self._facts_told) > 25:
-            self._facts_told.pop(0)
+        self.memory.record_fact(summary)
 
     def record_agent_response(self, text: str):
-        """Record what the LLM actually said (first ~150 chars) for anti-repetition."""
-        condensed = text.strip()[:150]
-        if condensed:
-            self._agent_responses.append(condensed)
+        self.memory.record_agent_response(text)
 
     def _pick_specific_topic(self, category_id: str) -> str:
         specific_options = self.profile.category_specifics.get(category_id, [])
         if not specific_options:
             return ""
-        used_in_cat = [s for s in self._facts_told if f"[{category_id}]" in s]
+        used_in_cat = [s for s in self.memory.facts_told if f"[{category_id}]" in s]
         available = [
             s for s in specific_options if not any(s.lower() in u.lower() for u in used_in_cat)
         ]
@@ -603,17 +654,17 @@ class VarietyEngine:
             lines.append(f"  ✗ {banned}")
 
         # 11) Historial anti-repetición
-        if self._facts_told:
+        if self.memory.facts_told:
             lines.append("")
             lines.append("═══ NO REPETIR — DATOS YA CONTADOS EN ESTA SESIÓN ═══")
-            for i, fact in enumerate(self._facts_told[-12:], 1):
+            for i, fact in enumerate(self.memory.facts_told[-12:], 1):
                 lines.append(f"  {i}. {fact}")
 
         # 11b) Feedback loop: lo que realmente dijiste
-        if self._agent_responses:
+        if self.memory.agent_responses:
             lines.append("")
             lines.append("═══ LO QUE YA DIJISTE TEXTUALMENTE (no repitas) ═══")
-            for i, resp in enumerate(self._agent_responses, 1):
+            for i, resp in enumerate(self.memory.agent_responses, 1):
                 lines.append(f'  {i}. "{resp}"')
 
         # 12) Reglas finales
@@ -629,7 +680,7 @@ class VarietyEngine:
         lines.append(f"• Usa lenguaje simple pero con {self.profile.flavor_label}.")
 
         # Registrar para tracking
-        self.record_fact(f"[{category['id']}] sobre {specific or category['label']}")
+        self.memory.record_fact(f"[{category['id']}] sobre {specific or category['label']}")
         self._last_category_label = category["label"]
         self._last_specific_topic = specific
 
@@ -640,7 +691,7 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def pick_trivia_category(self) -> str:
-        return self._pick_unique(self.profile.trivia_categories, self._trivia_categories_used)
+        return self._pick_unique(self.profile.trivia_categories, self.memory.trivia_categories_used)
 
     def build_trivia_prompt(self) -> str:
         category = self.pick_trivia_category()
@@ -665,7 +716,7 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def pick_story_theme(self) -> str:
-        return self._pick_unique(self.profile.story_themes, self._story_themes_used)
+        return self._pick_unique(self.profile.story_themes, self.memory.story_themes_used)
 
     def build_story_prompt(self, custom_theme: str = "") -> str:
         theme = custom_theme or self.pick_story_theme()
@@ -693,10 +744,10 @@ class VarietyEngine:
         lines.append("")
         lines.append("Nebu es el narrador. Puede meter comentarios entre la historia.")
 
-        if self._story_themes_used:
+        if self.memory.story_themes_used:
             lines.append("")
             lines.append("TEMAS YA USADOS (cuenta algo diferente):")
-            for t in list(self._story_themes_used)[-5:]:
+            for t in list(self.memory.story_themes_used)[-5:]:
                 lines.append(f"  - {t}")
 
         return "\n".join(lines)
@@ -706,9 +757,7 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def record_riddle(self, summary: str):
-        self._riddles_told.append(summary)
-        if len(self._riddles_told) > 15:
-            self._riddles_told.pop(0)
+        self.memory.record_riddle(summary)
 
     def build_riddle_prompt(self) -> str:
         if self.profile.riddle_moods:
@@ -725,10 +774,10 @@ class VarietyEngine:
             lines.append(self.profile.riddle_culture_hint)
         lines.append("")
         lines.append(f"Nebu la presenta con entusiasmo: {self.profile.riddle_challenge}")
-        if self._riddles_told:
+        if self.memory.riddles_told:
             lines.append("")
             lines.append("ADIVINANZAS YA CONTADAS (inventa algo diferente):")
-            for i, r in enumerate(self._riddles_told[-8:], 1):
+            for i, r in enumerate(self.memory.riddles_told[-8:], 1):
                 lines.append(f"  {i}. {r}")
         return "\n".join(lines)
 
@@ -738,7 +787,7 @@ class VarietyEngine:
 
     @property
     def last_fact_category(self) -> str:
-        return self._fact_categories_used[-1] if self._fact_categories_used else "general"
+        return self.memory.fact_categories_used[-1] if self.memory.fact_categories_used else "general"
 
     @property
     def session_minutes(self) -> float:
@@ -752,8 +801,8 @@ class VarietyEngine:
             "turns": self.turn_count,
             "mood": self._mood_value,
             "rapport": self.rapport_value,
-            "facts_told": len(self._facts_told),
-            "riddles_told": len(self._riddles_told),
+            "facts_told": len(self.memory.facts_told),
+            "riddles_told": len(self.memory.riddles_told),
             "favorite_category": self.favorite_category,
             "session_minutes": round(self.session_minutes, 1),
             "consecutive_facts": self._consecutive_facts,

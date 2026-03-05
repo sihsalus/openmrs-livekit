@@ -215,14 +215,11 @@ def make_entrypoint(settings: Settings):
 
         if custom_prompt:
             job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
-            instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
         else:
             job_logger.info("Usando prompt por defecto")
-            instructions = get_system_prompt()
-            if owner_context:
-                instructions = instructions.replace(
-                    CAPABILITIES_BLOCK, owner_context + CAPABILITIES_BLOCK
-                )
+            custom_prompt = get_system_prompt()
+
+        instructions = custom_prompt + owner_context + CAPABILITIES_BLOCK
 
         if owner_context:
             job_logger.info("Contexto del owner inyectado en prompt")
