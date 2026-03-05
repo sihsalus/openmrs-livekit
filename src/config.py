@@ -1,5 +1,6 @@
 """Configuración centralizada con Pydantic Settings"""
 
+from importlib.metadata import PackageNotFoundError, version
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
@@ -286,10 +287,15 @@ class Settings(BaseSettings):
 
     def display_config(self) -> str:
         """Retorna un resumen de la configuración (sin secretos)"""
+        try:
+            v = version("nebu-agent")
+        except PackageNotFoundError:
+            v = "dev"
+
         llm_label = f"{self.llm_provider}/{self.active_llm_model}"
         return f"""
 ╔══════════════════════════════════════════════════════════════╗
-║                    NEBU AGENT v2.0.0                         ║
+║                    NEBU AGENT v{v:<29}║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Agent Name:       {self.agent_name:<40} ║
 ║  Log Level:        {self.log_level:<40} ║
