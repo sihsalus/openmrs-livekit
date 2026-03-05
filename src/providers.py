@@ -84,14 +84,12 @@ def build_llm(settings: Settings):
     raise ValueError(f"Todos los proveedores LLM fallaron. Último error: {last_error}") from last_error
 
 
-def build_stt(settings: Settings):
-    """Construye el STT según el proveedor configurado."""
-    provider = settings.stt_provider
-
+def _build_stt_provider(provider: str, settings: Settings):
+    """Construye una instancia STT para un proveedor específico."""
     if provider == "openai":
         return openai.STT(
             model=settings.openai_stt_model,
-            language="es",
+            language=settings.stt_language,
             noise_reduction_type="far_field",
         )
 
@@ -109,6 +107,37 @@ def build_stt(settings: Settings):
         )
 
     raise ValueError(f"STT provider desconocido: {provider}")
+
+
+def build_stt(settings: Settings):
+    """Construye el STT con fallback automático si el proveedor primario falla.
+
+    Orden de intento: stt_provider → stt_fallback_providers (comma-separated).
+    Registra un warning si se activa el fallback.
+    """
+    from src.logger import get_logger
+
+    logger = get_logger("nebu.providers")
+
+    chain = [settings.stt_provider]
+    if settings.stt_fallback_providers:
+        chain += [p.strip() for p in settings.stt_fallback_providers.split(",") if p.strip()]
+
+    last_error: Exception | None = None
+    for provider in chain:
+        try:
+            stt = _build_stt_provider(provider, settings)
+            if provider != settings.stt_provider:
+                logger.warning(
+                    "STT fallback activo",
+                    extra={"using": provider, "primary": settings.stt_provider},
+                )
+            return stt
+        except Exception as e:
+            logger.error("STT provider falló", extra={"provider": provider, "error": str(e)})
+            last_error = e
+
+    raise ValueError(f"Todos los proveedores STT fallaron. Último error: {last_error}") from last_error
 
 
 def _build_tts_provider(provider: str, settings: Settings):

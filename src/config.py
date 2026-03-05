@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -111,6 +111,13 @@ class Settings(BaseSettings):
     deepgram_punctuate: bool = Field(default=True, description="Habilitar puntuación automática")
     deepgram_endpointing_ms: int = Field(
         default=300, description="Milisegundos de silencio para finalizar (200-1000ms)"
+    )
+    stt_language: str = Field(
+        default="es", description="Idioma para STT (BCP-47 base: 'es', 'en', 'fr', etc.)"
+    )
+    stt_fallback_providers: str = Field(
+        default="",
+        description="Proveedores STT de fallback separados por coma si el primario falla (ej: 'openai')",
     )
 
     # ============= Web Search Configuration =============
@@ -225,6 +232,45 @@ class Settings(BaseSettings):
         description="Enable parent pause mode for multi-participant rooms",
     )
 
+    @model_validator(mode="after")
+    def validate_provider_api_keys(self) -> "Settings":
+        """Falla en startup si el proveedor seleccionado no tiene API key configurada."""
+        llm_requirements: dict[str, tuple[str, str]] = {
+            "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
+            "groq": ("groq_api_key", "GROQ_API_KEY"),
+            "xai": ("xai_api_key", "XAI_API_KEY"),
+        }
+        if self.llm_provider in llm_requirements:
+            field, env = llm_requirements[self.llm_provider]
+            if not getattr(self, field):
+                raise ValueError(f"LLM_PROVIDER={self.llm_provider} requiere {env}")
+
+        tts_requirements: dict[str, tuple[str, str]] = {
+            "elevenlabs": ("elevenlabs_api_key", "ELEVENLABS_API_KEY"),
+            "cartesia": ("cartesia_api_key", "CARTESIA_API_KEY"),
+            "inworld": ("inworld_api_key", "INWORLD_API_KEY"),
+            "deepgram": ("deepgram_api_key", "DEEPGRAM_API_KEY"),
+        }
+        if self.tts_provider in tts_requirements:
+            field, env = tts_requirements[self.tts_provider]
+            if not getattr(self, field):
+                raise ValueError(f"TTS_PROVIDER={self.tts_provider} requiere {env}")
+
+        if self.stt_provider == "deepgram" and not self.deepgram_api_key:
+            raise ValueError("STT_PROVIDER=deepgram requiere DEEPGRAM_API_KEY")
+
+        return self
+
+    @property
+    def active_llm_model(self) -> str:
+        """Retorna el modelo del proveedor LLM activo."""
+        return {
+            "openai": self.openai_model,
+            "anthropic": self.anthropic_model,
+            "groq": self.groq_model,
+            "xai": self.xai_model,
+        }.get(self.llm_provider, self.openai_model)
+
     @field_validator("vad_activation_threshold")
     @classmethod
     def validate_vad_threshold(cls, v: float) -> float:
@@ -241,6 +287,7 @@ class Settings(BaseSettings):
 
     def display_config(self) -> str:
         """Retorna un resumen de la configuración (sin secretos)"""
+        llm_label = f"{self.llm_provider}/{self.active_llm_model}"
         return f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║                    NEBU AGENT v2.0.0                         ║
@@ -248,9 +295,9 @@ class Settings(BaseSettings):
 ║  Agent Name:       {self.agent_name:<40} ║
 ║  Log Level:        {self.log_level:<40} ║
 ║  LiveKit URL:      {self.livekit_url:<40} ║
-║  OpenAI Model:     {self.openai_model:<40} ║
-║  TTS Provider:     {self.tts_provider:<40} ║
-║  Voice ID:         {self.voice_id:<40} ║
+║  LLM:              {llm_label:<40} ║
+║  STT:              {self.stt_provider:<40} ║
+║  TTS:              {self.tts_provider:<40} ║
 ║  Greeting:         {str(self.greeting_enabled):<40} ║
 ║  Interruptions:    {str(self.allow_interruptions):<40} ║
 ╚══════════════════════════════════════════════════════════════╝
