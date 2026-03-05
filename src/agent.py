@@ -19,11 +19,11 @@ from types import SimpleNamespace
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
 from livekit.agents.metrics import LLMMetrics, STTMetrics, TTSMetrics, EOUMetrics
-from livekit.plugins import openai, silero
+from livekit.plugins import silero
 
 from src.config import Settings
 from src.logger import get_logger, setup_logging
-from src.providers import build_stt, build_tts
+from src.providers import build_llm, build_stt, build_tts
 from src.metrics import (
     ACTIVE_SESSIONS,
     AGENT_INFO,
@@ -61,12 +61,7 @@ class NebuAgent:
         """Crea una sesión de agente con la configuración actual"""
         # Build components
         stt = build_stt(self.settings)
-        llm = openai.LLM(
-            model=self.settings.openai_model,
-            temperature=0.6,  # Más directo
-            parallel_tool_calls=False,
-            max_completion_tokens=200,  # Respuestas cortas para reducir latencia
-        )
+        llm = build_llm(self.settings)
         tts = build_tts(self.settings)
 
         # Attach metrics collectors if logger provided
@@ -105,9 +100,9 @@ class NebuAgent:
             turn_detection=turn_detection_model,
             # VAD optimizado (reducido para menor CPU - evita "inference slower than realtime")
             vad=silero.VAD.load(
-                min_silence_duration=0.6,  # Era 0.5 → menos procesamiento
-                activation_threshold=0.4,  # Era 0.3 → menos sensible, menos false positives
-                min_speech_duration=0.3,  # Era 0.2 → ignora ruidos muy cortos
+                min_silence_duration=self.settings.vad_min_silence_duration,
+                activation_threshold=self.settings.vad_activation_threshold,
+                min_speech_duration=self.settings.vad_min_speech_duration,
             ),
             stt=stt,
             llm=llm,
@@ -119,7 +114,7 @@ class NebuAgent:
             min_interruption_duration=self.settings.min_interruption_duration,
             min_endpointing_delay=self.settings.min_endpointing_delay,
             max_endpointing_delay=self.settings.max_endpointing_delay,
-            user_away_timeout=30.0,
+            user_away_timeout=self.settings.user_away_timeout,
         )
 
 
@@ -382,24 +377,20 @@ def make_entrypoint(settings: Settings):
                 asyncio.create_task(session.current_agent.update_instructions(base + extra))
 
         def on_conversation_item(ev):
-            """Gap 2: Record what the LLM actually said for anti-repetition."""
+            """Gap 2 + latencia: procesa items de asistente en un solo listener."""
+            nonlocal _turn_start
             item = ev.item
             if not hasattr(item, "role") or item.role != "assistant":
                 return
-            text = item.text_content
-            if not text:
-                return
-            variety = session.userdata.get("variety")
-            if variety:
-                variety.record_agent_response(text)
-
-        def on_conversation_item_for_latency(ev):
-            """Record LLM latency from user speech end to assistant item ready."""
-            nonlocal _turn_start
-            if not hasattr(ev.item, "role") or ev.item.role != "assistant":
-                return
+            # Métrica de latencia LLM
             if _turn_start is not None:
                 LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _turn_start)
+            # Anti-repetición (solo si VarietyEngine activo)
+            text = item.text_content
+            if text:
+                variety = session.userdata.get("variety")
+                if variety:
+                    variety.record_agent_response(text)
 
         def on_speech_created(ev: SpeechCreatedEvent):
             """Record full turn latency from user speech end to TTS pipeline start."""
@@ -415,8 +406,8 @@ def make_entrypoint(settings: Settings):
             session.on("user_input_transcribed", on_user_transcribed)
             session.on("conversation_item_added", on_conversation_item)
 
-        # Listeners de métricas siempre activos
-        session.on("conversation_item_added", on_conversation_item_for_latency)
+        # Listener de métricas siempre activo (unificado con anti-repetición)
+        session.on("conversation_item_added", on_conversation_item)
         session.on("speech_created", on_speech_created)
 
         # Iniciar sesión de voz
@@ -436,7 +427,7 @@ def make_entrypoint(settings: Settings):
             await _pause_for_walkie_talkie()
         else:
             # Enviar greeting inicial
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(settings.greeting_delay)
             if settings.greeting_enabled:
                 custom_greeting = room_metadata.get("greeting")
                 if custom_greeting:

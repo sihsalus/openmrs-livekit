@@ -1,5 +1,5 @@
 """
-Factories de proveedores STT, TTS.
+Factories de proveedores LLM, STT, TTS.
 
 Cada factory lee Settings y retorna la instancia configurada.
 Añadir soporte para un nuevo proveedor = un bloque if aquí, sin tocar agent.py.
@@ -8,6 +8,16 @@ Añadir soporte para un nuevo proveedor = un bloque if aquí, sin tocar agent.py
 from livekit.plugins import openai
 
 from src.config import Settings
+
+
+def build_llm(settings: Settings):
+    """Construye el LLM según la configuración."""
+    return openai.LLM(
+        model=settings.openai_model,
+        temperature=settings.openai_temperature,
+        parallel_tool_calls=False,
+        max_completion_tokens=settings.openai_max_completion_tokens,
+    )
 
 
 def build_stt(settings: Settings):
@@ -51,7 +61,7 @@ def _build_tts_provider(provider: str, settings: Settings):
         return elevenlabs.TTS(
             voice_id=settings.voice_id,
             api_key=settings.elevenlabs_api_key,
-            language="es",
+            language=settings.tts_language,
         )
 
     if provider == "cartesia":
@@ -61,13 +71,13 @@ def _build_tts_provider(provider: str, settings: Settings):
             api_key=settings.cartesia_api_key,
             model=settings.cartesia_model,
             voice=settings.cartesia_voice_id,
-            language="es",
+            language=settings.tts_language,
         )
 
     if provider == "google":
         from livekit.plugins import google
 
-        return google.TTS(language="es-US")
+        return google.TTS(language=f"{settings.tts_language}-US")
 
     if provider == "deepgram":
         from livekit.plugins import deepgram

@@ -101,15 +101,23 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
     log_format: Literal["json", "text"] = Field(default="json")
 
-    # ============= VAD Settings (Optimizadas para interrupciones rápidas) =============
+    # ============= LLM Settings =============
+    openai_temperature: float = Field(
+        default=0.6, description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva"
+    )
+    openai_max_completion_tokens: int = Field(
+        default=200, description="Tokens máximos de respuesta — 200 = respuestas cortas, menor latencia"
+    )
+
+    # ============= VAD Settings (Optimizadas para reducir CPU en ESP32) =============
     vad_min_silence_duration: float = Field(
-        default=0.5, description="Silencio mínimo para considerar fin de habla"
+        default=0.6, description="Silencio mínimo para considerar fin de habla (0.6 = menos procesamiento que 0.5)"
     )
     vad_activation_threshold: float = Field(
-        default=0.3, description="Threshold VAD (0.0-1.0) - Más bajo = más sensible"
+        default=0.4, description="Threshold VAD (0.0-1.0) — 0.4 = menos false positives que 0.3"
     )
     vad_min_speech_duration: float = Field(
-        default=0.2, description="Duración mínima de habla para activar (evita ruido)"
+        default=0.3, description="Duración mínima de habla para activar (0.3 = ignora ruidos muy cortos)"
     )
 
     # ============= Session Settings (Optimizadas para captura de interrupciones) =============
@@ -126,7 +134,18 @@ class Settings(BaseSettings):
     max_endpointing_delay: float = Field(
         default=2.0, description="Delay máximo para esperar continuación"
     )
+    user_away_timeout: float = Field(
+        default=30.0, description="Segundos de inactividad antes de considerar al usuario ausente"
+    )
+    greeting_delay: float = Field(
+        default=0.5, description="Segundos de espera antes del saludo inicial (da tiempo al audio a estabilizarse)"
+    )
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
+
+    # ============= Language Settings =============
+    tts_language: str = Field(
+        default="es", description="Idioma para TTS (BCP-47 base: 'es', 'en', 'fr', etc.)"
+    )
 
     # ============= TTS Fallback =============
     tts_fallback_providers: str = Field(
