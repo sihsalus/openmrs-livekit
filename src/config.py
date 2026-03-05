@@ -128,6 +128,12 @@ class Settings(BaseSettings):
     )
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
 
+    # ============= TTS Fallback =============
+    tts_fallback_providers: str = Field(
+        default="",
+        description="Proveedores TTS de fallback separados por coma si el primario falla (ej: 'cartesia,openai')",
+    )
+
     # ============= API Settings =============
     api_enabled: bool = Field(default=True, description="Habilitar API REST")
     api_port: int = Field(default=8000, description="Puerto del servidor API")

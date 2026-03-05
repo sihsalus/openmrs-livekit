@@ -37,10 +37,8 @@ def build_stt(settings: Settings):
     raise ValueError(f"STT provider desconocido: {provider}")
 
 
-def build_tts(settings: Settings):
-    """Construye el TTS según el proveedor configurado."""
-    provider = settings.tts_provider
-
+def _build_tts_provider(provider: str, settings: Settings):
+    """Construye una instancia TTS para un proveedor específico."""
     if provider == "openai":
         return openai.TTS(
             voice=settings.openai_tts_voice,
@@ -88,3 +86,34 @@ def build_tts(settings: Settings):
         )
 
     raise ValueError(f"TTS provider desconocido: {provider}")
+
+
+def build_tts(settings: Settings):
+    """Construye el TTS con fallback automático si el proveedor primario falla.
+
+    Orden de intento: tts_provider → tts_fallback_providers (comma-separated).
+    Registra un warning si se activa el fallback.
+    """
+    from src.logger import get_logger
+
+    logger = get_logger("nebu.providers")
+
+    chain = [settings.tts_provider]
+    if settings.tts_fallback_providers:
+        chain += [p.strip() for p in settings.tts_fallback_providers.split(",") if p.strip()]
+
+    last_error: Exception | None = None
+    for provider in chain:
+        try:
+            tts = _build_tts_provider(provider, settings)
+            if provider != settings.tts_provider:
+                logger.warning(
+                    "TTS fallback activo",
+                    extra={"using": provider, "primary": settings.tts_provider},
+                )
+            return tts
+        except Exception as e:
+            logger.error("TTS provider falló", extra={"provider": provider, "error": str(e)})
+            last_error = e
+
+    raise ValueError(f"Todos los proveedores TTS fallaron. Último error: {last_error}") from last_error
