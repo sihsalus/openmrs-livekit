@@ -121,7 +121,7 @@ class Settings(BaseSettings):
     )
 
     # ============= Web Search Configuration =============
-    web_search_provider: Literal["tavily", "brave", "serpapi", "duckduckgo"] | None = Field(
+    web_search_provider: Literal["tavily", "brave", "serpapi", "duckduckgo", "wikipedia"] | None = Field(
         default=None, description="Proveedor de búsqueda web (None = deshabilitado)"
     )
     web_search_parental_consent: bool = Field(

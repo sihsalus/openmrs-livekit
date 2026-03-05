@@ -9,6 +9,7 @@ COPPA compliance:
 """
 
 import re
+import urllib.parse
 
 import aiohttp
 from livekit.agents import RunContext, function_tool
@@ -32,7 +33,7 @@ _PHONE_RE = re.compile(
     # Separadores explícitos en todos los grupos: 999-123-4567
     r"\b\d{2,4}[\-\.]\d{3,4}[\-\.]\d{3,4}\b"
 )
-_DNI_RE = re.compile(r"\b\d{8}[a-zA-Z]?\b")  # DNI/RUC peruano y similares
+_DNI_RE = re.compile(r"\b\d{8}[a-zA-Z]\b")  # DNI peruano: siempre 8 dígitos + letra
 _ADDRESS_RE = re.compile(
     r"(?:calle|avenida|av\.|jr\.|jirón|pasaje|manzana|lote|urbanización|urb\.)"
     r"\s+[^\s,]{2,}(?:\s+[^\s,]+){0,2}"  # keyword + hasta 3 tokens (nombre + número)
@@ -171,6 +172,60 @@ async def _search_duckduckgo(
     return results[:max_results]
 
 
+async def _search_wikipedia(
+    session: aiohttp.ClientSession, query: str, lang: str, max_results: int
+) -> list[dict]:
+    """Búsqueda en Wikipedia usando API pública sin API key.
+
+    Two-step: search titles (MediaWiki Action API) → fetch summaries (REST API, plain text).
+    """
+    base = f"https://{lang}.wikipedia.org"
+    limit = min(max_results, 3)
+
+    # Step 1: buscar títulos
+    params = {
+        "action": "query",
+        "list": "search",
+        "srsearch": query,
+        "format": "json",
+        "utf8": "1",
+        "srlimit": str(limit),
+    }
+    async with session.get(
+        f"{base}/w/api.php",
+        params=params,
+        headers={"User-Agent": "NebuAgent/1.0 (educational toy)"},
+    ) as r:
+        if r.status != 200:
+            return []
+        data = await r.json()
+
+    titles = [h["title"] for h in data.get("query", {}).get("search", [])]
+    if not titles:
+        return []
+
+    # Step 2: obtener summary de cada título (texto plano, sin markup)
+    results = []
+    for title in titles:
+        encoded = urllib.parse.quote(title.replace(" ", "_"))
+        summary_url = f"{base}/api/rest_v1/page/summary/{encoded}"
+        try:
+            async with session.get(
+                summary_url,
+                headers={"User-Agent": "NebuAgent/1.0 (educational toy)"},
+            ) as sr:
+                if sr.status == 200:
+                    sd = await sr.json()
+                    results.append({
+                        "title": sd.get("title", title),
+                        "snippet": sd.get("extract", ""),
+                    })
+        except Exception:
+            continue
+
+    return results
+
+
 _KIDS_SAFE_INSTRUCTION = (
     "\n\nIMPORTANTE: Estás hablando con un niño. "
     "Al presentar estos resultados, usa lenguaje apropiado para niños. "
@@ -203,6 +258,7 @@ def make_web_search(settings: Settings):
     tavily_api_key = settings.tavily_api_key
     brave_api_key = settings.brave_search_api_key
     serpapi_api_key = settings.serpapi_api_key
+    wiki_lang = settings.stt_language or "es"
 
     @function_tool(
         name="web_search",
@@ -246,6 +302,9 @@ def make_web_search(settings: Settings):
 
                 elif provider == "duckduckgo":
                     results = await _search_duckduckgo(session, safe_query, max_results)
+
+                elif provider == "wikipedia":
+                    results = await _search_wikipedia(session, safe_query, wiki_lang, max_results)
 
                 else:
                     return f"Proveedor de búsqueda desconocido: {provider}"
