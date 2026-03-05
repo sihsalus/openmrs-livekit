@@ -28,12 +28,16 @@ from src.metrics import (
     ACTIVE_SESSIONS,
     AGENT_INFO,
     CHILD_SIGNALS_TOTAL,
+    EOU_DELAY,
     ERRORS_TOTAL,
     LLM_LATENCY,
     SESSION_DURATION,
     SESSIONS_TOTAL,
+    STT_DURATION,
     TURN_LATENCY,
     TURNS_TOTAL,
+    TTS_AUDIO_DURATION,
+    TTS_TTFB,
 )
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.tools import get_tools
@@ -63,37 +67,40 @@ class NebuAgent:
         llm = build_llm(self.settings)
         tts = build_tts(self.settings)
 
-        # Attach metrics collectors if logger provided
-        if job_logger:
-
-            def llm_metrics_wrapper(metrics: LLMMetrics):
+        # Attach metrics collectors (always active; log only if job_logger provided)
+        def llm_metrics_wrapper(metrics: LLMMetrics):
+            if job_logger:
                 job_logger.info(
                     f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
                     f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}"
                 )
 
-            llm.on("metrics_collected", llm_metrics_wrapper)
-
-            def stt_metrics_wrapper(metrics: STTMetrics):
+        def stt_metrics_wrapper(metrics: STTMetrics):
+            if job_logger:
                 job_logger.info(
                     f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
                 )
+            STT_DURATION.labels(stt_provider=self.settings.stt_provider).observe(metrics.duration)
 
-            stt.on("metrics_collected", stt_metrics_wrapper)
-
-            def eou_metrics_wrapper(metrics: EOUMetrics):
+        def eou_metrics_wrapper(metrics: EOUMetrics):
+            if job_logger:
                 job_logger.info(
                     f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s"
                 )
+            EOU_DELAY.observe(metrics.end_of_utterance_delay)
 
-            stt.on("eou_metrics_collected", eou_metrics_wrapper)
-
-            def tts_metrics_wrapper(metrics: TTSMetrics):
+        def tts_metrics_wrapper(metrics: TTSMetrics):
+            if job_logger:
                 job_logger.info(
                     f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}"
                 )
+            TTS_TTFB.labels(tts_provider=self.settings.tts_provider).observe(metrics.ttfb)
+            TTS_AUDIO_DURATION.labels(tts_provider=self.settings.tts_provider).observe(metrics.audio_duration)
 
-            tts.on("metrics_collected", tts_metrics_wrapper)
+        llm.on("metrics_collected", llm_metrics_wrapper)
+        stt.on("metrics_collected", stt_metrics_wrapper)
+        stt.on("eou_metrics_collected", eou_metrics_wrapper)
+        tts.on("metrics_collected", tts_metrics_wrapper)
 
         return AgentSession(
             turn_detection=turn_detection_model,
@@ -201,7 +208,11 @@ def make_entrypoint(settings: Settings):
 
         # Obtener prompt personalizado desde metadata o usar default
         raw_prompt = room_metadata.get("agent_prompt")
-        custom_prompt = _sanitize_custom_prompt(raw_prompt, settings.max_custom_prompt_chars) if raw_prompt else None
+        custom_prompt = (
+            _sanitize_custom_prompt(raw_prompt, settings.max_custom_prompt_chars)
+            if raw_prompt
+            else None
+        )
         owner_context = _build_owner_context(room_metadata)
 
         if custom_prompt:
@@ -264,7 +275,9 @@ def make_entrypoint(settings: Settings):
         _session_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
         _session_span.set_attribute("session.personality", profile.id)
         _session_span.set_attribute("session.owner_age", str(room_metadata.get("owner_age", "")))
-        _session_span.set_attribute("session.language", room_metadata.get("preferred_language", "es"))
+        _session_span.set_attribute(
+            "session.language", room_metadata.get("preferred_language", "es")
+        )
 
         async def _on_session_end():
             ACTIVE_SESSIONS.dec()
@@ -412,9 +425,9 @@ def make_entrypoint(settings: Settings):
                 _filler_task.cancel()
                 _filler_task = None
             if _turn_start is not None:
-                TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
-                    ev.created_at - _turn_start
-                )
+                TURN_LATENCY.labels(
+                    personality=profile.id, tts_provider=settings.tts_provider
+                ).observe(ev.created_at - _turn_start)
                 _turn_start = None
 
         # Registrar listener de transcripción si alguna feature lo necesita
@@ -432,7 +445,9 @@ def make_entrypoint(settings: Settings):
                 agent=agent,
             )
         except Exception as e:
-            job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
+            job_logger.error(
+                "Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True
+            )
             return
         job_logger.info("Sesión iniciada y escuchando")
 
@@ -454,7 +469,9 @@ def make_entrypoint(settings: Settings):
                 try:
                     await session.say(greeting_text)
                 except Exception as e:
-                    job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
+                    job_logger.error(
+                        "Error enviando greeting", extra={"error": str(e)}, exc_info=True
+                    )
                     ERRORS_TOTAL.labels(type="greeting").inc()
 
         job_logger.info("Agente activo y escuchando")

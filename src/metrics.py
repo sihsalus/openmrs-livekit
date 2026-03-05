@@ -81,3 +81,37 @@ TURN_LATENCY = Histogram(
     ["personality", "tts_provider"],
     buckets=[0.3, 0.5, 0.8, 1.0, 1.5, 2.0, 3.0, 5.0],
 )
+
+# ── Pipeline E2E: componentes individuales de latencia ──────────────────────
+
+# Tiempo de procesamiento STT (duración real del pipeline de transcripción)
+STT_DURATION = Histogram(
+    "nebu_agent_stt_duration_seconds",
+    "Duración del procesamiento STT (audio recibido → texto final)",
+    ["stt_provider"],
+    buckets=[0.1, 0.2, 0.3, 0.5, 0.8, 1.0, 1.5, 2.0],
+)
+
+# Delay de detección de fin de utterance
+# end_of_utterance_delay = tiempo desde que el niño dejó de hablar hasta que EOU lo detectó
+EOU_DELAY = Histogram(
+    "nebu_agent_eou_delay_seconds",
+    "Delay desde fin real del habla hasta detección EOU (VAD + buffer de silencio)",
+    buckets=[0.1, 0.2, 0.3, 0.5, 0.6, 0.8, 1.0, 1.5],
+)
+
+# TTS time-to-first-byte: desde que el LLM entrega texto hasta primer byte de audio
+TTS_TTFB = Histogram(
+    "nebu_agent_tts_ttfb_seconds",
+    "TTS time-to-first-byte: desde texto disponible hasta primer byte de audio sintetizado",
+    ["tts_provider"],
+    buckets=[0.05, 0.1, 0.2, 0.3, 0.5, 0.8, 1.0, 1.5],
+)
+
+# Duración total del audio sintetizado (cuánto tiempo habla el juguete por respuesta)
+TTS_AUDIO_DURATION = Histogram(
+    "nebu_agent_tts_audio_duration_seconds",
+    "Duración total del audio TTS sintetizado por respuesta",
+    ["tts_provider"],
+    buckets=[1, 2, 3, 5, 8, 12, 20, 30],
+)
