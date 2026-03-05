@@ -41,6 +41,7 @@ from src.metrics import (
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.providers import build_llm, build_stt, build_tts
 from src.tools import get_tools
+from opentelemetry import trace
 from src.tracing import get_tracer
 
 # Imports condicionales solo si están habilitados (ahorro ~25MB RAM)
@@ -350,14 +351,20 @@ def make_entrypoint(settings: Settings):
         # ── Event listeners: conectar VarietyEngine + filler al flujo real ──
         _turn_start: float | None = None
         _filler_task: asyncio.Task | None = None
+        _response_span = None
 
         def on_user_transcribed(ev):
             """Filler sound + FSM Mood Lite + Persona Anchor/Sliding Summary."""
-            nonlocal _turn_start, _filler_task
+            nonlocal _turn_start, _filler_task, _response_span
             if not ev.is_final:
                 return
 
             _turn_start = time.time()
+            _response_span = tracer.start_span(
+                "agent.response_latency",
+                context=trace.set_span_in_context(_session_span),
+            )
+            _response_span.set_attribute("session.room", ctx.room.name if ctx.room else "unknown")
 
             # Filtro anti-ruido: ignorar transcripciones muy cortas o basura
             text = ev.transcript.strip()
@@ -421,16 +428,23 @@ def make_entrypoint(settings: Settings):
 
         def on_speech_created(ev: SpeechCreatedEvent):
             """Cancela el filler si el LLM respondió a tiempo; registra latencia de turno."""
-            nonlocal _turn_start, _filler_task
+            nonlocal _turn_start, _filler_task, _response_span
             # Cancelar filler pendiente — el agente ya tiene su respuesta real
             if _filler_task and not _filler_task.done():
                 _filler_task.cancel()
                 _filler_task = None
+            latency: float | None = None
             if _turn_start is not None:
+                latency = ev.created_at - _turn_start
                 TURN_LATENCY.labels(
                     personality=profile.id, tts_provider=settings.tts_provider
-                ).observe(ev.created_at - _turn_start)
+                ).observe(latency)
                 _turn_start = None
+            if _response_span is not None:
+                if latency is not None:
+                    _response_span.set_attribute("agent.latency_seconds", latency)
+                _response_span.end()
+                _response_span = None
 
         # Registrar listener de transcripción si alguna feature lo necesita
         if settings.enable_variety_engine or settings.filler_sound_enabled:
