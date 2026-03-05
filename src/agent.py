@@ -113,10 +113,9 @@ class NebuAgent:
 
         llm.on("metrics_collected", llm_metrics_wrapper)
         stt.on("metrics_collected", stt_metrics_wrapper)
-        stt.on("eou_metrics_collected", eou_metrics_wrapper)
         tts.on("metrics_collected", tts_metrics_wrapper)
 
-        return AgentSession(
+        session = AgentSession(
             turn_detection=turn_detection_model,
             # VAD optimizado (reducido para menor CPU - evita "inference slower than realtime")
             vad=silero.VAD.load(
@@ -136,6 +135,11 @@ class NebuAgent:
             max_endpointing_delay=self.settings.max_endpointing_delay,
             user_away_timeout=self.settings.user_away_timeout,
         )
+
+        # EOUMetrics se emite desde AgentSession (no desde stt), hay que registrar aquí
+        session.on("metrics_collected", lambda ev: eou_metrics_wrapper(ev.metrics) if isinstance(ev.metrics, EOUMetrics) else None)
+
+        return session
 
 
 def _build_owner_context(room_metadata: dict) -> str:
