@@ -439,7 +439,7 @@ async def _save_transcript(
         return
 
     try:
-        messages = session.history.messages
+        messages = session.history.items
     except Exception as exc:
         job_logger.warning("No se pudo acceder a history", extra={"error": str(exc)})
         return
