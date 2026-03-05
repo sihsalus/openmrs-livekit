@@ -439,21 +439,25 @@ async def _save_transcript(
         return
 
     try:
-        messages = session.chat_ctx.messages
-    except Exception:
+        messages = session.history.messages
+    except Exception as exc:
+        job_logger.warning("No se pudo acceder a history", extra={"error": str(exc)})
         return
+
+    job_logger.info("history inspeccionado", extra={"total_msgs": len(messages)})
 
     lines = []
     for msg in messages:
         role = getattr(msg, "role", None)
+        text = getattr(msg, "text_content", None) or ""
         if role == "system":
             continue
         label = "Niño" if role == "user" else "Nebu"
-        text = getattr(msg, "text_content", None) or ""
         if text.strip():
             lines.append(f"[{label}]: {text.strip()}")
 
     if not lines:
+        job_logger.warning("Transcript vacío — history sin mensajes user/assistant con texto")
         return
 
     transcript = "\n".join(lines)
