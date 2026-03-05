@@ -14,6 +14,7 @@ import json
 import signal
 import threading
 import time
+from types import SimpleNamespace
 
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
@@ -226,7 +227,7 @@ _MAX_CUSTOM_PROMPT = 4096
 
 def _sanitize_custom_prompt(prompt: str) -> str:
     """Trunca y elimina bytes de control de prompts externos (anti-injection)."""
-    prompt = prompt[:_MAX_CUSTOM_PROMPT]
+    prompt = prompt.strip()[:_MAX_CUSTOM_PROMPT]
     return "".join(c for c in prompt if c >= " " or c in "\n\t")
 
 
@@ -320,8 +321,6 @@ async def entrypoint(ctx: agents.JobContext):
         ERRORS_TOTAL.labels(type="session").inc()
         return
     # Hardcoded simple personality (no module loading)
-    from types import SimpleNamespace
-
     profile = SimpleNamespace(id="neutral", name="Neutral")
 
     # VarietyEngine - solo si está habilitado (import condicional)
