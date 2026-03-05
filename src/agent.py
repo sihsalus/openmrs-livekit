@@ -309,10 +309,13 @@ def _setup_walkie_talkie(
 
 def _setup_event_listeners(
     session: AgentSession,
+    room: rtc.Room,
+    room_name: str,
     settings: Settings,
     turn_context: dict,
     profile,
     job_logger,
+    transcript_sent: dict,
 ) -> None:
     """Registra listeners: user_input_transcribed, conversation_item_added, speech_created."""
     # Estado compartido entre los tres listeners
@@ -393,6 +396,15 @@ def _setup_event_listeners(
     session.on("user_input_transcribed", on_user_transcribed)
     session.on("conversation_item_added", on_conversation_item)
     session.on("speech_created", on_speech_created)
+
+    @room.on("participant_disconnected")
+    def on_participant_disconnected(participant: rtc.RemoteParticipant):
+        if participant.identity.startswith(PARENT_IDENTITY_PREFIX):
+            return  # padre saliendo no termina la sesión del niño
+        job_logger.info("Participante desconectado, guardando transcript", extra={"participant": participant.identity})
+        if not transcript_sent["done"]:
+            transcript_sent["done"] = True
+            asyncio.create_task(_save_transcript(session, room_name, settings, job_logger))
 
 
 async def _send_initial_greeting(
@@ -515,19 +527,22 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     session.userdata["base_instructions"] = instructions
 
     _session_start = time.time()
+    _transcript_sent = {"done": False}
     ACTIVE_SESSIONS.inc()
     SESSIONS_TOTAL.labels(personality=profile.id).inc()
 
     async def _on_session_end():
         ACTIVE_SESSIONS.dec()
         SESSION_DURATION.observe(time.time() - _session_start)
-        await _save_transcript(session, room_name, settings, job_logger)
+        if not _transcript_sent["done"]:
+            _transcript_sent["done"] = True
+            await _save_transcript(session, room_name, settings, job_logger)
 
     ctx.add_shutdown_callback(_on_session_end)
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
     has_parent_in_room = _setup_walkie_talkie(ctx, session, settings, job_logger)
-    _setup_event_listeners(session, settings, turn_context, profile, job_logger)
+    _setup_event_listeners(session, ctx.room, room_name, settings, turn_context, profile, job_logger, _transcript_sent)
 
     try:
         await session.start(room=ctx.room, agent=agent)
