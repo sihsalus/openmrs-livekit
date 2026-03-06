@@ -13,7 +13,7 @@ from prometheus_client import Counter, Gauge, Histogram, Info
 # Expone: nebu_agent_info{version="2.0.0", agent_name="Nebu", tts_provider="inworld", ...} 1.0
 AGENT_INFO = Info("nebu_agent", "Nebu agent static configuration info")
 
-# Timestamp de arranque del proceso principal (persiste en multiprocess dir)
+# Timestamp de arranque — leído por backend AgentMonitorService para calcular uptime
 AGENT_START_TIME = Gauge(
     "nebu_agent_start_time_seconds",
     "Unix timestamp when the agent main process started",
