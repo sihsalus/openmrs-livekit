@@ -210,7 +210,7 @@ def main():
     )
 
     if settings.log_format == "text":
-        print(settings.display_config())
+        logger.info(settings.display_config())
 
     AGENT_INFO.info(
         {

@@ -7,6 +7,7 @@ from livekit.agents import AgentSession
 
 from src.config import Settings
 from src.logger import get_logger
+from src.metrics import ERRORS_TOTAL
 
 logger = get_logger("nebu.transcript")
 
@@ -65,4 +66,5 @@ async def save_transcript(
                     extra={"status": resp.status, "body": body[:200]},
                 )
     except Exception as exc:
+        ERRORS_TOTAL.labels(type="transcript").inc()
         job_logger.warning("Error guardando transcript", extra={"error": str(exc)})

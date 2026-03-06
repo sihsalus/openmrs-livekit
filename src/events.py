@@ -125,8 +125,13 @@ def setup_event_listeners(
                 await asyncio.sleep(settings.filler_delay)
                 try:
                     await session.say(settings.filler_sound_text)
-                except (asyncio.CancelledError, Exception):
+                except asyncio.CancelledError:
                     pass
+                except Exception as exc:
+                    job_logger.warning(
+                        "Filler sound falló",
+                        extra={"error": str(exc)},
+                    )
 
             _state["filler_task"] = asyncio.create_task(_maybe_filler())
 

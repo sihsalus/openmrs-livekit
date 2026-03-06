@@ -3,6 +3,10 @@
 import aiohttp
 from livekit.agents import RunContext, function_tool
 
+from src.logger import get_logger
+
+logger = get_logger("nebu.tools.weather")
+
 _GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 _WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -86,5 +90,6 @@ async def get_weather(
             f"En {resolved_name} ahora: {desc}, temperatura {temp} grados celsius, "
             f"humedad {humidity} por ciento, viento a {wind} kilómetros por hora."
         )
-    except Exception:
+    except Exception as exc:
+        logger.warning("Error consultando clima", extra={"city": city, "error": str(exc)})
         return f"No pude consultar el clima para {city} en este momento."
