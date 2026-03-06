@@ -13,6 +13,36 @@ from src.logger import get_logger
 logger = get_logger("nebu.providers")
 
 
+def _build_with_fallback(
+    label: str,
+    primary: str,
+    fallback_csv: str | None,
+    builder,
+):
+    """Intenta construir con el proveedor primario; si falla, recorre los fallbacks."""
+    chain = [primary]
+    if fallback_csv:
+        chain += [p.strip() for p in fallback_csv.split(",") if p.strip()]
+
+    last_error: Exception | None = None
+    for provider in chain:
+        try:
+            instance = builder(provider)
+            if provider != primary:
+                logger.warning(
+                    f"{label} fallback activo",
+                    extra={"using": provider, "primary": primary},
+                )
+            return instance
+        except Exception as e:
+            logger.error(f"{label} provider falló", extra={"provider": provider, "error": str(e)})
+            last_error = e
+
+    raise ValueError(
+        f"Todos los proveedores {label} fallaron. Último error: {last_error}"
+    ) from last_error
+
+
 def _build_llm_provider(provider: str, settings: Settings):
     """Construye una instancia LLM para un proveedor específico."""
     if provider == "openai":
@@ -55,32 +85,13 @@ def _build_llm_provider(provider: str, settings: Settings):
 
 
 def build_llm(settings: Settings):
-    """Construye el LLM con fallback automático si el proveedor primario falla.
-
-    Orden de intento: llm_provider → llm_fallback_providers (comma-separated).
-    Registra un warning si se activa el fallback.
-    """
-    chain = [settings.llm_provider]
-    if settings.llm_fallback_providers:
-        chain += [p.strip() for p in settings.llm_fallback_providers.split(",") if p.strip()]
-
-    last_error: Exception | None = None
-    for provider in chain:
-        try:
-            llm = _build_llm_provider(provider, settings)
-            if provider != settings.llm_provider:
-                logger.warning(
-                    "LLM fallback activo",
-                    extra={"using": provider, "primary": settings.llm_provider},
-                )
-            return llm
-        except Exception as e:
-            logger.error("LLM provider falló", extra={"provider": provider, "error": str(e)})
-            last_error = e
-
-    raise ValueError(
-        f"Todos los proveedores LLM fallaron. Último error: {last_error}"
-    ) from last_error
+    """Construye el LLM con fallback automático si el proveedor primario falla."""
+    return _build_with_fallback(
+        "LLM",
+        settings.llm_provider,
+        settings.llm_fallback_providers,
+        lambda p: _build_llm_provider(p, settings),
+    )
 
 
 def _build_stt_provider(provider: str, settings: Settings):
@@ -109,32 +120,13 @@ def _build_stt_provider(provider: str, settings: Settings):
 
 
 def build_stt(settings: Settings):
-    """Construye el STT con fallback automático si el proveedor primario falla.
-
-    Orden de intento: stt_provider → stt_fallback_providers (comma-separated).
-    Registra un warning si se activa el fallback.
-    """
-    chain = [settings.stt_provider]
-    if settings.stt_fallback_providers:
-        chain += [p.strip() for p in settings.stt_fallback_providers.split(",") if p.strip()]
-
-    last_error: Exception | None = None
-    for provider in chain:
-        try:
-            stt = _build_stt_provider(provider, settings)
-            if provider != settings.stt_provider:
-                logger.warning(
-                    "STT fallback activo",
-                    extra={"using": provider, "primary": settings.stt_provider},
-                )
-            return stt
-        except Exception as e:
-            logger.error("STT provider falló", extra={"provider": provider, "error": str(e)})
-            last_error = e
-
-    raise ValueError(
-        f"Todos los proveedores STT fallaron. Último error: {last_error}"
-    ) from last_error
+    """Construye el STT con fallback automático si el proveedor primario falla."""
+    return _build_with_fallback(
+        "STT",
+        settings.stt_provider,
+        settings.stt_fallback_providers,
+        lambda p: _build_stt_provider(p, settings),
+    )
 
 
 def _build_tts_provider(provider: str, settings: Settings):
@@ -189,29 +181,10 @@ def _build_tts_provider(provider: str, settings: Settings):
 
 
 def build_tts(settings: Settings):
-    """Construye el TTS con fallback automático si el proveedor primario falla.
-
-    Orden de intento: tts_provider → tts_fallback_providers (comma-separated).
-    Registra un warning si se activa el fallback.
-    """
-    chain = [settings.tts_provider]
-    if settings.tts_fallback_providers:
-        chain += [p.strip() for p in settings.tts_fallback_providers.split(",") if p.strip()]
-
-    last_error: Exception | None = None
-    for provider in chain:
-        try:
-            tts = _build_tts_provider(provider, settings)
-            if provider != settings.tts_provider:
-                logger.warning(
-                    "TTS fallback activo",
-                    extra={"using": provider, "primary": settings.tts_provider},
-                )
-            return tts
-        except Exception as e:
-            logger.error("TTS provider falló", extra={"provider": provider, "error": str(e)})
-            last_error = e
-
-    raise ValueError(
-        f"Todos los proveedores TTS fallaron. Último error: {last_error}"
-    ) from last_error
+    """Construye el TTS con fallback automático si el proveedor primario falla."""
+    return _build_with_fallback(
+        "TTS",
+        settings.tts_provider,
+        settings.tts_fallback_providers,
+        lambda p: _build_tts_provider(p, settings),
+    )
