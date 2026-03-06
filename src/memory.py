@@ -9,8 +9,6 @@ At session start, calls the backend's vector memory service to load:
 Follows the same pattern as transcript.py (aiohttp, agent-secret auth, fault-tolerant).
 """
 
-import asyncio
-
 import aiohttp
 
 from src.config import Settings
@@ -76,7 +74,7 @@ async def fetch_memory_context(
                     extra={"status": resp.status, "body": body[:200]},
                 )
                 return None
-    except asyncio.TimeoutError:
+    except TimeoutError:
         job_logger.warning("Memory fetch timed out (>3s), proceeding without memory")
         return None
     except Exception as exc:

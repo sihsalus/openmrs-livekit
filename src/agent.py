@@ -35,8 +35,8 @@ from src.session import (
     send_initial_greeting,
     setup_variety_engine,
 )
-from src.tools import get_tools
 from src.memory import fetch_memory_context
+from src.tools import get_tools
 from src.transcript import save_transcript
 
 logger = get_logger("nebu.agent")
