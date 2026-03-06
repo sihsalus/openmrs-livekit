@@ -18,7 +18,6 @@ import time
 from types import SimpleNamespace
 
 import aiohttp
-
 from livekit import agents, rtc
 from livekit.agents import Agent, AgentSession, SpeechCreatedEvent
 from livekit.agents.metrics import EOUMetrics, LLMMetrics, STTMetrics, TTSMetrics
@@ -36,14 +35,15 @@ from src.metrics import (
     SESSION_DURATION,
     SESSIONS_TOTAL,
     STT_DURATION,
-    TURN_LATENCY,
-    TURNS_TOTAL,
     TTS_AUDIO_DURATION,
     TTS_TTFB,
+    TURN_LATENCY,
+    TURNS_TOTAL,
 )
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.providers import build_llm, build_stt, build_tts
 from src.tools import get_tools
+
 # Imports condicionales solo si están habilitados (ahorro ~25MB RAM)
 # from src.variety import VarietyEngine  # Solo si enable_variety_engine=true
 # from src.personalities import get_profile  # Solo si enable_variety_engine=true
