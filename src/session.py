@@ -177,12 +177,9 @@ def build_instructions(
         memory_block = (
             "\n\nMEMORIA DE SESIONES ANTERIORES:\n"
             "Usa esta información para personalizar la conversación. "
-            "No repitas datos que ya le contaste.\n"
-            + memory_context
+            "No repitas datos que ya le contaste.\n" + memory_context
         )
-        job_logger.info(
-            "Memory context inyectado en prompt", extra={"length": len(memory_context)}
-        )
+        job_logger.info("Memory context inyectado en prompt", extra={"length": len(memory_context)})
 
     return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
 
