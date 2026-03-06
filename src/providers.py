@@ -8,6 +8,9 @@ Añadir soporte para un nuevo proveedor = un bloque if aquí, sin tocar agent.py
 from livekit.plugins import openai
 
 from src.config import Settings
+from src.logger import get_logger
+
+logger = get_logger("nebu.providers")
 
 
 def _build_llm_provider(provider: str, settings: Settings):
@@ -59,10 +62,6 @@ def build_llm(settings: Settings):
     Orden de intento: llm_provider → llm_fallback_providers (comma-separated).
     Registra un warning si se activa el fallback.
     """
-    from src.logger import get_logger
-
-    logger = get_logger("nebu.providers")
-
     chain = [settings.llm_provider]
     if settings.llm_fallback_providers:
         chain += [p.strip() for p in settings.llm_fallback_providers.split(",") if p.strip()]
@@ -117,10 +116,6 @@ def build_stt(settings: Settings):
     Orden de intento: stt_provider → stt_fallback_providers (comma-separated).
     Registra un warning si se activa el fallback.
     """
-    from src.logger import get_logger
-
-    logger = get_logger("nebu.providers")
-
     chain = [settings.stt_provider]
     if settings.stt_fallback_providers:
         chain += [p.strip() for p in settings.stt_fallback_providers.split(",") if p.strip()]
@@ -201,10 +196,6 @@ def build_tts(settings: Settings):
     Orden de intento: tts_provider → tts_fallback_providers (comma-separated).
     Registra un warning si se activa el fallback.
     """
-    from src.logger import get_logger
-
-    logger = get_logger("nebu.providers")
-
     chain = [settings.tts_provider]
     if settings.tts_fallback_providers:
         chain += [p.strip() for p in settings.tts_fallback_providers.split(",") if p.strip()]
