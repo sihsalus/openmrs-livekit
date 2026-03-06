@@ -30,6 +30,16 @@ from src.transcript import save_transcript
 AGENT_ROOM_PREFIX = "iot-device-"
 PARENT_IDENTITY_PREFIX = "user-parent-"
 
+# Keeps strong references to fire-and-forget tasks so the GC doesn't destroy them.
+_bg_tasks: set[asyncio.Task] = set()
+
+
+def _fire_and_forget(coro) -> asyncio.Task:
+    task = asyncio.create_task(coro)
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+    return task
+
 
 def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logger):
     """Registra handlers de walkie-talkie. Retorna _has_parent_in_room o None si está deshabilitado."""
@@ -62,7 +72,7 @@ def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logg
                 "Padre conectado - pausando AI para walkie-talkie",
                 extra={"parent_identity": participant.identity},
             )
-            asyncio.create_task(_pause_for_walkie_talkie())
+            _fire_and_forget(_pause_for_walkie_talkie())
 
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(participant: rtc.RemoteParticipant):
@@ -72,7 +82,7 @@ def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logg
                 "Padre desconectado - reanudando AI",
                 extra={"parent_identity": participant.identity},
             )
-            asyncio.create_task(_resume_from_walkie_talkie())
+            _fire_and_forget(_resume_from_walkie_talkie())
 
     job_logger.info("Walkie-talkie mode enabled")
     return _has_parent_in_room
@@ -135,7 +145,7 @@ def setup_event_listeners(
         if anchor or summary:
             base = session.userdata.get("base_instructions", "")
             extra = ("\n" + anchor if anchor else "") + ("\n" + summary if summary else "")
-            asyncio.create_task(session.current_agent.update_instructions(base + extra))
+            _fire_and_forget(session.current_agent.update_instructions(base + extra))
 
     def on_conversation_item(ev):
         """Latencia LLM + anti-repetición (si VarietyEngine activo)."""
@@ -175,4 +185,4 @@ def setup_event_listeners(
         )
         if not transcript_sent["done"]:
             transcript_sent["done"] = True
-            asyncio.create_task(save_transcript(session, room_name, settings, job_logger))
+            _fire_and_forget(save_transcript(session, room_name, settings, job_logger))
