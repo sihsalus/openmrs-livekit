@@ -18,9 +18,7 @@ def _build_llm_provider(provider: str, settings: Settings):
     if provider == "openai":
         return openai.LLM(
             model=settings.openai_model,
-            temperature=settings.llm_temperature,
-            parallel_tool_calls=False,
-            max_completion_tokens=settings.llm_max_tokens,
+            # Sin parámetros extra → usa defaults internos de OpenAI
         )
 
     if provider == "anthropic":

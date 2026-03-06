@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # ============= OpenAI Configuration =============
     openai_api_key: str = Field(..., description="API Key de OpenAI")
     openai_model: str = Field(default="gpt-4o-mini", description="Modelo OpenAI para LLM")
-    openai_stt_model: str = Field(default="gpt-4o-transcribe", description="Modelo STT")
+    openai_stt_model: str = Field(default="gpt-4o-mini-transcribe", description="Modelo STT")
 
     # ============= Anthropic Configuration =============
     anthropic_api_key: str | None = Field(default=None, description="API Key de Anthropic")
@@ -144,13 +144,13 @@ class Settings(BaseSettings):
         description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva",
     )
     llm_max_tokens: int = Field(
-        default=200,
-        description="Tokens máximos de respuesta — 200 = respuestas cortas, menor latencia",
+        default=500,
+        description="Tokens máximos de respuesta — 500 = respuestas completas sin cortes",
     )
 
-    # ============= VAD Settings (Optimizadas para reducir CPU en ESP32) =============
+    # ============= VAD Settings (Valores estándar LiveKit) =============
     vad_min_silence_duration: float = Field(
-        default=0.6,
+        default=0.5,
         description="Silencio mínimo para considerar fin de habla (0.6 = menos procesamiento que 0.5)",
     )
     vad_activation_threshold: float = Field(

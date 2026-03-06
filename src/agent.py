@@ -36,6 +36,7 @@ from src.session import (
     setup_variety_engine,
 )
 from src.tools import get_tools
+from src.memory import fetch_memory_context
 from src.transcript import save_transcript
 
 logger = get_logger("nebu.agent")
@@ -85,7 +86,17 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     job_logger.info("Conectado al room", extra={"room": ctx.room.name})
 
     room_metadata = parse_room_metadata(ctx, job_logger)
-    instructions = build_instructions(room_metadata, settings, job_logger)
+
+    toy_id = room_metadata.get("toy_id")
+    memory_context = None
+    if toy_id:
+        memory_context = await fetch_memory_context(toy_id, settings, job_logger)
+    else:
+        job_logger.info("No toy_id in metadata, skipping memory fetch")
+
+    instructions = build_instructions(
+        room_metadata, settings, job_logger, memory_context=memory_context
+    )
     turn_context = TurnContext()
 
     nebu = NebuAgent(settings)

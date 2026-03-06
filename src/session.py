@@ -110,11 +110,7 @@ class NebuAgent:
 
         session = AgentSession(
             turn_detection=turn_detection_model,
-            vad=silero.VAD.load(
-                min_silence_duration=self.settings.vad_min_silence_duration,
-                activation_threshold=self.settings.vad_activation_threshold,
-                min_speech_duration=self.settings.vad_min_speech_duration,
-            ),
+            vad=silero.VAD.load(),  # Sin parámetros → usa defaults internos de LiveKit
             stt=stt,
             llm=llm,
             tts=tts,
@@ -154,7 +150,12 @@ def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict:
         return {}
 
 
-def build_instructions(room_metadata: dict, settings: Settings, job_logger) -> str:
+def build_instructions(
+    room_metadata: dict,
+    settings: Settings,
+    job_logger,
+    memory_context: str | None = None,
+) -> str:
     """Construye las instrucciones del agente a partir de metadata y settings."""
     raw_prompt = room_metadata.get("agent_prompt")
     custom_prompt = (
@@ -170,7 +171,20 @@ def build_instructions(room_metadata: dict, settings: Settings, job_logger) -> s
         custom_prompt = get_system_prompt()
     if owner_context:
         job_logger.info("Contexto del owner inyectado en prompt")
-    return custom_prompt + owner_context + CAPABILITIES_BLOCK
+
+    memory_block = ""
+    if memory_context:
+        memory_block = (
+            "\n\nMEMORIA DE SESIONES ANTERIORES:\n"
+            "Usa esta información para personalizar la conversación. "
+            "No repitas datos que ya le contaste.\n"
+            + memory_context
+        )
+        job_logger.info(
+            "Memory context inyectado en prompt", extra={"length": len(memory_context)}
+        )
+
+    return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
 
 
 def setup_variety_engine(
