@@ -145,7 +145,12 @@ class NebuAgent:
         )
 
         # EOUMetrics se emite desde AgentSession (no desde stt), hay que registrar aquí
-        session.on("metrics_collected", lambda ev: eou_metrics_wrapper(ev.metrics) if isinstance(ev.metrics, EOUMetrics) else None)
+        session.on(
+            "metrics_collected",
+            lambda ev: (
+                eou_metrics_wrapper(ev.metrics) if isinstance(ev.metrics, EOUMetrics) else None
+            ),
+        )
 
         return session
 
@@ -373,9 +378,7 @@ def _setup_event_listeners(
         if not hasattr(item, "role") or item.role != "assistant":
             return
         if _state["turn_start"] is not None:
-            LLM_LATENCY.labels(personality=profile.id).observe(
-                time.time() - _state["turn_start"]
-            )
+            LLM_LATENCY.labels(personality=profile.id).observe(time.time() - _state["turn_start"])
         text = item.text_content
         if text:
             variety = session.userdata.get("variety")
@@ -388,9 +391,9 @@ def _setup_event_listeners(
             _state["filler_task"].cancel()
             _state["filler_task"] = None
         if _state["turn_start"] is not None:
-            TURN_LATENCY.labels(
-                personality=profile.id, tts_provider=settings.tts_provider
-            ).observe(ev.created_at - _state["turn_start"])
+            TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
+                ev.created_at - _state["turn_start"]
+            )
             _state["turn_start"] = None
 
     session.on("user_input_transcribed", on_user_transcribed)
@@ -401,7 +404,10 @@ def _setup_event_listeners(
     def on_participant_disconnected(participant: rtc.RemoteParticipant):
         if participant.identity.startswith(PARENT_IDENTITY_PREFIX):
             return  # padre saliendo no termina la sesión del niño
-        job_logger.info("Participante desconectado, guardando transcript", extra={"participant": participant.identity})
+        job_logger.info(
+            "Participante desconectado, guardando transcript",
+            extra={"participant": participant.identity},
+        )
         if not transcript_sent["done"]:
             transcript_sent["done"] = True
             asyncio.create_task(_save_transcript(session, room_name, settings, job_logger))
@@ -466,14 +472,20 @@ async def _save_transcript(
         async with aiohttp.ClientSession(timeout=timeout) as http:
             resp = await http.post(
                 url,
-                json={"roomName": room_name, "transcript": transcript, "messageCount": message_count},
+                json={
+                    "roomName": room_name,
+                    "transcript": transcript,
+                    "messageCount": message_count,
+                },
                 headers={"x-agent-secret": settings.agent_internal_secret},
             )
             if resp.status == 200:
                 job_logger.info("Transcript guardado", extra={"messages": message_count})
             else:
                 body = await resp.text()
-                job_logger.warning("Backend rechazó transcript", extra={"status": resp.status, "body": body[:200]})
+                job_logger.warning(
+                    "Backend rechazó transcript", extra={"status": resp.status, "body": body[:200]}
+                )
     except Exception as exc:
         job_logger.warning("Error guardando transcript", extra={"error": str(exc)})
 
@@ -543,7 +555,9 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
     has_parent_in_room = _setup_walkie_talkie(ctx, session, settings, job_logger)
-    _setup_event_listeners(session, ctx.room, room_name, settings, turn_context, profile, job_logger, _transcript_sent)
+    _setup_event_listeners(
+        session, ctx.room, room_name, settings, turn_context, profile, job_logger, _transcript_sent
+    )
 
     try:
         await session.start(room=ctx.room, agent=agent)
@@ -566,7 +580,6 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 def make_entrypoint(settings: Settings):
     """Devuelve el entrypoint del agente picklable via functools.partial."""
     return functools.partial(_entrypoint, settings=settings)
-
 
 
 def start_metrics_server(settings: Settings) -> None:

@@ -81,7 +81,9 @@ def build_llm(settings: Settings):
             logger.error("LLM provider falló", extra={"provider": provider, "error": str(e)})
             last_error = e
 
-    raise ValueError(f"Todos los proveedores LLM fallaron. Último error: {last_error}") from last_error
+    raise ValueError(
+        f"Todos los proveedores LLM fallaron. Último error: {last_error}"
+    ) from last_error
 
 
 def _build_stt_provider(provider: str, settings: Settings):
@@ -137,7 +139,9 @@ def build_stt(settings: Settings):
             logger.error("STT provider falló", extra={"provider": provider, "error": str(e)})
             last_error = e
 
-    raise ValueError(f"Todos los proveedores STT fallaron. Último error: {last_error}") from last_error
+    raise ValueError(
+        f"Todos los proveedores STT fallaron. Último error: {last_error}"
+    ) from last_error
 
 
 def _build_tts_provider(provider: str, settings: Settings):
@@ -219,4 +223,6 @@ def build_tts(settings: Settings):
             logger.error("TTS provider falló", extra={"provider": provider, "error": str(e)})
             last_error = e
 
-    raise ValueError(f"Todos los proveedores TTS fallaron. Último error: {last_error}") from last_error
+    raise ValueError(
+        f"Todos los proveedores TTS fallaron. Último error: {last_error}"
+    ) from last_error

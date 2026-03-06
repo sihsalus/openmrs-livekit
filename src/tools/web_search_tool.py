@@ -216,10 +216,12 @@ async def _search_wikipedia(
             ) as sr:
                 if sr.status == 200:
                     sd = await sr.json()
-                    results.append({
-                        "title": sd.get("title", title),
-                        "snippet": sd.get("extract", ""),
-                    })
+                    results.append(
+                        {
+                            "title": sd.get("title", title),
+                            "snippet": sd.get("extract", ""),
+                        }
+                    )
         except Exception:
             continue
 
@@ -298,7 +300,9 @@ def make_web_search(settings: Settings):
                 elif provider == "serpapi":
                     if not serpapi_api_key:
                         return "Falta la API key de SerpAPI para realizar búsquedas."
-                    results = await _search_serpapi(session, safe_query, serpapi_api_key, max_results)
+                    results = await _search_serpapi(
+                        session, safe_query, serpapi_api_key, max_results
+                    )
 
                 elif provider == "duckduckgo":
                     results = await _search_duckduckgo(session, safe_query, max_results)

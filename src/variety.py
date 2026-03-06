@@ -787,7 +787,9 @@ class VarietyEngine:
 
     @property
     def last_fact_category(self) -> str:
-        return self.memory.fact_categories_used[-1] if self.memory.fact_categories_used else "general"
+        return (
+            self.memory.fact_categories_used[-1] if self.memory.fact_categories_used else "general"
+        )
 
     @property
     def session_minutes(self) -> float:

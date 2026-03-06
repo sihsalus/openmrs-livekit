@@ -121,8 +121,8 @@ class Settings(BaseSettings):
     )
 
     # ============= Web Search Configuration =============
-    web_search_provider: Literal["tavily", "brave", "serpapi", "duckduckgo", "wikipedia"] | None = Field(
-        default=None, description="Proveedor de búsqueda web (None = deshabilitado)"
+    web_search_provider: Literal["tavily", "brave", "serpapi", "duckduckgo", "wikipedia"] | None = (
+        Field(default=None, description="Proveedor de búsqueda web (None = deshabilitado)")
     )
     web_search_parental_consent: bool = Field(
         default=False,
@@ -140,21 +140,25 @@ class Settings(BaseSettings):
 
     # ============= LLM Settings =============
     llm_temperature: float = Field(
-        default=0.6, description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva"
+        default=0.6,
+        description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva",
     )
     llm_max_tokens: int = Field(
-        default=200, description="Tokens máximos de respuesta — 200 = respuestas cortas, menor latencia"
+        default=200,
+        description="Tokens máximos de respuesta — 200 = respuestas cortas, menor latencia",
     )
 
     # ============= VAD Settings (Optimizadas para reducir CPU en ESP32) =============
     vad_min_silence_duration: float = Field(
-        default=0.6, description="Silencio mínimo para considerar fin de habla (0.6 = menos procesamiento que 0.5)"
+        default=0.6,
+        description="Silencio mínimo para considerar fin de habla (0.6 = menos procesamiento que 0.5)",
     )
     vad_activation_threshold: float = Field(
         default=0.4, description="Threshold VAD (0.0-1.0) — 0.4 = menos false positives que 0.3"
     )
     vad_min_speech_duration: float = Field(
-        default=0.3, description="Duración mínima de habla para activar (0.3 = ignora ruidos muy cortos)"
+        default=0.3,
+        description="Duración mínima de habla para activar (0.3 = ignora ruidos muy cortos)",
     )
 
     # ============= Session Settings (Optimizadas para captura de interrupciones) =============
@@ -175,7 +179,8 @@ class Settings(BaseSettings):
         default=30.0, description="Segundos de inactividad antes de considerar al usuario ausente"
     )
     greeting_delay: float = Field(
-        default=0.5, description="Segundos de espera antes del saludo inicial (da tiempo al audio a estabilizarse)"
+        default=0.5,
+        description="Segundos de espera antes del saludo inicial (da tiempo al audio a estabilizarse)",
     )
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
 
@@ -184,7 +189,8 @@ class Settings(BaseSettings):
         default="es", description="Idioma para TTS (BCP-47 base: 'es', 'en', 'fr', etc.)"
     )
     tts_google_language: str = Field(
-        default="es-US", description="Locale BCP-47 completo para Google TTS (ej: 'es-US', 'es-MX', 'en-US')"
+        default="es-US",
+        description="Locale BCP-47 completo para Google TTS (ej: 'es-US', 'es-MX', 'en-US')",
     )
 
     # ============= Filler Sound =============
@@ -201,7 +207,8 @@ class Settings(BaseSettings):
 
     # ============= Security =============
     max_custom_prompt_chars: int = Field(
-        default=4096, description="Tamaño máximo en caracteres para prompts personalizados (anti-injection)"
+        default=4096,
+        description="Tamaño máximo en caracteres para prompts personalizados (anti-injection)",
     )
 
     # ============= TTS Fallback =============
@@ -215,8 +222,13 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, description="Puerto del servidor API")
 
     # ============= Backend Integration =============
-    agent_backend_url: str | None = Field(default=None, description="URL interna del backend NestJS (ej: http://localhost:3001/api/v1)")
-    agent_internal_secret: str | None = Field(default=None, description="Secret compartido para llamadas internas agente→backend")
+    agent_backend_url: str | None = Field(
+        default=None,
+        description="URL interna del backend NestJS (ej: http://localhost:3001/api/v1)",
+    )
+    agent_internal_secret: str | None = Field(
+        default=None, description="Secret compartido para llamadas internas agente→backend"
+    )
 
     # ═══════════════════════════════════════════════════════════════
     # Feature Flags - Optimización para ESP32
@@ -311,5 +323,3 @@ class Settings(BaseSettings):
 ║  Interruptions:    {str(self.allow_interruptions):<40} ║
 ╚══════════════════════════════════════════════════════════════╝
 """
-
-
