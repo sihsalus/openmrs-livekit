@@ -20,6 +20,7 @@ from livekit.plugins import silero
 from src.config import Settings
 from src.events import AGENT_ROOM_PREFIX, setup_event_listeners, setup_walkie_talkie
 from src.logger import get_logger, setup_logging
+from src.memory import fetch_memory_context
 from src.metrics import (
     ACTIVE_SESSIONS,
     AGENT_INFO,
@@ -35,7 +36,6 @@ from src.session import (
     send_initial_greeting,
     setup_variety_engine,
 )
-from src.memory import fetch_memory_context
 from src.tools import get_tools
 from src.transcript import save_transcript
 
