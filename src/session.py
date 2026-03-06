@@ -2,6 +2,7 @@
 session.py — Setup y lifecycle de AgentSession.
 
 Incluye:
+- TurnContext: dataclass para estado de turno compartido entre session y events.
 - NebuAgent: clase que construye la AgentSession con STT/LLM/TTS y métricas.
 - Helpers de construcción de instrucciones a partir de room metadata.
 - Setup de VarietyEngine y envío del saludo inicial.
@@ -9,11 +10,11 @@ Incluye:
 
 import asyncio
 import json
-import time
+from dataclasses import dataclass
 from types import SimpleNamespace
 
 from livekit import agents
-from livekit.agents import Agent, AgentSession
+from livekit.agents import AgentSession
 from livekit.agents.metrics import EOUMetrics, LLMMetrics, STTMetrics, TTSMetrics
 from livekit.plugins import silero
 
@@ -32,65 +33,80 @@ from src.providers import build_llm, build_stt, build_tts
 logger = get_logger("nebu.session")
 
 
+@dataclass
+class TurnContext:
+    turn_num: int = 0
+    turn_id: str | None = None
+
+
 class NebuAgent:
     """Agente Nebu — construye y configura la AgentSession."""
 
     def __init__(self, settings: Settings):
         self.settings = settings
-        self.session: AgentSession | None = None
+        self._job_logger = None
+        self._turn_context: TurnContext | None = None
+
+    def _on_llm_metrics(self, metrics: LLMMetrics) -> None:
+        if self._job_logger:
+            self._job_logger.info(
+                f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
+                f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}",
+                extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
+            )
+
+    def _on_stt_metrics(self, metrics: STTMetrics) -> None:
+        if self._job_logger:
+            self._job_logger.info(
+                f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
+                extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
+            )
+        STT_DURATION.labels(stt_provider=self.settings.stt_provider).observe(metrics.duration)
+
+    def _on_eou_metrics(self, metrics: EOUMetrics) -> None:
+        if self._turn_context is not None:
+            self._turn_context.turn_num += 1
+            self._turn_context.turn_id = f"t{self._turn_context.turn_num:03d}"
+        if self._job_logger:
+            self._job_logger.info(
+                f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s",
+                extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
+            )
+        EOU_DELAY.observe(metrics.end_of_utterance_delay)
+
+    def _on_tts_metrics(self, metrics: TTSMetrics) -> None:
+        if self._job_logger:
+            self._job_logger.info(
+                f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
+                extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
+            )
+        TTS_TTFB.labels(tts_provider=self.settings.tts_provider).observe(metrics.ttfb)
+        TTS_AUDIO_DURATION.labels(tts_provider=self.settings.tts_provider).observe(
+            metrics.audio_duration
+        )
+
+    def _on_session_metrics(self, ev) -> None:
+        if isinstance(ev.metrics, EOUMetrics):
+            self._on_eou_metrics(ev.metrics)
 
     async def create_session(
-        self, instructions: str, job_logger=None, turn_detection_model=None, turn_context=None
+        self,
+        instructions: str,
+        job_logger=None,
+        turn_detection_model=None,
+        turn_context: TurnContext | None = None,
     ) -> AgentSession:
         """Crea una sesión de agente con la configuración actual."""
+        self._job_logger = job_logger
+        self._turn_context = turn_context
+
         stt = build_stt(self.settings)
         llm = build_llm(self.settings)
         tts = build_tts(self.settings)
 
-        def _tid() -> str | None:
-            return turn_context["turn_id"] if turn_context else None
-
-        def llm_metrics_wrapper(metrics: LLMMetrics):
-            if job_logger:
-                job_logger.info(
-                    f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
-                    f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}",
-                    extra={"turn_id": _tid()},
-                )
-
-        def stt_metrics_wrapper(metrics: STTMetrics):
-            if job_logger:
-                job_logger.info(
-                    f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
-                    extra={"turn_id": _tid()},
-                )
-            STT_DURATION.labels(stt_provider=self.settings.stt_provider).observe(metrics.duration)
-
-        def eou_metrics_wrapper(metrics: EOUMetrics):
-            if turn_context is not None:
-                turn_context["turn_num"] += 1
-                turn_context["turn_id"] = f"t{turn_context['turn_num']:03d}"
-            if job_logger:
-                job_logger.info(
-                    f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s",
-                    extra={"turn_id": _tid()},
-                )
-            EOU_DELAY.observe(metrics.end_of_utterance_delay)
-
-        def tts_metrics_wrapper(metrics: TTSMetrics):
-            if job_logger:
-                job_logger.info(
-                    f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
-                    extra={"turn_id": _tid()},
-                )
-            TTS_TTFB.labels(tts_provider=self.settings.tts_provider).observe(metrics.ttfb)
-            TTS_AUDIO_DURATION.labels(tts_provider=self.settings.tts_provider).observe(
-                metrics.audio_duration
-            )
-
-        llm.on("metrics_collected", llm_metrics_wrapper)
-        stt.on("metrics_collected", stt_metrics_wrapper)
-        tts.on("metrics_collected", tts_metrics_wrapper)
+        llm.on("metrics_collected", self._on_llm_metrics)
+        stt.on("metrics_collected", self._on_stt_metrics)
+        tts.on("metrics_collected", self._on_tts_metrics)
 
         session = AgentSession(
             turn_detection=turn_detection_model,
@@ -111,12 +127,7 @@ class NebuAgent:
             user_away_timeout=self.settings.user_away_timeout,
         )
 
-        session.on(
-            "metrics_collected",
-            lambda ev: (
-                eou_metrics_wrapper(ev.metrics) if isinstance(ev.metrics, EOUMetrics) else None
-            ),
-        )
+        session.on("metrics_collected", self._on_session_metrics)
 
         return session
 

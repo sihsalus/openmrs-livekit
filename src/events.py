@@ -15,6 +15,7 @@ from livekit import rtc
 from livekit.agents import AgentSession, SpeechCreatedEvent
 
 from src.config import Settings
+from src.session import TurnContext
 from src.metrics import (
     CHILD_SIGNALS_TOTAL,
     LLM_LATENCY,
@@ -82,7 +83,7 @@ def setup_event_listeners(
     room: rtc.Room,
     room_name: str,
     settings: Settings,
-    turn_context: dict,
+    turn_context: TurnContext,
     profile,
     job_logger,
     transcript_sent: dict,
@@ -103,7 +104,7 @@ def setup_event_listeners(
 
         job_logger.info(
             "Turno iniciado",
-            extra={"turn_id": turn_context["turn_id"], "transcript_len": len(text)},
+            extra={"turn_id": turn_context.turn_id, "transcript_len": len(text)},
         )
 
         if settings.filler_sound_enabled:
@@ -155,9 +156,9 @@ def setup_event_listeners(
             _state["filler_task"].cancel()
             _state["filler_task"] = None
         if _state["turn_start"] is not None:
-            TURN_LATENCY.labels(
-                personality=profile.id, tts_provider=settings.tts_provider
-            ).observe(ev.created_at - _state["turn_start"])
+            TURN_LATENCY.labels(personality=profile.id, tts_provider=settings.tts_provider).observe(
+                ev.created_at - _state["turn_start"]
+            )
             _state["turn_start"] = None
 
     session.on("user_input_transcribed", on_user_transcribed)

@@ -29,6 +29,7 @@ from src.metrics import (
 )
 from src.session import (
     NebuAgent,
+    TurnContext,
     build_instructions,
     parse_room_metadata,
     send_initial_greeting,
@@ -85,7 +86,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     room_metadata = parse_room_metadata(ctx, job_logger)
     instructions = build_instructions(room_metadata, settings, job_logger)
-    turn_context: dict = {"turn_id": None, "turn_num": 0}
+    turn_context = TurnContext()
 
     nebu = NebuAgent(settings)
     prewarmed_td = (
