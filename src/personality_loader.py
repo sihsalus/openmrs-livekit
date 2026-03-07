@@ -59,6 +59,7 @@ def _build_knowledge_injector(
     Uses knowledge_loader to load the YAML knowledge module and
     wraps it with chance-based logic.
     """
+
     def injector(category_id: str) -> str:
         chance = special_chance if category_id == special_category else default_chance
         if random.random() > chance:
@@ -125,7 +126,5 @@ def load_profile(personality_id: str) -> PersonalityProfile:
 def discover_profiles() -> list[str]:
     """Return personality IDs found as YAML files (excluding defaults/TEMPLATE)."""
     return sorted(
-        p.stem
-        for p in _PERSONALITIES_DIR.glob("*.yaml")
-        if p.stem not in ("defaults", "TEMPLATE")
+        p.stem for p in _PERSONALITIES_DIR.glob("*.yaml") if p.stem not in ("defaults", "TEMPLATE")
     )
