@@ -162,11 +162,12 @@ def make_entrypoint(settings: Settings):
 
 
 def start_metrics_server(settings: Settings) -> None:
-    """Inicia un servidor HTTP mínimo para el endpoint /metrics de Prometheus."""
+    """Inicia un servidor HTTP para /metrics y /personalities."""
     if not settings.api_enabled:
         logger.info("Servidor de métricas deshabilitado (API_ENABLED=false)")
         return
 
+    import json
     import os
     from wsgiref.simple_server import WSGIRequestHandler, make_server
 
@@ -174,21 +175,42 @@ def start_metrics_server(settings: Settings) -> None:
     from prometheus_client import multiprocess as prom_mp
     from prometheus_client.exposition import make_wsgi_app
 
-    multiprocess_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    from src.personalities import REGISTRY
 
-    def _metrics_wsgi(environ, start_response):
-        if multiprocess_dir:
-            registry = CollectorRegistry()
-            prom_mp.MultiProcessCollector(registry)
-        else:
-            registry = None
-        return make_wsgi_app(registry)(environ, start_response)
+    multiprocess_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
+    metrics_app = None
+
+    def _app(environ, start_response):
+        nonlocal metrics_app
+        path = environ.get("PATH_INFO", "")
+
+        if path == "/personalities":
+            profiles = [
+                {"id": p.id, "display_name": p.display_name, "description": p.description}
+                for p in REGISTRY.values()
+            ]
+            body = json.dumps(profiles).encode()
+            start_response("200 OK", [
+                ("Content-Type", "application/json"),
+                ("Content-Length", str(len(body))),
+            ])
+            return [body]
+
+        # /metrics (default)
+        if metrics_app is None:
+            if multiprocess_dir:
+                registry = CollectorRegistry()
+                prom_mp.MultiProcessCollector(registry)
+            else:
+                registry = None
+            metrics_app = make_wsgi_app(registry)
+        return metrics_app(environ, start_response)
 
     class _SilentHandler(WSGIRequestHandler):
         def log_message(self, *_):
             pass
 
-    httpd = make_server("0.0.0.0", settings.api_port, _metrics_wsgi, handler_class=_SilentHandler)
+    httpd = make_server("0.0.0.0", settings.api_port, _app, handler_class=_SilentHandler)
     thread = threading.Thread(target=httpd.serve_forever, name="metrics-server", daemon=True)
     thread.start()
     logger.info("Metrics server iniciado", extra={"port": settings.api_port})
