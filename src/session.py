@@ -10,6 +10,7 @@ Incluye:
 
 import asyncio
 import json
+import re
 from dataclasses import dataclass
 from types import SimpleNamespace
 
@@ -253,7 +254,14 @@ def _build_owner_context(room_metadata: dict) -> str:
     return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)
 
 
+_INJECTION_PATTERNS = re.compile(
+    r"(^|\n)\s*(SYSTEM\s*:|ASSISTANT\s*:|<\|im_start\|>|<\|system\|>|\[INST\])",
+    re.IGNORECASE,
+)
+
+
 def _sanitize_custom_prompt(prompt: str, max_chars: int) -> str:
-    """Trunca y elimina bytes de control de prompts externos (anti-injection)."""
+    """Trunca, elimina bytes de control y filtra patrones de inyección."""
     prompt = prompt.strip()[:max_chars]
-    return "".join(c for c in prompt if c >= " " or c in "\n\t")
+    prompt = "".join(c for c in prompt if c >= " " or c in "\n\t")
+    return _INJECTION_PATTERNS.sub("", prompt)
