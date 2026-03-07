@@ -233,6 +233,7 @@ async def send_initial_greeting(
 
 def _build_owner_context(room_metadata: dict) -> str:
     """Construye un bloque de contexto sobre el niño/owner para inyectar en el prompt."""
+
     def sanitize(v, limit=200):
         return _sanitize_custom_prompt(str(v), limit)
 
