@@ -87,9 +87,9 @@ RUN chown -R appuser:appuser /app
 # Cambiar a usuario no privilegiado
 USER appuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)" || exit 1
+# Health check — hits /metrics (the only endpoint the agent exposes)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/metrics', timeout=5)" || exit 1
 
 # Exponer puerto del health server de LiveKit y API REST
 EXPOSE 8081 8000

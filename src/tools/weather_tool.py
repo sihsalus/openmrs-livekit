@@ -48,7 +48,7 @@ async def get_weather(
     Args:
         city: The city name to check weather for, e.g. 'Bogota' or 'Madrid'.
     """
-    timeout = aiohttp.ClientTimeout(total=10)
+    timeout = aiohttp.ClientTimeout(total=4)
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             # Step 1: Geocode city name to coordinates
