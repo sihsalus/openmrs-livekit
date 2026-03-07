@@ -139,7 +139,7 @@ def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict:
             "Metadata parseada",
             extra={
                 "keys": list(metadata.keys()),
-                "owner_age": metadata.get("owner_age"),
+                "has_age": metadata.get("owner_age") is not None,
                 "language": metadata.get("preferred_language", "es"),
                 "personality": metadata.get("personality_profile"),
             },
@@ -233,17 +233,19 @@ async def send_initial_greeting(
 
 def _build_owner_context(room_metadata: dict) -> str:
     """Construye un bloque de contexto sobre el niño/owner para inyectar en el prompt."""
+    def sanitize(v, limit=200):
+        return _sanitize_custom_prompt(str(v), limit)
     lines = []
     if name := room_metadata.get("owner_name"):
-        lines.append(f"- Nombre del niño: {name}")
+        lines.append(f"- Nombre del niño: {sanitize(name, 100)}")
     if age := room_metadata.get("owner_age"):
-        lines.append(f"- Edad: {age} años")
+        lines.append(f"- Edad: {sanitize(age, 10)} años")
     if interests := room_metadata.get("owner_interests"):
-        lines.append(f"- Intereses: {interests}")
+        lines.append(f"- Intereses: {sanitize(interests, 500)}")
     if goals := room_metadata.get("learning_goals"):
-        lines.append(f"- Objetivos de aprendizaje: {goals}")
+        lines.append(f"- Objetivos de aprendizaje: {sanitize(goals, 500)}")
     if toy_name := room_metadata.get("toy_name"):
-        lines.append(f"- En esta sesión te llamas '{toy_name}'")
+        lines.append(f"- En esta sesión te llamas '{sanitize(toy_name, 100)}'")
     if not lines:
         return ""
     return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)

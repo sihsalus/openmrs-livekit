@@ -37,10 +37,6 @@ dependencies = [
     # Metrics (expone /metrics via wsgiref stdlib — sin FastAPI)
     "prometheus-client>=0.21",
 
-    # Tracing (OpenTelemetry)
-    "opentelemetry-sdk>=1.25",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.25",
-    "opentelemetry-instrumentation-aiohttp-client>=0.46b0",
 
 ]
 
