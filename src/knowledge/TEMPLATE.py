@@ -8,10 +8,10 @@ Instrucciones:
 4. Conecta con tu personalidad via `knowledge_injector` (ver personalities/TEMPLATE.md)
 
 Ejemplos existentes:
-- andean.py   → Cosmovisión andina (peruvian.py)
-- mexican.py  → Cosmovisión mesoamericana (mexican.py)
-- kpop.py     → Cultura coreana (kpop.py)
-- roblox.py   → Gaming y tech (roblox.py)
+- andean.py   → Cosmovisión andina (peruvian.yaml)
+- mexican.py  → Cosmovisión mesoamericana (mexican.yaml)
+- kpop.py     → Cultura coreana (kpop.yaml)
+- roblox.py   → Gaming y tech (roblox.yaml)
 
 Cada entrada DEBE tener:
 - Versión académica (`descripcion`)
