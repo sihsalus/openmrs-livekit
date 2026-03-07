@@ -32,8 +32,8 @@ class TestFactCategoryRotation:
     def test_tracks_favorite_category(self):
         engine = VarietyEngine()
         for _ in range(4):
-            engine._fact_categories_used.clear()
-            engine._fact_categories_used.append("animals")
+            engine.memory.fact_categories_used.clear()
+            engine.memory.fact_categories_used.append("animals")
             engine._track_category("animals")
         assert engine.favorite_category == "animals"
 
@@ -69,7 +69,7 @@ class TestFactPrompt:
         engine = VarietyEngine()
         for i in range(30):
             engine.record_fact(f"Fact {i}")
-        assert len(engine._facts_told) == 25
+        assert len(engine.memory.facts_told) == 25
 
     def test_build_fact_prompt_with_topic(self):
         engine = VarietyEngine()
@@ -322,7 +322,7 @@ class TestRiddles:
         engine = VarietyEngine()
         for i in range(20):
             engine.record_riddle(f"Riddle {i}")
-        assert len(engine._riddles_told) == 15
+        assert len(engine.memory.riddles_told) == 15
 
 
 class TestTick:
@@ -631,26 +631,26 @@ class TestAgentResponseFeedback:
     def test_record_agent_response_stores_text(self):
         engine = VarietyEngine()
         engine.record_agent_response("¡Asu mare! Los pulpos tienen tres corazones.")
-        assert len(engine._agent_responses) == 1
-        assert "pulpos" in engine._agent_responses[0]
+        assert len(engine.memory.agent_responses) == 1
+        assert "pulpos" in engine.memory.agent_responses[0]
 
     def test_record_agent_response_truncates_at_150(self):
         engine = VarietyEngine()
         long_text = "A" * 300
         engine.record_agent_response(long_text)
-        assert len(engine._agent_responses[0]) == 150
+        assert len(engine.memory.agent_responses[0]) == 150
 
     def test_record_agent_response_caps_at_8(self):
         engine = VarietyEngine()
         for i in range(12):
             engine.record_agent_response(f"Response {i}")
-        assert len(engine._agent_responses) == 8
+        assert len(engine.memory.agent_responses) == 8
 
     def test_record_agent_response_ignores_empty(self):
         engine = VarietyEngine()
         engine.record_agent_response("")
         engine.record_agent_response("   ")
-        assert len(engine._agent_responses) == 0
+        assert len(engine.memory.agent_responses) == 0
 
     def test_fact_prompt_includes_agent_responses(self):
         engine = VarietyEngine()

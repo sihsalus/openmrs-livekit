@@ -18,6 +18,7 @@ from src.personality import PersonalityProfile
 
 _PERSONALITIES_DIR = Path(__file__).parent / "personalities"
 _defaults_cache: dict | None = None
+_profile_cache: dict[str, PersonalityProfile] = {}
 
 
 def _load_defaults() -> dict:
@@ -78,6 +79,9 @@ def load_profile(personality_id: str) -> PersonalityProfile:
     5. Fix milestone keys (YAML int keys)
     6. Construct PersonalityProfile
     """
+    if personality_id in _profile_cache:
+        return _profile_cache[personality_id]
+
     defaults = _load_defaults()
 
     yaml_path = _PERSONALITIES_DIR / f"{personality_id}.yaml"
@@ -113,7 +117,9 @@ def load_profile(personality_id: str) -> PersonalityProfile:
     # Remove any leftover key not in PersonalityProfile
     merged.pop("knowledge_injector", None)
 
-    return PersonalityProfile(knowledge_injector=knowledge_injector, **merged)
+    profile = PersonalityProfile(knowledge_injector=knowledge_injector, **merged)
+    _profile_cache[personality_id] = profile
+    return profile
 
 
 def discover_profiles() -> list[str]:
