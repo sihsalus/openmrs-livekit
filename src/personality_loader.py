@@ -8,13 +8,12 @@ Usage:
     ids = discover_profiles()           # ["peruvian", "mexican", "kpop", "roblox"]
 """
 
-import importlib
 import random
 from pathlib import Path
-from typing import Any
 
 import yaml
 
+from src.knowledge_loader import build_knowledge_injection
 from src.personality import PersonalityProfile
 
 _PERSONALITIES_DIR = Path(__file__).parent / "personalities"
@@ -49,7 +48,6 @@ def _deep_merge(base: dict, override: dict) -> dict:
 
 def _build_knowledge_injector(
     module_name: str,
-    function_name: str,
     special_category: str,
     default_chance: float = 0.12,
     special_chance: float = 0.25,
@@ -57,17 +55,14 @@ def _build_knowledge_injector(
     """
     Build a knowledge_injector callable from YAML config.
 
-    Dynamically imports the knowledge module and wraps the build function
-    with the same chance-based logic used by all personalities.
+    Uses knowledge_loader to load the YAML knowledge module and
+    wraps it with chance-based logic.
     """
-    module = importlib.import_module(f"src.knowledge.{module_name}")
-    build_fn = getattr(module, function_name)
-
     def injector(category_id: str) -> str:
         chance = special_chance if category_id == special_category else default_chance
         if random.random() > chance:
             return ""
-        return f"\n📚 {build_fn()}"
+        return f"\n📚 {build_knowledge_injection(module_name)}"
 
     return injector
 
@@ -96,16 +91,15 @@ def load_profile(personality_id: str) -> PersonalityProfile:
 
     # Pop YAML-only knowledge config keys (not PersonalityProfile fields)
     knowledge_module = merged.pop("knowledge_module", None)
-    knowledge_function = merged.pop("knowledge_function", None)
+    merged.pop("knowledge_function", None)  # legacy, no longer used
     knowledge_special_category = merged.pop("knowledge_special_category", None)
     default_chance = merged.pop("knowledge_default_chance", 0.12)
     special_chance = merged.pop("knowledge_special_chance", 0.25)
 
     knowledge_injector = None
-    if knowledge_module and knowledge_function and knowledge_special_category:
+    if knowledge_module and knowledge_special_category:
         knowledge_injector = _build_knowledge_injector(
             module_name=knowledge_module,
-            function_name=knowledge_function,
             special_category=knowledge_special_category,
             default_chance=default_chance,
             special_chance=special_chance,
