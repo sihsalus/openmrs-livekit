@@ -83,14 +83,11 @@ class MemoryTracker:
     - agent_responses       maxlen=8:  ~8 turnos de output real del LLM
                                        realimentados para dedup textual
 
-    Listas con truncado manual:
-    - facts_told    MAX_FACTS=25:    balance costo de contexto LLM vs. cobertura
-    - riddles_told  MAX_RIDDLES=15:  las adivinanzas tienen menos variedad;
-                                     ventana más pequeña es suficiente
+    Deques con maxlen fijo:
+    - facts_told    maxlen=25:  balance costo de contexto LLM vs. cobertura
+    - riddles_told  maxlen=15:  las adivinanzas tienen menos variedad;
+                                ventana más pequeña es suficiente
     """
-
-    MAX_FACTS: ClassVar[int] = 25
-    MAX_RIDDLES: ClassVar[int] = 15
 
     # Rotating deques — Python evicts oldest entries automatically at maxlen
     fact_categories_used: deque = field(default_factory=lambda: deque(maxlen=10))
@@ -106,19 +103,15 @@ class MemoryTracker:
     pattern_history: deque = field(default_factory=lambda: deque(maxlen=6))
     agent_responses: deque = field(default_factory=lambda: deque(maxlen=8))
 
-    # Manually-capped lists
-    facts_told: list = field(default_factory=list)
-    riddles_told: list = field(default_factory=list)
+    # Anti-repetition deques (maxlen auto-evicts oldest)
+    facts_told: deque = field(default_factory=lambda: deque(maxlen=25))
+    riddles_told: deque = field(default_factory=lambda: deque(maxlen=15))
 
     def record_fact(self, summary: str):
         self.facts_told.append(summary)
-        if len(self.facts_told) > self.MAX_FACTS:
-            self.facts_told.pop(0)
 
     def record_riddle(self, summary: str):
         self.riddles_told.append(summary)
-        if len(self.riddles_told) > self.MAX_RIDDLES:
-            self.riddles_told.pop(0)
 
     def record_agent_response(self, text: str):
         """Record what the LLM actually said (first ~150 chars) for anti-repetition."""
@@ -657,7 +650,7 @@ class VarietyEngine:
         if self.memory.facts_told:
             lines.append("")
             lines.append("═══ NO REPETIR — DATOS YA CONTADOS EN ESTA SESIÓN ═══")
-            for i, fact in enumerate(self.memory.facts_told[-12:], 1):
+            for i, fact in enumerate(list(self.memory.facts_told)[-12:], 1):
                 lines.append(f"  {i}. {fact}")
 
         # 11b) Feedback loop: lo que realmente dijiste
@@ -777,7 +770,7 @@ class VarietyEngine:
         if self.memory.riddles_told:
             lines.append("")
             lines.append("ADIVINANZAS YA CONTADAS (inventa algo diferente):")
-            for i, r in enumerate(self.memory.riddles_told[-8:], 1):
+            for i, r in enumerate(list(self.memory.riddles_told)[-8:], 1):
                 lines.append(f"  {i}. {r}")
         return "\n".join(lines)
 
