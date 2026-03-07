@@ -235,6 +235,7 @@ def _build_owner_context(room_metadata: dict) -> str:
     """Construye un bloque de contexto sobre el niño/owner para inyectar en el prompt."""
     def sanitize(v, limit=200):
         return _sanitize_custom_prompt(str(v), limit)
+
     lines = []
     if name := room_metadata.get("owner_name"):
         lines.append(f"- Nombre del niño: {sanitize(name, 100)}")
