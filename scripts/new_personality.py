@@ -7,7 +7,7 @@ Usage:
 
 Creates:
     src/personalities/<id>.yaml — Personality profile (from TEMPLATE.yaml)
-    src/knowledge/<id>.py       — Knowledge module skeleton
+    src/knowledge/<id>.yaml     — Knowledge module (from TEMPLATE.yaml)
     (No __init__.py update needed — auto-discovery via YAML glob)
 """
 
@@ -18,8 +18,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PERSONALITIES_DIR = ROOT / "src" / "personalities"
 KNOWLEDGE_DIR = ROOT / "src" / "knowledge"
-TEMPLATE_FILE = PERSONALITIES_DIR / "TEMPLATE.yaml"
-KNOWLEDGE_TEMPLATE_FILE = KNOWLEDGE_DIR / "TEMPLATE.py"
+PERSONALITY_TEMPLATE = PERSONALITIES_DIR / "TEMPLATE.yaml"
+KNOWLEDGE_TEMPLATE = KNOWLEDGE_DIR / "TEMPLATE.yaml"
 
 
 def ask(prompt: str, default: str = "") -> str:
@@ -36,25 +36,21 @@ def validate_id(personality_id: str) -> str | None:
     return None
 
 
-def generate_knowledge_module(personality_id: str, culture_name: str) -> str:
-    """Copy knowledge TEMPLATE.py and apply replacements."""
-    content = KNOWLEDGE_TEMPLATE_FILE.read_text()
-    content = content.replace("REPLACE_ME", personality_id)
-    content = content.replace(
-        "TEMPLATE — Esqueleto para crear un módulo de conocimiento de Nebu.",
-        f"Módulo de Conocimiento de {culture_name} para Nebu.",
-    )
+def scaffold_knowledge(personality_id: str, culture_name: str) -> str:
+    """Read knowledge TEMPLATE.yaml and apply replacements."""
+    content = KNOWLEDGE_TEMPLATE.read_text()
+    content = content.replace("[TU_MODULO]", personality_id)
+    content = content.replace("[TU CULTURA]", culture_name)
     return content
 
 
 def scaffold_personality(personality_id: str, replacements: dict[str, str]) -> str:
-    """Read TEMPLATE.yaml and apply replacements."""
-    content = TEMPLATE_FILE.read_text()
+    """Read personality TEMPLATE.yaml and apply replacements."""
+    content = PERSONALITY_TEMPLATE.read_text()
 
     culture = replacements["culture_name"]
     special_category = replacements.get("special_category", personality_id)
 
-    # Replace placeholders
     content = content.replace("tu_personalidad", personality_id)
     content = content.replace("TU_MODULO", personality_id)
     content = content.replace("TU_CATEGORIA_ESPECIAL", special_category)
@@ -72,27 +68,12 @@ def scaffold_personality(personality_id: str, replacements: dict[str, str]) -> s
         f'"{replacements["display_name"]}"',
     )
 
-    # Update header comment
-    content = content.replace(
-        "# [TU_CULTURA].yaml",
-        f"# {personality_id}.yaml",
-    )
-    content = content.replace(
-        f"— Personalidad {culture} para Nebu.",
-        f"— Personalidad {culture} para Nebu.",
-    )
-    content = content.replace(
-        '"[Tu frase icónica aquí]"',
-        '"[Tu frase icónica aquí]"',
-    )
-
     return content
 
 
 def main():
     print("\n🧸 Nuevo perfil de personalidad para Nebu\n")
 
-    # Gather info
     while True:
         personality_id = ask("ID (snake_case)", "")
         if not personality_id:
@@ -116,9 +97,8 @@ def main():
         "special_category": special_category,
     }
 
-    # Preview
     personality_path = PERSONALITIES_DIR / f"{personality_id}.yaml"
-    knowledge_path = KNOWLEDGE_DIR / f"{personality_id}.py"
+    knowledge_path = KNOWLEDGE_DIR / f"{personality_id}.yaml"
 
     print(f"\n📁 Se van a crear:")
     print(f"   {personality_path.relative_to(ROOT)}")
@@ -130,19 +110,17 @@ def main():
         print("  Cancelado.")
         sys.exit(0)
 
-    # Generate files
     personality_content = scaffold_personality(personality_id, replacements)
     personality_path.write_text(personality_content)
     print(f"  ✓ {personality_path.relative_to(ROOT)}")
 
-    knowledge_content = generate_knowledge_module(personality_id, culture_name)
+    knowledge_content = scaffold_knowledge(personality_id, culture_name)
     knowledge_path.write_text(knowledge_content)
     print(f"  ✓ {knowledge_path.relative_to(ROOT)}")
 
     print(f"\n🎉 ¡Listo! Ahora rellena el contenido cultural:")
     print(f"   1. {personality_path.relative_to(ROOT)} — moods, catchphrases, categorías, etc.")
-    print(f"   2. {knowledge_path.relative_to(ROOT)} — datos reales con fuentes académicas")
-    print(f"\n   Ver TEMPLATE.md en cada directorio para la guía completa.\n")
+    print(f"   2. {knowledge_path.relative_to(ROOT)} — datos reales con fuentes académicas\n")
 
 
 if __name__ == "__main__":
