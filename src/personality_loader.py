@@ -21,7 +21,7 @@ _defaults_cache: dict | None = None
 _profile_cache: dict[str, PersonalityProfile] = {}
 
 
-def _load_defaults() -> dict:
+def load_defaults() -> dict:
     """Load and cache defaults.yaml."""
     global _defaults_cache
     if _defaults_cache is None:
@@ -30,7 +30,7 @@ def _load_defaults() -> dict:
     return _defaults_cache
 
 
-def _deep_merge(base: dict, override: dict) -> dict:
+def deep_merge(base: dict, override: dict) -> dict:
     """
     Deep-merge override into base. Returns new dict.
 
@@ -41,7 +41,7 @@ def _deep_merge(base: dict, override: dict) -> dict:
     result = dict(base)
     for key, value in override.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-            result[key] = _deep_merge(result[key], value)
+            result[key] = deep_merge(result[key], value)
         else:
             result[key] = value
     return result
@@ -83,7 +83,7 @@ def load_profile(personality_id: str) -> PersonalityProfile:
     if personality_id in _profile_cache:
         return _profile_cache[personality_id]
 
-    defaults = _load_defaults()
+    defaults = load_defaults()
 
     yaml_path = _PERSONALITIES_DIR / f"{personality_id}.yaml"
     if not yaml_path.exists():
@@ -92,7 +92,7 @@ def load_profile(personality_id: str) -> PersonalityProfile:
     with open(yaml_path) as f:
         personality_data = yaml.safe_load(f)
 
-    merged = _deep_merge(defaults, personality_data)
+    merged = deep_merge(defaults, personality_data)
 
     # Pop YAML-only knowledge config keys (not PersonalityProfile fields)
     knowledge_module = merged.pop("knowledge_module", None)

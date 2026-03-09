@@ -12,7 +12,7 @@ import aiohttp
 from src.config import Settings
 from src.logger import get_logger
 from src.personality import PersonalityProfile
-from src.personality_loader import _deep_merge, _load_defaults
+from src.personality_loader import deep_merge, load_defaults
 
 logger = get_logger("nebu.custom_personality")
 
@@ -68,8 +68,8 @@ def _build_profile_from_content(
 ) -> PersonalityProfile | None:
     """Build a PersonalityProfile from backend JSON content, merged with defaults."""
     try:
-        defaults = _load_defaults()
-        merged = _deep_merge(defaults, content)
+        defaults = load_defaults()
+        merged = deep_merge(defaults, content)
 
         # Remove YAML-only keys that aren't PersonalityProfile fields
         for key in (
