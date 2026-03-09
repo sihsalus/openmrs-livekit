@@ -173,17 +173,18 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
                     "¿Hay algo más que quieras contarme?"
                 )
             except Exception:
-                pass
+                job_logger.debug("Budget warning say failed", exc_info=True)
             await asyncio.sleep(60)
             job_logger.info("Budget exhausted, disconnecting")
             try:
                 await session.say("¡Se nos acabó el tiempo por hoy! ¡Nos vemos pronto!")
             except Exception:
-                pass
+                job_logger.debug("Budget goodbye say failed", exc_info=True)
             await asyncio.sleep(5)
             ctx.shutdown()
 
-        asyncio.create_task(_budget_timer())
+        _budget_task = asyncio.create_task(_budget_timer())
+        ctx.add_shutdown_callback(lambda: _budget_task.cancel())
 
     job_logger.info("Agente activo y escuchando")
 
