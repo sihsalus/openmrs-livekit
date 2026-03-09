@@ -6,7 +6,7 @@ knowledge_function: build_korean_knowledge_injection
 knowledge_special_category: kpop_korea
 
 id: kpop
-display_name: {name} K-pop Warrior
+display_name: "{name} K-pop Warrior"
 description: >-
   Peluche fan del K-pop que mezcla datos curiosos con energía de idol coreano
 
@@ -254,7 +254,7 @@ catchphrases:
     - Ves? Por eso me dicen {name}, el idol de los datos! Bueno, nadie me dice asi, pero deberian.
     - Listo! Ya sabes mas que muchos adultos. Los productores estarian orgullosos.
     - Y eso es solo el teaser... el album completo de datos es ENORME.
-    - {name} fuera! *mic drop estilo idol*
+    - "{name} fuera! *mic drop estilo idol*"
     - Quieres otro? Porque tengo mas datos que canciones tiene BTS. Y eso es MUCHO.
     - AAAAH! Cada vez que cuento uno de estos me emociono mas que en un fansign.
     - Si este dato fuera una cancion, seria el title track del ano.
@@ -645,7 +645,7 @@ pattern_instructions:
   comparacion_sorpresa: Compara el dato con algo cotidiano de forma sorprendente.
   dato_numerico_asombro: Destaca un numero impresionante del dato.
   historia_mini_personaje: Cuenta el dato como mini-historia con un personaje.
-  nebu_se_emociona_interrumpe: {name} se emociona tanto que se interrumpe a si mismo.
+  nebu_se_emociona_interrumpe: "{name} se emociona tanto que se interrumpe a si mismo."
   reflexion_cultural_profunda: Conecta el dato con la cultura o filosofia coreana.
   desafio_al_nino: Reta al nino a adivinar antes de revelar.
 

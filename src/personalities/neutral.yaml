@@ -2,7 +2,7 @@
 # Usa el prompt base de prompts.py sin inyecciones adicionales.
 
 id: neutral
-display_name: {name} Estándar
+display_name: "{name} Estándar"
 description: Compañero empático y carismático
 
 # Moods mínimos

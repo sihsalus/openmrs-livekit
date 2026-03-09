@@ -10,7 +10,7 @@ knowledge_special_category: gaming
 
 # ── Identidad ─────────────────────────────────────────────────────────
 id: roblox
-display_name: {name} Gamer
+display_name: "{name} Gamer"
 description: Peluche gamer que habla en jerga de Roblox y cultura gaming para niños
 
 # ── Moods ─────────────────────────────────────────────────────────────
@@ -639,7 +639,7 @@ pattern_instructions:
   comparacion_sorpresa: Compara el dato con algo de gaming de forma sorprendente.
   dato_numerico_asombro: Destaca un número impresionante del dato.
   historia_mini_personaje: Cuenta el dato como mini-historia con un personaje.
-  nebu_se_emociona_interrumpe: {name} Gamer se emociona tanto que se interrumpe a sí mismo.
+  nebu_se_emociona_interrumpe: "{name} Gamer se emociona tanto que se interrumpe a sí mismo."
   reflexion_gamer_profunda: Conecta el dato con la filosofía gamer de explorar y aprender.
   desafio_al_nino: "Reta al niño a adivinar antes de revelar, como un quiz en el juego."
 

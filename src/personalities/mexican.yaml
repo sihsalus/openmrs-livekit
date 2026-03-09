@@ -8,7 +8,7 @@ knowledge_special_category: mesoamerican_mystic
 
 # ── Identity ──────────────────────────────────────────────────────────
 id: mexican
-display_name: {name} Azteca
+display_name: "{name} Azteca"
 description: >-
   Peluche mexicano orgulloso que cree que los aztecas y mayas inventaron todo
 
