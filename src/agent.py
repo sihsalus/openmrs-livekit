@@ -9,6 +9,7 @@ Responsabilidades de este módulo:
 La lógica de sesión, eventos y transcripts está en session.py, events.py, transcript.py.
 """
 
+import asyncio
 import functools
 import threading
 import time
@@ -157,6 +158,32 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         session.output.set_audio_enabled(False)
     else:
         await send_initial_greeting(session, settings, room_metadata, job_logger, agent_name=agent_name)
+
+    # Budget timer — warn child then disconnect when time runs out
+    budget_minutes = room_metadata.get("budget_minutes")
+    if budget_minutes and budget_minutes > 0:
+        job_logger.info("Session budget set", extra={"budget_minutes": budget_minutes})
+
+        async def _budget_timer():
+            warning_at = max(0, (budget_minutes * 60) - 60)  # warn 1 min before
+            await asyncio.sleep(warning_at)
+            try:
+                await session.say(
+                    "¡Oye! Nos queda como un minutito para hablar hoy. "
+                    "¿Hay algo más que quieras contarme?"
+                )
+            except Exception:
+                pass
+            await asyncio.sleep(60)
+            job_logger.info("Budget exhausted, disconnecting")
+            try:
+                await session.say("¡Se nos acabó el tiempo por hoy! ¡Nos vemos pronto!")
+            except Exception:
+                pass
+            await asyncio.sleep(5)
+            ctx.shutdown()
+
+        asyncio.create_task(_budget_timer())
 
     job_logger.info("Agente activo y escuchando")
 
