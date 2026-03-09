@@ -1,7 +1,7 @@
 """
 PersonalityProfile — Contrato de datos para personalidades del VarietyEngine.
 
-Cada personalidad (peruana, mexicana, k-pop, roblox, etc.) es una instancia
+Cada personalidad (neutral, peruana, mexicana, k-pop, roblox, etc.) es una instancia
 de PersonalityProfile con todo el contenido cultural parametrizado.
 El engine (variety.py) lee de self.profile en vez de constantes hardcodeadas.
 """
@@ -15,8 +15,8 @@ class PersonalityProfile:
     """Todos los datos culturales para una personalidad del VarietyEngine."""
 
     # ── Identidad ───────────────────────────────────────────────────────
-    id: str  # "peruvian", "mexican", "kpop", "roblox"
-    display_name: str  # "Nebu Etnocacerista"
+    id: str  # "neutral", "peruvian", "mexican", "kpop", "roblox"
+    display_name: str  # "Nebu Estándar"
     description: str  # Una línea descriptiva
 
     # ── Moods ───────────────────────────────────────────────────────────

@@ -4,16 +4,16 @@ Personality profile registry.
 Usage:
     from src.personalities import get_profile, REGISTRY
 
-    profile = get_profile("peruvian")  # returns PersonalityProfile
+    profile = get_profile("neutral")   # returns PersonalityProfile
     profile = get_profile("mexican")
-    profile = get_profile()            # returns default (peruvian)
+    profile = get_profile()            # returns default (neutral)
 """
 
 from src.personality import PersonalityProfile
 from src.personality_loader import discover_profiles, load_profile
 
 REGISTRY: dict[str, PersonalityProfile] = {}
-DEFAULT_PROFILE_ID = "peruvian"
+DEFAULT_PROFILE_ID = "neutral"
 
 
 def register(profile: PersonalityProfile):

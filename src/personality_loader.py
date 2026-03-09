@@ -4,8 +4,8 @@ personality_loader — Load PersonalityProfile from YAML + defaults.
 Usage:
     from src.personality_loader import load_profile, discover_profiles
 
-    profile = load_profile("peruvian")  # loads src/personalities/peruvian.yaml
-    ids = discover_profiles()           # ["peruvian", "mexican", "kpop", "roblox"]
+    profile = load_profile("neutral")   # loads src/personalities/neutral.yaml
+    ids = discover_profiles()           # ["neutral", "mexican", "kpop", "roblox"]
 """
 
 import random

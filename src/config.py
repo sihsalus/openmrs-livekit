@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # ============= OpenAI Configuration =============
     openai_api_key: str = Field(..., description="API Key de OpenAI")
-    openai_model: str = Field(default="gpt-4o-mini", description="Modelo OpenAI para LLM")
+    openai_model: str = Field(default="gpt-4.1-mini", description="Modelo OpenAI para LLM")
     openai_stt_model: str = Field(default="gpt-4o-mini-transcribe", description="Modelo STT")
 
     # ============= Anthropic Configuration =============
@@ -164,7 +164,7 @@ class Settings(BaseSettings):
     # ============= Session Settings (Optimizadas para captura de interrupciones) =============
     allow_interruptions: bool = Field(default=True, description="Permitir interrupciones")
     min_interruption_words: int = Field(
-        default=0, description="Palabras mínimas para interrumpir (0 = cualquier sonido)"
+        default=2, description="Palabras mínimas para interrumpir (2 = evita falsos positivos por eco)"
     )
     min_interruption_duration: float = Field(
         default=0.3, description="Duración mínima para interrumpir (segundos)"
