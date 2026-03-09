@@ -87,6 +87,9 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     room_metadata = parse_room_metadata(ctx, job_logger)
 
+    agent_name = room_metadata.get("toy_name") or settings.agent_name
+    job_logger.info("Agent name resolved", extra={"agent_name": agent_name})
+
     toy_id = room_metadata.get("toy_id")
     memory_context = None
     if toy_id:
@@ -95,7 +98,8 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         job_logger.info("No toy_id in metadata, skipping memory fetch")
 
     instructions = build_instructions(
-        room_metadata, settings, job_logger, memory_context=memory_context
+        room_metadata, settings, job_logger, memory_context=memory_context,
+        agent_name=agent_name,
     )
     turn_context = TurnContext()
 
@@ -115,8 +119,9 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         ERRORS_TOTAL.labels(type="session").inc()
         return
 
-    profile = setup_variety_engine(session, room_metadata, settings, job_logger)
+    profile = setup_variety_engine(session, room_metadata, settings, job_logger, agent_name=agent_name)
     session.userdata["base_instructions"] = instructions
+    session.userdata["agent_name"] = agent_name
 
     _session_start = time.time()
     _transcript_sent = {"done": False}
@@ -151,7 +156,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         session.input.set_audio_enabled(False)
         session.output.set_audio_enabled(False)
     else:
-        await send_initial_greeting(session, settings, room_metadata, job_logger)
+        await send_initial_greeting(session, settings, room_metadata, job_logger, agent_name=agent_name)
 
     job_logger.info("Agente activo y escuchando")
 

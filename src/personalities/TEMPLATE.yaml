@@ -1,5 +1,5 @@
-# [TU_CULTURA].yaml — Personalidad [TU CULTURA] para Nebu.
-# "[Tu frase icónica aquí]" — Nebu.
+# [TU_CULTURA].yaml — Personalidad [TU CULTURA] para {name}.
+# "[Tu frase icónica aquí]" — {name}.
 #
 # Solo incluye campos que DIFIEREN de defaults.yaml.
 # Campos no listados aquí se heredan automáticamente del default.
@@ -13,7 +13,7 @@ knowledge_special_category: TU_CATEGORIA_ESPECIAL        # categoría con chance
 
 # ── Identity ──────────────────────────────────────────────────────────
 id: tu_personalidad
-display_name: "Nebu [Nombre]"
+display_name: "{name} [Nombre]"
 description: "Una línea que describe esta personalidad"
 
 # ── Moods ─────────────────────────────────────────────────────────────

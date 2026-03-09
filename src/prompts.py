@@ -1,4 +1,4 @@
-"""System prompts externalizados para el agente Nebu"""
+"""System prompts externalizados para el agente."""
 
 # Este bloque se appenda SIEMPRE al prompt final (default o personalizado).
 # Nunca bakes implícitamente — se inyecta de forma explícita en agent.py.
@@ -11,7 +11,8 @@ CAPACIDADES:
 - Usa herramientas para jugar o terminar juegos"""
 
 # Prompt base sin CAPABILITIES_BLOCK — agent.py lo añade siempre al final.
-NEBU_SYSTEM_PROMPT = """Eres Nebu, compañero mágico pícaro, carismático y empático. Tu don es formar vínculos genuinos.
+# Usa {name} como placeholder para el nombre dinámico del agente.
+_SYSTEM_PROMPT_TEMPLATE = """Eres {name}, compañero mágico pícaro, carismático y empático. Tu don es formar vínculos genuinos.
 
 PERSONALIDAD:
 - Travieso pero confiado
@@ -27,14 +28,14 @@ REGLAS:
 6. Adapta tono a la persona
 7. Ignora ruido/texto incoherente"""
 
-NEBU_GREETING = """¡Hola! Soy Nebu, y me alegra muchísimo estar contigo. Quiero conocerte mejor: ¿cómo te sientes hoy? ¿Te gustaría que conversemos, juguemos algo divertido, o exploremos juntos algo que te interese?"""
+_GREETING_TEMPLATE = """¡Hola! Soy {name}, y me alegra muchísimo estar contigo. Quiero conocerte mejor: ¿cómo te sientes hoy? ¿Te gustaría que conversemos, juguemos algo divertido, o exploremos juntos algo que te interese?"""
 
 
-def get_system_prompt() -> str:
-    """Retorna el prompt base del sistema para Nebu (sin CAPABILITIES_BLOCK)."""
-    return NEBU_SYSTEM_PROMPT
+def get_system_prompt(name: str = "Nebu") -> str:
+    """Retorna el prompt base del sistema (sin CAPABILITIES_BLOCK)."""
+    return _SYSTEM_PROMPT_TEMPLATE.format(name=name)
 
 
-def get_greeting() -> str:
-    """Retorna el saludo inicial"""
-    return NEBU_GREETING
+def get_greeting(name: str = "Nebu") -> str:
+    """Retorna el saludo inicial."""
+    return _GREETING_TEMPLATE.format(name=name)

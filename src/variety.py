@@ -1,7 +1,7 @@
 """
 Variety Engine v4 — Sistema de personalidad parametrizable.
 
-Motor anti-repetición con personalidad configurable para Nebu.
+Motor anti-repetición con personalidad configurable.
 La mecánica del engine (anti-repetición, patches, FSM) es universal.
 El contenido cultural viene del PersonalityProfile.
 
@@ -127,7 +127,7 @@ class MemoryTracker:
 @dataclass
 class VarietyEngine:
     """
-    Motor de variedad y personalidad parametrizable para Nebu v4.
+    Motor de variedad y personalidad parametrizable v4.
 
     Más que un anti-repetición: es el sistema nervioso del personaje.
     El contenido cultural viene del PersonalityProfile.
@@ -142,6 +142,7 @@ class VarietyEngine:
 
     # ── Profile (fuente de todo el contenido cultural) ────────────────
     profile: PersonalityProfile | None = field(default=None, repr=False)
+    agent_name: str = "Nebu"
 
     # ── Anti-repetición memory ──────────────────────────────────────────
     memory: MemoryTracker = field(default_factory=MemoryTracker)
@@ -668,7 +669,7 @@ class VarietyEngine:
         lines.append("• Nada de chistes sobre redes sociales.")
         lines.append("• Datos REALES, VERIFICABLES y ASOMBROSOS.")
         lines.append("• Máximo 2-3 oraciones para el dato.")
-        lines.append(f"• Habla como Nebu: {self.profile.personality_label}.")
+        lines.append(f"• Habla como {self.agent_name}: {self.profile.personality_label}.")
         lines.append(f"• Usa lenguaje simple pero con {self.profile.flavor_label}.")
 
         # Registrar para tracking
@@ -697,7 +698,7 @@ class VarietyEngine:
             "",
             "Genera UNA pregunta de trivia con 3 opciones (A, B, C).",
             "La pregunta debe ser interesante y para niños (6-10 años).",
-            "Nebu debe sonar entusiasmado al plantear el desafío.",
+            f"{self.agent_name} debe sonar entusiasmado al plantear el desafío.",
         ]
         if self.profile.trivia_culture_hint:
             lines.append(self.profile.trivia_culture_hint)
@@ -734,7 +735,7 @@ class VarietyEngine:
         if self.profile.story_culture_hint:
             lines.append(f"• {self.profile.story_culture_hint}")
         lines.append("")
-        lines.append("Nebu es el narrador. Puede meter comentarios entre la historia.")
+        lines.append(f"{self.agent_name} es el narrador. Puede meter comentarios entre la historia.")
 
         if self.memory.story_themes_used:
             lines.append("")
@@ -765,7 +766,7 @@ class VarietyEngine:
         if self.profile.riddle_culture_hint:
             lines.append(self.profile.riddle_culture_hint)
         lines.append("")
-        lines.append(f"Nebu la presenta con entusiasmo: {self.profile.riddle_challenge}")
+        lines.append(f"{self.agent_name} la presenta con entusiasmo: {self.profile.riddle_challenge}")
         if self.memory.riddles_told:
             lines.append("")
             lines.append("ADIVINANZAS YA CONTADAS (inventa algo diferente):")
@@ -807,7 +808,7 @@ class VarietyEngine:
     def debug_status(self) -> str:
         stats = self.get_session_stats()
         return (
-            f"🎭 Nebu Status ({self.profile.debug_version_label})\n"
+            f"🎭 {self.agent_name} Status ({self.profile.debug_version_label})\n"
             f"├─ Profile: {self.profile.id}\n"
             f"├─ Mood: {self._mood_value}\n"
             f"├─ Rapport: {self.rapport_value}\n"

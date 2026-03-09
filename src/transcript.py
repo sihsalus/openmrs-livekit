@@ -34,7 +34,7 @@ async def save_transcript(
         text = getattr(msg, "text_content", None) or ""
         if role == "system":
             continue
-        label = "Niño" if role == "user" else "Nebu"
+        label = "Niño" if role == "user" else session.userdata.get("agent_name", "Nebu")
         if text.strip():
             lines.append(f"[{label}]: {text.strip()}")
 

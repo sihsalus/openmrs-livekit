@@ -1,4 +1,4 @@
-# defaults.yaml — Valores compartidos entre todas las personalidades de Nebu.
+# defaults.yaml — Valores compartidos entre todas las personalidades de {name}.
 # Cualquier campo aquí puede ser overrideado por la YAML de cada personalidad.
 
 default_mood: curioso
@@ -37,7 +37,7 @@ pattern_instructions:
   comparacion_sorpresa: "Compara el dato con algo cotidiano de forma sorprendente."
   dato_numerico_asombro: "Destaca un número impresionante del dato."
   historia_mini_personaje: "Cuenta el dato como mini-historia con un personaje."
-  nebu_se_emociona_interrumpe: "Nebu se emociona tanto que se interrumpe a sí mismo."
+  nebu_se_emociona_interrumpe: "{name} se emociona tanto que se interrumpe a sí mismo."
   desafio_al_nino: "Reta al niño a adivinar antes de revelar."
 
 # Imperfections base (Roblox las override con versiones gaming)

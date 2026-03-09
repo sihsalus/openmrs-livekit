@@ -156,6 +156,7 @@ def build_instructions(
     settings: Settings,
     job_logger,
     memory_context: str | None = None,
+    agent_name: str = "Nebu",
 ) -> str:
     """Construye las instrucciones del agente a partir de metadata y settings."""
     raw_prompt = room_metadata.get("agent_prompt")
@@ -169,7 +170,7 @@ def build_instructions(
         job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
     else:
         job_logger.info("Usando prompt por defecto")
-        custom_prompt = get_system_prompt()
+        custom_prompt = get_system_prompt(name=agent_name)
     if owner_context:
         job_logger.info("Contexto del owner inyectado en prompt")
 
@@ -186,7 +187,8 @@ def build_instructions(
 
 
 def setup_variety_engine(
-    session: AgentSession, room_metadata: dict, settings: Settings, job_logger
+    session: AgentSession, room_metadata: dict, settings: Settings, job_logger,
+    agent_name: str = "Nebu",
 ):
     """Inicializa VarietyEngine si está habilitado. Retorna el perfil de personalidad."""
     if not settings.enable_variety_engine:
@@ -206,13 +208,15 @@ def setup_variety_engine(
             extra={"requested": personality_id},
         )
         profile = get_profile()
-    session.userdata["variety"] = VarietyEngine(profile=profile)
-    job_logger.info("VarietyEngine enabled", extra={"profile": profile.id})
+    profile.resolve_name(agent_name)
+    session.userdata["variety"] = VarietyEngine(profile=profile, agent_name=agent_name)
+    job_logger.info("VarietyEngine enabled", extra={"profile": profile.id, "agent_name": agent_name})
     return profile
 
 
 async def send_initial_greeting(
-    session: AgentSession, settings: Settings, room_metadata: dict, job_logger
+    session: AgentSession, settings: Settings, room_metadata: dict, job_logger,
+    agent_name: str = "Nebu",
 ) -> None:
     """Envía el saludo inicial tras el delay configurado."""
     if not settings.greeting_enabled:
@@ -222,7 +226,7 @@ async def send_initial_greeting(
     greeting_text = (
         _sanitize_custom_prompt(raw_greeting, settings.max_custom_prompt_chars)
         if raw_greeting
-        else get_greeting()
+        else get_greeting(name=agent_name)
     )
     job_logger.info("Enviando greeting inicial")
     try:
@@ -247,8 +251,6 @@ def _build_owner_context(room_metadata: dict) -> str:
         lines.append(f"- Intereses: {sanitize(interests, 500)}")
     if goals := room_metadata.get("learning_goals"):
         lines.append(f"- Objetivos de aprendizaje: {sanitize(goals, 500)}")
-    if toy_name := room_metadata.get("toy_name"):
-        lines.append(f"- En esta sesión te llamas '{sanitize(toy_name, 100)}'")
     if not lines:
         return ""
     return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)

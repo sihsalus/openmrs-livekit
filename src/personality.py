@@ -126,3 +126,25 @@ class PersonalityProfile:
             if turns >= level["threshold"]:
                 result = level
         return result
+
+    def resolve_name(self, name: str) -> None:
+        """Replace {name} placeholders in all string fields with the agent name."""
+        for fld in self.__dataclass_fields__:
+            val = getattr(self, fld)
+            if isinstance(val, str) and "{name}" in val:
+                setattr(self, fld, val.replace("{name}", name))
+            elif isinstance(val, list):
+                setattr(self, fld, [self._resolve_in(item, name) for item in val])
+            elif isinstance(val, dict):
+                setattr(self, fld, {k: self._resolve_in(v, name) for k, v in val.items()})
+
+    @staticmethod
+    def _resolve_in(val, name: str):
+        """Recursively replace {name} in nested structures."""
+        if isinstance(val, str):
+            return val.replace("{name}", name) if "{name}" in val else val
+        if isinstance(val, list):
+            return [PersonalityProfile._resolve_in(item, name) for item in val]
+        if isinstance(val, dict):
+            return {k: PersonalityProfile._resolve_in(v, name) for k, v in val.items()}
+        return val
