@@ -186,7 +186,7 @@ def build_instructions(
     return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
 
 
-def setup_variety_engine(
+async def setup_variety_engine(
     session: AgentSession, room_metadata: dict, settings: Settings, job_logger,
     agent_name: str = "Nebu",
 ):
@@ -199,15 +199,32 @@ def setup_variety_engine(
     from src.personalities import get_profile
     from src.variety import VarietyEngine
 
-    personality_id = room_metadata.get("personality_profile")
-    try:
-        profile = get_profile(personality_id)
-    except ValueError:
-        job_logger.warning(
-            "Unknown personality profile, using default",
-            extra={"requested": personality_id},
-        )
-        profile = get_profile()
+    profile = None
+
+    # Priority 1: Custom personality from backend
+    custom_personality_id = room_metadata.get("custom_personality_id")
+    if custom_personality_id:
+        from src.custom_personality import fetch_custom_personality
+
+        profile = await fetch_custom_personality(custom_personality_id, settings, job_logger)
+        if profile:
+            job_logger.info(
+                "Custom personality loaded from backend",
+                extra={"id": custom_personality_id, "display_name": profile.display_name},
+            )
+
+    # Priority 2: Built-in YAML personality
+    if profile is None:
+        personality_id = room_metadata.get("personality_profile")
+        try:
+            profile = get_profile(personality_id)
+        except ValueError:
+            job_logger.warning(
+                "Unknown personality profile, using default",
+                extra={"requested": personality_id},
+            )
+            profile = get_profile()
+
     profile.resolve_name(agent_name)
     session.userdata["variety"] = VarietyEngine(profile=profile, agent_name=agent_name)
     job_logger.info("VarietyEngine enabled", extra={"profile": profile.id, "agent_name": agent_name})

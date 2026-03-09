@@ -119,7 +119,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         ERRORS_TOTAL.labels(type="session").inc()
         return
 
-    profile = setup_variety_engine(session, room_metadata, settings, job_logger, agent_name=agent_name)
+    profile = await setup_variety_engine(session, room_metadata, settings, job_logger, agent_name=agent_name)
     session.userdata["base_instructions"] = instructions
     session.userdata["agent_name"] = agent_name
 
