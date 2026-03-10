@@ -94,7 +94,6 @@ class NebuAgent:
         self,
         instructions: str,
         job_logger=None,
-        turn_detection_model=None,
         turn_context: TurnContext | None = None,
     ) -> AgentSession:
         """Crea una sesión de agente con la configuración actual."""
@@ -110,8 +109,7 @@ class NebuAgent:
         tts.on("metrics_collected", self._on_tts_metrics)
 
         session = AgentSession(
-            turn_detection=turn_detection_model,
-            vad=silero.VAD.load(),  # Sin parámetros → usa defaults internos de LiveKit
+            vad=silero.VAD.load(),
             stt=stt,
             llm=llm,
             tts=tts,
@@ -121,7 +119,6 @@ class NebuAgent:
             min_interruption_duration=self.settings.min_interruption_duration,
             min_endpointing_delay=self.settings.min_endpointing_delay,
             max_endpointing_delay=self.settings.max_endpointing_delay,
-            user_away_timeout=self.settings.user_away_timeout,
         )
 
         session.on("metrics_collected", self._on_session_metrics)

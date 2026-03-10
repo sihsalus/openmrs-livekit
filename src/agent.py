@@ -105,14 +105,10 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     turn_context = TurnContext()
 
     nebu = NebuAgent(settings)
-    prewarmed_td = (
-        ctx.proc.userdata.get("turn_detection") if settings.enable_turn_detection else None
-    )
     try:
         session = await nebu.create_session(
             instructions,
             job_logger=job_logger,
-            turn_detection_model=prewarmed_td,
             turn_context=turn_context,
         )
     except Exception as e:
@@ -124,24 +120,13 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     session.userdata["base_instructions"] = instructions
     session.userdata["agent_name"] = agent_name
 
-    _session_start = time.time()
-    _transcript_sent = {"done": False}
-    ACTIVE_SESSIONS.inc()
-    SESSIONS_TOTAL.labels(personality=profile.id).inc()
-
-    async def _on_session_end():
-        ACTIVE_SESSIONS.dec()
-        SESSION_DURATION.observe(time.time() - _session_start)
-        if not _transcript_sent["done"]:
-            _transcript_sent["done"] = True
-            await save_transcript(session, room_name, settings, job_logger)
-
-    ctx.add_shutdown_callback(_on_session_end)
+    transcript_sent = {"done": False}
+    _register_session_lifecycle(ctx, session, room_name, settings, profile, job_logger, transcript_sent)
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
     has_parent_in_room = setup_walkie_talkie(ctx, session, settings, job_logger)
     setup_event_listeners(
-        session, ctx.room, room_name, settings, turn_context, profile, job_logger, _transcript_sent
+        session, ctx.room, room_name, settings, turn_context, profile, job_logger, transcript_sent
     )
 
     try:
@@ -159,35 +144,71 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     else:
         await send_initial_greeting(session, settings, room_metadata, job_logger, agent_name=agent_name)
 
-    # Budget timer — warn child then disconnect when time runs out
-    budget_minutes = room_metadata.get("budget_minutes")
-    if budget_minutes and budget_minutes > 0:
-        job_logger.info("Session budget set", extra={"budget_minutes": budget_minutes})
-
-        async def _budget_timer():
-            warn_sec = settings.budget_warning_seconds
-            warning_at = max(0, (budget_minutes * 60) - warn_sec)
-            await asyncio.sleep(warning_at)
-            try:
-                await session.say(
-                    "¡Oye! Nos queda como un minutito para hablar hoy. "
-                    "¿Hay algo más que quieras contarme?"
-                )
-            except Exception:
-                job_logger.debug("Budget warning say failed", exc_info=True)
-            await asyncio.sleep(warn_sec)
-            job_logger.info("Budget exhausted, disconnecting")
-            try:
-                await session.say("¡Se nos acabó el tiempo por hoy! ¡Nos vemos pronto!")
-            except Exception:
-                job_logger.debug("Budget goodbye say failed", exc_info=True)
-            await asyncio.sleep(5)
-            ctx.shutdown()
-
-        _budget_task = asyncio.create_task(_budget_timer())
-        ctx.add_shutdown_callback(lambda: _budget_task.cancel())
+    _setup_budget_timer(ctx, session, settings, room_metadata, job_logger)
 
     job_logger.info("Agente activo y escuchando")
+
+
+def _register_session_lifecycle(
+    ctx: agents.JobContext,
+    session,
+    room_name: str,
+    settings: Settings,
+    profile,
+    job_logger,
+    transcript_sent: dict,
+) -> None:
+    """Registra métricas de sesión activa y callback de cierre para transcript."""
+    session_start = time.time()
+    ACTIVE_SESSIONS.inc()
+    SESSIONS_TOTAL.labels(personality=profile.id).inc()
+
+    async def _on_session_end():
+        ACTIVE_SESSIONS.dec()
+        SESSION_DURATION.observe(time.time() - session_start)
+        if not transcript_sent["done"]:
+            transcript_sent["done"] = True
+            await save_transcript(session, room_name, settings, job_logger)
+
+    ctx.add_shutdown_callback(_on_session_end)
+
+
+def _setup_budget_timer(
+    ctx: agents.JobContext,
+    session,
+    settings: Settings,
+    room_metadata: dict,
+    job_logger,
+) -> None:
+    """Configura el timer de budget: avisa al niño y desconecta cuando se acaba el tiempo."""
+    budget_minutes = room_metadata.get("budget_minutes")
+    if not budget_minutes or budget_minutes <= 0:
+        return
+
+    job_logger.info("Session budget set", extra={"budget_minutes": budget_minutes})
+
+    async def _budget_timer():
+        warn_sec = settings.budget_warning_seconds
+        warning_at = max(0, (budget_minutes * 60) - warn_sec)
+        await asyncio.sleep(warning_at)
+        try:
+            await session.say(
+                "¡Oye! Nos queda como un minutito para hablar hoy. "
+                "¿Hay algo más que quieras contarme?"
+            )
+        except Exception:
+            job_logger.debug("Budget warning say failed", exc_info=True)
+        await asyncio.sleep(warn_sec)
+        job_logger.info("Budget exhausted, disconnecting")
+        try:
+            await session.say("¡Se nos acabó el tiempo por hoy! ¡Nos vemos pronto!")
+        except Exception:
+            job_logger.debug("Budget goodbye say failed", exc_info=True)
+        await asyncio.sleep(5)
+        ctx.shutdown()
+
+    budget_task = asyncio.create_task(_budget_timer())
+    ctx.add_shutdown_callback(lambda: budget_task.cancel())
 
 
 def make_entrypoint(settings: Settings):

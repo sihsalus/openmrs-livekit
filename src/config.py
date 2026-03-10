@@ -186,7 +186,7 @@ class Settings(BaseSettings):
         default=0.5, description="Delay antes de considerar turno completo (segundos) — 0.8 = recomendado sin turn detector"
     )
     max_endpointing_delay: float = Field(
-        default=0.5 , description="Sin turn detector, debe ser igual a min_endpointing_delay"
+        default=0.5, description="Sin turn detector, debe ser igual a min_endpointing_delay"
     )
     user_away_timeout: float = Field(
         default=30.0, description="Segundos de inactividad antes de considerar al usuario ausente"

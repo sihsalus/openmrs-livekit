@@ -25,7 +25,7 @@ async def get_current_datetime(
         tz = ZoneInfo("UTC")
 
     now = datetime.datetime.now(tz)
-    days = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
+    days = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
     months = [
         "enero",
         "febrero",
