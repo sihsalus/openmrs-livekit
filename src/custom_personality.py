@@ -3,12 +3,9 @@ custom_personality.py — Fetch custom personality profiles from the backend.
 
 When a toy has a user-created custom personality (custom_personality_id in room metadata),
 this module fetches it from the backend API and converts it into a PersonalityProfile.
-
-Follows the same pattern as memory.py (aiohttp, agent-secret auth, fault-tolerant).
 """
 
-import aiohttp
-
+from src.backend_client import backend_request
 from src.config import Settings
 from src.logger import get_logger
 from src.personality import PersonalityProfile
@@ -28,37 +25,19 @@ async def fetch_custom_personality(
     Returns a PersonalityProfile on success, or None on failure (graceful fallback).
     The fetched content is deep-merged with defaults.yaml so missing fields get sensible values.
     """
-    if not settings.agent_backend_url or not settings.agent_internal_secret:
-        job_logger.debug("Backend not configured, skipping custom personality fetch")
+    data = await backend_request(
+        settings,
+        "GET",
+        f"personalities/agent/{personality_id}",
+        job_logger,
+        timeout_seconds=5,
+        label="custom personality fetch",
+    )
+
+    if data is None:
         return None
 
-    url = f"{settings.agent_backend_url.rstrip('/')}/personalities/agent/{personality_id}"
-
-    try:
-        timeout = aiohttp.ClientTimeout(total=5)
-        async with aiohttp.ClientSession(timeout=timeout) as http:
-            resp = await http.get(
-                url,
-                headers={"x-agent-secret": settings.agent_internal_secret},
-            )
-            if resp.status != 200:
-                body = await resp.text()
-                job_logger.warning(
-                    "Failed to fetch custom personality",
-                    extra={"status": resp.status, "body": body[:200], "id": personality_id},
-                )
-                return None
-
-            data = await resp.json()
-            content = data.get("content", {})
-
-    except Exception as exc:
-        job_logger.warning(
-            "Error fetching custom personality",
-            extra={"error": str(exc), "id": personality_id},
-        )
-        return None
-
+    content = data.get("content", {})
     return _build_profile_from_content(content, job_logger)
 
 

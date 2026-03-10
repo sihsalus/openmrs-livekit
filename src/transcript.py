@@ -5,6 +5,7 @@ transcript.py — Persistencia del transcript de sesión al backend.
 import aiohttp
 from livekit.agents import AgentSession
 
+from src.backend_client import is_backend_configured
 from src.config import Settings
 from src.logger import get_logger
 from src.metrics import ERRORS_TOTAL
@@ -19,7 +20,7 @@ async def save_transcript(
     job_logger,
 ) -> None:
     """Envía el transcript completo al backend en un único HTTP call al cierre de sesión."""
-    if not settings.agent_backend_url or not settings.agent_internal_secret:
+    if not is_backend_configured(settings):
         return
 
     try:
