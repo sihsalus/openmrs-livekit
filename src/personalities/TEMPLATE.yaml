@@ -4,12 +4,18 @@
 # Solo incluye campos que DIFIEREN de defaults.yaml.
 # Campos no listados aquí se heredan automáticamente del default.
 # Ver defaults.yaml para valores compartidos.
+#
+# Arquitectura:
+#   variety.py         → motor de estado (mood, memory, anti-repetición)
+#   prompt_flavor.py   → inyecciones de sabor (hype, rants, slang, culture connections)
+#   prompts_builder.py → composición final de prompts (facts, trivia, stories, riddles)
+#   knowledge/         → datos culturales reales (YAML, cargados por knowledge_loader)
 
 # ── Knowledge config ──────────────────────────────────────────────────
-# Módulo Python en src/knowledge/ que genera inyecciones de conocimiento.
-knowledge_module: TU_MODULO          # nombre del archivo en src/knowledge/ (sin .py)
-knowledge_function: build_TU_MODULO_knowledge_injection  # función que retorna str
-knowledge_special_category: TU_CATEGORIA_ESPECIAL        # categoría con chance 0.25
+# Módulo YAML en src/knowledge/ que provee datos culturales reales.
+# El loader resuelve automáticamente — solo necesitas module y special_category.
+knowledge_module: TU_MODULO                       # archivo en src/knowledge/ (sin .yaml)
+knowledge_special_category: TU_CATEGORIA_ESPECIAL # categoría con chance elevada (0.25)
 
 # ── Identity ──────────────────────────────────────────────────────────
 id: tu_personalidad
@@ -88,7 +94,9 @@ rapport_levels:
     flavor: >-
       [Tono para mejor amigo, máxima confianza]
 
-# ── Culture brain ─────────────────────────────────────────────────────
+# ── Prompt flavor ─────────────────────────────────────────────────────
+# Fragmentos inyectados por prompt_flavor.py para dar sabor cultural.
+# culture_connections, bonus_facts, rants y slang enriquecen los prompts.
 culture_connections:
   - trigger: "[tema]"
     connection: "[conexión cultural]"

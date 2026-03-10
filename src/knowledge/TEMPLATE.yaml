@@ -3,11 +3,15 @@
 # Cada sección contiene datos REALES y verificables.
 # Citar fuentes académicas en este comentario.
 #
+# Cargado por: knowledge_loader.py → build_knowledge_injection(module_name)
+# Inyectado por: prompt_flavor.py → maybe_knowledge()
+# Referenciado desde: personalities/[tu_personalidad].yaml → knowledge_module
+#
 # Fuentes:
 # - [AGREGAR FUENTES ACADÉMICAS AQUÍ]
 
 # ── Meta ──────────────────────────────────────────────────────────────
-# Configuración del builder: secciones con sus format strings.
+# Configuración del knowledge_loader: secciones con sus format strings.
 meta:
   sections:
     historia:
