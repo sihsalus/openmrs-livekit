@@ -175,6 +175,8 @@ def _build_tts_provider(provider: str, settings: Settings):
             model=settings.inworld_model,
             speaking_rate=settings.inworld_speaking_rate,
             temperature=settings.inworld_temperature,
+            buffer_char_threshold=settings.inworld_buffer_char_threshold,
+            max_buffer_delay_ms=settings.inworld_max_buffer_delay_ms,
         )
 
     raise ValueError(f"TTS provider desconocido: {provider}")
