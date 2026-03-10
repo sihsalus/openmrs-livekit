@@ -3,6 +3,11 @@
 from importlib.metadata import PackageNotFoundError, version
 from typing import Literal
 
+try:
+    AGENT_VERSION = version("nebu-agent")
+except PackageNotFoundError:
+    AGENT_VERSION = "dev"
+
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -183,6 +188,10 @@ class Settings(BaseSettings):
         description="Segundos de espera antes del saludo inicial (da tiempo al audio a estabilizarse)",
     )
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
+    budget_warning_seconds: int = Field(
+        default=60,
+        description="Segundos antes del fin del budget para avisar al niño",
+    )
 
     # ============= Language Settings =============
     tts_language: str = Field(
@@ -303,11 +312,7 @@ class Settings(BaseSettings):
 
     def display_config(self) -> str:
         """Retorna un resumen de la configuración (sin secretos)"""
-        try:
-            v = version("nebu-agent")
-        except PackageNotFoundError:
-            v = "dev"
-
+        v = AGENT_VERSION
         llm_label = f"{self.llm_provider}/{self.active_llm_model}"
         return f"""
 ╔══════════════════════════════════════════════════════════════╗

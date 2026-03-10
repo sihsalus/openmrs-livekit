@@ -18,7 +18,7 @@ from livekit import agents
 from livekit.agents import Agent
 from livekit.plugins import silero
 
-from src.config import Settings
+from src.config import AGENT_VERSION, Settings
 from src.events import AGENT_ROOM_PREFIX, setup_event_listeners, setup_walkie_talkie
 from src.logger import get_logger, setup_logging
 from src.memory import fetch_memory_context
@@ -165,7 +165,8 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         job_logger.info("Session budget set", extra={"budget_minutes": budget_minutes})
 
         async def _budget_timer():
-            warning_at = max(0, (budget_minutes * 60) - 60)  # warn 1 min before
+            warn_sec = settings.budget_warning_seconds
+            warning_at = max(0, (budget_minutes * 60) - warn_sec)
             await asyncio.sleep(warning_at)
             try:
                 await session.say(
@@ -174,7 +175,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
                 )
             except Exception:
                 job_logger.debug("Budget warning say failed", exc_info=True)
-            await asyncio.sleep(60)
+            await asyncio.sleep(warn_sec)
             job_logger.info("Budget exhausted, disconnecting")
             try:
                 await session.say("¡Se nos acabó el tiempo por hoy! ¡Nos vemos pronto!")
@@ -267,7 +268,7 @@ def main():
     logger.info(
         "Iniciando Nebu Agent",
         extra={
-            "version": "2.0.0",
+            "version": AGENT_VERSION,
             "agent_name": settings.agent_name,
             "log_level": settings.log_level,
             "tts_provider": settings.tts_provider,
@@ -279,7 +280,7 @@ def main():
 
     AGENT_INFO.info(
         {
-            "version": "2.0.0",
+            "version": AGENT_VERSION,
             "agent_name": settings.agent_name,
             "tts_provider": settings.tts_provider,
             "stt_provider": settings.stt_provider,
