@@ -13,7 +13,7 @@ from __future__ import annotations
 import random
 from typing import TYPE_CHECKING
 
-from src.culture import (
+from src.prompt_flavor import (
     build_culture_injection,
     evolve_hype,
     maybe_culture_rant,

@@ -1,8 +1,8 @@
 """
-culture.py — Inyección cultural y hype management.
+prompt_flavor.py — Flavor injections for personality-driven prompts.
 
-Extraído de VarietyEngine para separar la lógica cultural
-(hype, rants, slang, knowledge, culture connections) del motor de variedad.
+Enriches base prompts with cultural connections, rants, slang,
+knowledge injection, and hype evolution. Extracted from VarietyEngine.
 """
 
 import random
