@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     inworld_temperature: float = Field(
         default=1.1, description="Temperatura Inworld (0-2, controla variabilidad emocional)"
     )
+    inworld_buffer_char_threshold: int = Field(
+        default=60,
+        description="Caracteres mínimos antes de enviar chunk de audio (streaming) — menor = más rápido pero más fragmentado",
+    )
+    inworld_max_buffer_delay_ms: int = Field(
+        default=1500,
+        description="Delay máximo en ms antes de forzar envío del buffer — evita esperas largas en frases cortas",
+    )
 
     # ============= Deepgram Configuration =============
     deepgram_api_key: str | None = Field(default=None, description="API Key Deepgram")
@@ -153,32 +161,32 @@ class Settings(BaseSettings):
         description="Tokens máximos de respuesta — 500 = respuestas completas sin cortes",
     )
 
-    # ============= VAD Settings (Valores optimizados para respuesta rápida) =============
+    # ============= VAD Settings (Valores por defecto de LiveKit Silero VAD) =============
     vad_min_silence_duration: float = Field(
-        default=0.5,
-        description="Silencio mínimo para considerar fin de habla (segundos) — 0.5 = respuesta rápida",
+        default=0.55,
+        description="Silencio mínimo para considerar fin de habla (segundos) — 0.55 = default LiveKit",
     )
     vad_activation_threshold: float = Field(
-        default=0.5, description="Threshold VAD (0.0-1.0) — 0.5 = balance entre sensibilidad y falsos positivos"
+        default=0.5, description="Threshold VAD (0.0-1.0) — 0.5 = default LiveKit"
     )
     vad_min_speech_duration: float = Field(
-        default=0.1,
-        description="Duración mínima de habla para activar (segundos) — 0.1 = detecta habla rápidamente",
+        default=0.05,
+        description="Duración mínima de habla para activar (segundos) — 0.05 = default LiveKit",
     )
 
-    # ============= Session Settings (Optimizadas para captura de interrupciones) =============
+    # ============= Session Settings (Optimizadas según LiveKit docs para Pipeline Agent sin Turn Detector) =============
     allow_interruptions: bool = Field(default=True, description="Permitir interrupciones")
     min_interruption_words: int = Field(
-        default=2, description="Palabras mínimas para interrumpir (2 = evita falsos positivos por eco)"
+        default=0, description="Palabras mínimas para interrumpir (2 = evita falsos positivos por eco)"
     )
     min_interruption_duration: float = Field(
-        default=0.3, description="Duración mínima para interrumpir (segundos)"
+        default=0.5, description="Duración mínima para interrumpir (segundos) — 0.5 = default LiveKit"
     )
     min_endpointing_delay: float = Field(
-        default=0.5, description="Delay mínimo antes de considerar turno completo"
+        default=0.5, description="Delay antes de considerar turno completo (segundos) — 0.8 = recomendado sin turn detector"
     )
     max_endpointing_delay: float = Field(
-        default=2.0, description="Delay máximo para esperar continuación"
+        default=0.5 , description="Sin turn detector, debe ser igual a min_endpointing_delay"
     )
     user_away_timeout: float = Field(
         default=30.0, description="Segundos de inactividad antes de considerar al usuario ausente"
