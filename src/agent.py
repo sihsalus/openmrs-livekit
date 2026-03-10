@@ -10,6 +10,7 @@ La lógica de sesión, eventos y transcripts está en session.py, events.py, tra
 """
 
 import asyncio
+import atexit
 import functools
 import threading
 import time
@@ -18,6 +19,7 @@ from livekit import agents
 from livekit.agents import Agent
 from livekit.plugins import silero
 
+from src.backend_client import close_session as _close_backend_session
 from src.config import AGENT_VERSION, Settings
 from src.events import AGENT_ROOM_PREFIX, setup_event_listeners, setup_walkie_talkie
 from src.logger import get_logger, setup_logging
@@ -310,6 +312,8 @@ def main():
     )
 
     start_metrics_server(settings)
+
+    atexit.register(lambda: asyncio.get_event_loop().run_until_complete(_close_backend_session()))
 
     agents.cli.run_app(
         agents.WorkerOptions(

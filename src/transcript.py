@@ -2,10 +2,9 @@
 transcript.py — Persistencia del transcript de sesión al backend.
 """
 
-import aiohttp
 from livekit.agents import AgentSession
 
-from src.backend_client import is_backend_configured
+from src.backend_client import backend_request, is_backend_configured
 from src.config import Settings
 from src.logger import get_logger
 from src.metrics import ERRORS_TOTAL
@@ -44,28 +43,22 @@ async def save_transcript(
 
     transcript = "\n".join(lines)
     message_count = len(lines)
-    url = f"{settings.agent_backend_url.rstrip('/')}/voice/sessions/transcript"
 
     try:
-        timeout = aiohttp.ClientTimeout(total=10)
-        async with aiohttp.ClientSession(timeout=timeout) as http:
-            resp = await http.post(
-                url,
-                json={
-                    "roomName": room_name,
-                    "transcript": transcript,
-                    "messageCount": message_count,
-                },
-                headers={"x-agent-secret": settings.agent_internal_secret},
-            )
-            if resp.status == 200:
-                job_logger.info("Transcript guardado", extra={"messages": message_count})
-            else:
-                body = await resp.text()
-                job_logger.warning(
-                    "Backend rechazó transcript",
-                    extra={"status": resp.status, "body": body[:200]},
-                )
+        result = await backend_request(
+            settings,
+            "POST",
+            "voice/sessions/transcript",
+            job_logger,
+            json={
+                "roomName": room_name,
+                "transcript": transcript,
+                "messageCount": message_count,
+            },
+            label="save transcript",
+        )
+        if result is not None:
+            job_logger.info("Transcript guardado", extra={"messages": message_count})
     except Exception as exc:
         ERRORS_TOTAL.labels(type="transcript").inc()
         job_logger.warning("Error guardando transcript", extra={"error": str(exc)})
