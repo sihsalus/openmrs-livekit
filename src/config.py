@@ -148,17 +148,17 @@ class Settings(BaseSettings):
         description="Tokens máximos de respuesta — 500 = respuestas completas sin cortes",
     )
 
-    # ============= VAD Settings (Valores estándar LiveKit) =============
+    # ============= VAD Settings (Valores optimizados para respuesta rápida) =============
     vad_min_silence_duration: float = Field(
         default=0.5,
-        description="Silencio mínimo para considerar fin de habla (0.6 = menos procesamiento que 0.5)",
+        description="Silencio mínimo para considerar fin de habla (segundos) — 0.5 = respuesta rápida",
     )
     vad_activation_threshold: float = Field(
-        default=0.4, description="Threshold VAD (0.0-1.0) — 0.4 = menos false positives que 0.3"
+        default=0.5, description="Threshold VAD (0.0-1.0) — 0.5 = balance entre sensibilidad y falsos positivos"
     )
     vad_min_speech_duration: float = Field(
-        default=0.3,
-        description="Duración mínima de habla para activar (0.3 = ignora ruidos muy cortos)",
+        default=0.1,
+        description="Duración mínima de habla para activar (segundos) — 0.1 = detecta habla rápidamente",
     )
 
     # ============= Session Settings (Optimizadas para captura de interrupciones) =============
