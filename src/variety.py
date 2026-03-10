@@ -132,6 +132,9 @@ class VarietyEngine:
     Más que un anti-repetición: es el sistema nervioso del personaje.
     El contenido cultural viene del PersonalityProfile.
 
+    Prompts delegados a src.prompts_builder.
+    Lógica cultural delegada a src.culture.
+
     Patches integrados:
     1. Persona Anchor — re-anclaje periódico de identidad
     2. Narrative Pattern Dedup — anti-repetición semántica
@@ -307,63 +310,6 @@ class VarietyEngine:
         self._consecutive_facts = 0
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # 🧠 CULTURE BRAIN — Inyección cultural
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-    def _build_culture_brain_injection(self, category_id: str) -> str:
-        """Inyecta conexión cultural si toca."""
-        if category_id in self.profile.hype_boost_categories:
-            return ""
-
-        if not self.profile.culture_connections:
-            return ""
-
-        chance = self.profile.culture_brain_chance + (self.culture_hype * 0.3)
-        if random.random() > chance:
-            return ""
-
-        connection = random.choice(self.profile.culture_connections)
-        if self.profile.bonus_facts:
-            fact = random.choice(self.profile.bonus_facts)
-            connection = connection.replace("{culture_fact}", fact)
-
-        return f"\n🧠 CULTURE BRAIN: {connection}"
-
-    def _maybe_culture_rant(self) -> str:
-        if not self.profile.culture_rants:
-            return ""
-        if random.random() > self.profile.rant_chance:
-            return ""
-        return f"\n🎭 RANT (úsalo antes del dato): {random.choice(self.profile.culture_rants)}"
-
-    def _maybe_slang(self) -> str:
-        if not self.profile.slang_phrases:
-            return ""
-        if random.random() > self.profile.slang_chance:
-            return ""
-        return (
-            f"\nJERGA: Mete un '{random.choice(self.profile.slang_phrases)}' natural "
-            f"en tu respuesta."
-        )
-
-    def _maybe_knowledge(self, category_id: str) -> str:
-        if self.profile.knowledge_injector is None:
-            return ""
-        return self.profile.knowledge_injector(category_id)
-
-    def _evolve_hype(self, category_id: str):
-        """Sube el hype cultural con el tiempo y con temas afines."""
-        self.culture_hype = min(
-            self.profile.hype_cap,
-            self.culture_hype + self.profile.hype_growth,
-        )
-        if category_id in self.profile.hype_boost_categories:
-            self.culture_hype = min(
-                self.profile.hype_cap,
-                self.culture_hype + self.profile.hype_boost_growth,
-            )
-
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # 📊 ENGAGEMENT TRACKING
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -476,7 +422,7 @@ class VarietyEngine:
             return flavors.get("late_night", "")
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # 📚 FACTS — El plato fuerte
+    # 📚 FACTS + CONTENT SELECTION
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def _pick_unique(self, options: list, used: deque):
@@ -521,258 +467,34 @@ class VarietyEngine:
             available = specific_options
         return random.choice(available)
 
-    def build_fact_prompt(self, topic: str = "", hour: int | None = None) -> str:
-        """
-        Construye el prompt completo para generar un dato curioso.
-        v4: Parametrizable + patches + personalidad configurable.
-        """
-        category = self.pick_fact_category()
-        style = self.pick_delivery_style()
-        specific = self._pick_specific_topic(category["id"])
-
-        # Evolucionar mood cada 3-4 turnos
-        if self.turn_count > 0 and self.turn_count % random.randint(3, 4) == 0:
-            self.evolve_mood()
-
-        # Evolucionar hype
-        self._evolve_hype(category["id"])
-
-        lines = []
-
-        # PATCH 1: Persona Anchor
-        anchor = self.build_persona_anchor()
-        if anchor:
-            lines.append(anchor)
-            lines.append("")
-
-        # PATCH 3: Sliding Summary
-        summary = self.build_sliding_summary()
-        if summary:
-            lines.append(summary)
-            lines.append("")
-
-        # 1) Personalidad base
-        lines.append("═══ PERSONALIDAD DE NEBU ═══")
-        lines.append(self.get_mood_instruction())
-        lines.append(self.get_rapport_instruction())
-        lines.append(self.get_time_flavor(hour))
-        lines.append("")
-
-        # PATCH 4: Imperfección orgánica
-        imperfection = self._maybe_imperfection()
-        if imperfection:
-            lines.append(imperfection)
-
-        # 2) Catchphrase + jerga
-        pre = self.pick_catchphrase("pre_fact")
-        if pre:
-            lines.append(f"FRASE DE APERTURA (úsala o adáptala): {pre}")
-        slang = self._maybe_slang()
-        if slang:
-            lines.append(slang)
-        lines.append("")
-
-        # PATCH 2: Narrative Pattern Dedup
-        lines.append(self._build_pattern_instruction())
-
-        # 3) El dato en sí
-        lines.append("")
-        lines.append("═══ DATO CURIOSO ═══")
-        if topic:
-            lines.append(f"Tema pedido por el niño: {topic}")
-            lines.append("Cuenta un dato REAL y poco conocido sobre este tema.")
-            lines.append(f"Estilo de entrega: {style}")
-        else:
-            lines.append(
-                f"Categoría: {category['label']} {category['emoji']} "
-                f"— {category.get('nebu_intro', '')}"
-            )
-            culture_angle = category.get("culture_angle", "")
-            if culture_angle:
-                lines.append(f"{self.profile.culture_angle_label}: {culture_angle}")
-            if specific:
-                lines.append(f"Tema específico: cuenta algo sobre {specific}")
-                lines.append("Busca un dato REAL, VERIFICABLE y que suene casi inventado.")
-            else:
-                lines.append(f"Pista: {category['hint']}")
-            lines.append(f"Estilo de entrega: {style}")
-        lines.append("")
-
-        # 4) Culture Brain injection
-        culture_brain = self._build_culture_brain_injection(category["id"])
-        if culture_brain:
-            lines.append(culture_brain)
-
-        # Culture rant
-        rant = self._maybe_culture_rant()
-        if rant:
-            lines.append(rant)
-
-        # Knowledge injection
-        knowledge = self._maybe_knowledge(category["id"])
-        if knowledge:
-            lines.append(knowledge)
-
-        # 5) Wildcard
-        wildcard = self.roll_wildcard()
-        if wildcard:
-            lines.append(f"\n🎲 {wildcard}")
-
-        # 6) Topic chaining
-        chain = self._build_chain_prompt()
-        if chain:
-            lines.append(chain)
-
-        # 7) Combo tracker
-        combo = self._build_combo_text()
-        if combo:
-            lines.append(combo)
-
-        # 8) Favorite hint
-        fav_hint = self._build_favorite_hint()
-        if fav_hint:
-            lines.append(fav_hint)
-
-        # 9) Milestone check
-        milestone = self.check_milestone()
-        if milestone:
-            lines.append(f"\n🏆 CELEBRACIÓN: {milestone}")
-
-        # 10) Datos PROHIBIDOS
-        all_banned = BANNED_FACTS + self.profile.extra_banned_facts
-        lines.append("")
-        lines.append("═══ 🚫 DATOS PROHIBIDOS — NUNCA digas estos ═══")
-        lines.append("Estos datos están SUPER quemados. JAMÁS los uses:")
-        for banned in all_banned:
-            lines.append(f"  ✗ {banned}")
-
-        # 11) Historial anti-repetición
-        if self.memory.facts_told:
-            lines.append("")
-            lines.append("═══ NO REPETIR — DATOS YA CONTADOS EN ESTA SESIÓN ═══")
-            for i, fact in enumerate(list(self.memory.facts_told)[-12:], 1):
-                lines.append(f"  {i}. {fact}")
-
-        # 11b) Feedback loop: lo que realmente dijiste
-        if self.memory.agent_responses:
-            lines.append("")
-            lines.append("═══ LO QUE YA DIJISTE TEXTUALMENTE (no repitas) ═══")
-            for i, resp in enumerate(self.memory.agent_responses, 1):
-                lines.append(f'  {i}. "{resp}"')
-
-        # 12) Reglas finales
-        lines.append("")
-        lines.append("═══ REGLAS ESTRICTAS ═══")
-        lines.append("• PROHIBIDO repetir los datos de la lista prohibida.")
-        lines.append("• NO repitas NADA ya contado en esta sesión.")
-        lines.append("• Cuenta algo que un niño JAMÁS haya escuchado.")
-        lines.append("• Nada de chistes sobre redes sociales.")
-        lines.append("• Datos REALES, VERIFICABLES y ASOMBROSOS.")
-        lines.append("• Máximo 2-3 oraciones para el dato.")
-        lines.append(f"• Habla como {self.agent_name}: {self.profile.personality_label}.")
-        lines.append(f"• Usa lenguaje simple pero con {self.profile.flavor_label}.")
-
-        # Registrar para tracking
-        self.memory.record_fact(f"[{category['id']}] sobre {specific or category['label']}")
-        self._last_category_label = category["label"]
-        self._last_specific_topic = specific
-
-        return "\n".join(lines)
-
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # 🧩 TRIVIA
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
     def pick_trivia_category(self) -> str:
         return self._pick_unique(self.profile.trivia_categories, self.memory.trivia_categories_used)
-
-    def build_trivia_prompt(self) -> str:
-        category = self.pick_trivia_category()
-        lines = [
-            "═══ PERSONALIDAD ═══",
-            self.get_mood_instruction(),
-            self.get_rapport_instruction(),
-            "",
-            "═══ TRIVIA ═══",
-            f"Categoría: {category}",
-            "",
-            "Genera UNA pregunta de trivia con 3 opciones (A, B, C).",
-            "La pregunta debe ser interesante y para niños (6-10 años).",
-            f"{self.agent_name} debe sonar entusiasmado al plantear el desafío.",
-        ]
-        if self.profile.trivia_culture_hint:
-            lines.append(self.profile.trivia_culture_hint)
-        return "\n".join(lines)
-
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # 📖 CUENTOS
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def pick_story_theme(self) -> str:
         return self._pick_unique(self.profile.story_themes, self.memory.story_themes_used)
 
-    def build_story_prompt(self, custom_theme: str = "") -> str:
-        theme = custom_theme or self.pick_story_theme()
-        if self.profile.story_moods:
-            self._mood_value = random.choice(self.profile.story_moods)
-
-        lines = [
-            "═══ PERSONALIDAD ═══",
-            self.get_mood_instruction(),
-            self.get_rapport_instruction(),
-            self.get_time_flavor(),
-            "",
-            "═══ CUENTO ═══",
-            f"Tema: {theme}",
-            "",
-            "Cuenta un cuento corto (8-12 oraciones) sobre este tema.",
-            "El cuento debe tener:",
-            "• Un inicio que enganche",
-            "• Un problema o aventura en el medio",
-            "• Un final feliz o sorprendente",
-            "• Un mensaje positivo sutil",
-        ]
-        if self.profile.story_culture_hint:
-            lines.append(f"• {self.profile.story_culture_hint}")
-        lines.append("")
-        lines.append(f"{self.agent_name} es el narrador. Puede meter comentarios entre la historia.")
-
-        if self.memory.story_themes_used:
-            lines.append("")
-            lines.append("TEMAS YA USADOS (cuenta algo diferente):")
-            for t in list(self.memory.story_themes_used)[-5:]:
-                lines.append(f"  - {t}")
-
-        return "\n".join(lines)
-
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    # 🤔 ADIVINANZAS
-    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
     def record_riddle(self, summary: str):
         self.memory.record_riddle(summary)
 
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📝 PROMPT BUILDERS — delegados a src.prompts_builder
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def build_fact_prompt(self, topic: str = "", hour: int | None = None) -> str:
+        from src.prompts_builder import build_fact_prompt
+        return build_fact_prompt(self, topic, hour)
+
+    def build_trivia_prompt(self) -> str:
+        from src.prompts_builder import build_trivia_prompt
+        return build_trivia_prompt(self)
+
+    def build_story_prompt(self, custom_theme: str = "") -> str:
+        from src.prompts_builder import build_story_prompt
+        return build_story_prompt(self, custom_theme)
+
     def build_riddle_prompt(self) -> str:
-        if self.profile.riddle_moods:
-            self._mood_value = random.choice(self.profile.riddle_moods)
-        lines = [
-            "═══ PERSONALIDAD ═══",
-            self.get_mood_instruction(),
-            self.get_rapport_instruction(),
-            "",
-            "═══ ADIVINANZA ═══",
-            "Inventa una adivinanza original, divertida y para niños.",
-        ]
-        if self.profile.riddle_culture_hint:
-            lines.append(self.profile.riddle_culture_hint)
-        lines.append("")
-        lines.append(f"{self.agent_name} la presenta con entusiasmo: {self.profile.riddle_challenge}")
-        if self.memory.riddles_told:
-            lines.append("")
-            lines.append("ADIVINANZAS YA CONTADAS (inventa algo diferente):")
-            for i, r in enumerate(list(self.memory.riddles_told)[-8:], 1):
-                lines.append(f"  {i}. {r}")
-        return "\n".join(lines)
+        from src.prompts_builder import build_riddle_prompt
+        return build_riddle_prompt(self)
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # 🛠️ UTILIDADES
