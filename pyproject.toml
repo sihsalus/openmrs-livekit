@@ -22,14 +22,13 @@ dependencies = [
     "livekit-plugins-inworld",
     "livekit-plugins-deepgram",
     "livekit-plugins-turn-detector",
-    "livekit-plugins-noise-cancellation",
 
     # Configuration
     "pydantic-settings",
     "python-dotenv",
 
-    # Logging
-    "python-json-logger",
+    # YAML (knowledge & personality loaders)
+    "PyYAML",
 
     # HTTP client
     "aiohttp",
