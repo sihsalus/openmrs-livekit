@@ -177,13 +177,16 @@ class Settings(BaseSettings):
     # ============= Session Settings (Optimizadas según LiveKit docs para Pipeline Agent sin Turn Detector) =============
     allow_interruptions: bool = Field(default=True, description="Permitir interrupciones")
     min_interruption_words: int = Field(
-        default=0, description="Palabras mínimas para interrumpir (2 = evita falsos positivos por eco)"
+        default=0,
+        description="Palabras mínimas para interrumpir (2 = evita falsos positivos por eco)",
     )
     min_interruption_duration: float = Field(
-        default=0.5, description="Duración mínima para interrumpir (segundos) — 0.5 = default LiveKit"
+        default=0.5,
+        description="Duración mínima para interrumpir (segundos) — 0.5 = default LiveKit",
     )
     min_endpointing_delay: float = Field(
-        default=0.5, description="Delay antes de considerar turno completo (segundos) — 0.8 = recomendado sin turn detector"
+        default=0.5,
+        description="Delay antes de considerar turno completo (segundos) — 0.8 = recomendado sin turn detector",
     )
     max_endpointing_delay: float = Field(
         default=0.5, description="Sin turn detector, debe ser igual a min_endpointing_delay"

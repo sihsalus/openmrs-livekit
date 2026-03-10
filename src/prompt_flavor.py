@@ -47,10 +47,7 @@ def maybe_slang(profile: PersonalityProfile) -> str:
         return ""
     if random.random() > profile.slang_chance:
         return ""
-    return (
-        f"\nJERGA: Mete un '{random.choice(profile.slang_phrases)}' natural "
-        f"en tu respuesta."
-    )
+    return f"\nJERGA: Mete un '{random.choice(profile.slang_phrases)}' natural en tu respuesta."
 
 
 def maybe_knowledge(profile: PersonalityProfile, category_id: str) -> str:

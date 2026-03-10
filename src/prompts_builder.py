@@ -44,9 +44,7 @@ def build_fact_prompt(
         engine.evolve_mood()
 
     # Evolucionar hype
-    engine.culture_hype = evolve_hype(
-        engine.culture_hype, engine.profile, category["id"]
-    )
+    engine.culture_hype = evolve_hype(engine.culture_hype, engine.profile, category["id"])
 
     lines = []
 
@@ -95,8 +93,7 @@ def build_fact_prompt(
         lines.append(f"Estilo de entrega: {style}")
     else:
         lines.append(
-            f"Categoría: {category['label']} {category['emoji']} "
-            f"— {category.get('nebu_intro', '')}"
+            f"Categoría: {category['label']} {category['emoji']} — {category.get('nebu_intro', '')}"
         )
         culture_angle = category.get("culture_angle", "")
         if culture_angle:
@@ -110,9 +107,7 @@ def build_fact_prompt(
     lines.append("")
 
     # 4) Culture Brain injection
-    culture_brain = build_culture_injection(
-        engine.profile, engine.culture_hype, category["id"]
-    )
+    culture_brain = build_culture_injection(engine.profile, engine.culture_hype, category["id"])
     if culture_brain:
         lines.append(culture_brain)
 
@@ -261,7 +256,9 @@ def build_riddle_prompt(engine: VarietyEngine) -> str:
     if engine.profile.riddle_culture_hint:
         lines.append(engine.profile.riddle_culture_hint)
     lines.append("")
-    lines.append(f"{engine.agent_name} la presenta con entusiasmo: {engine.profile.riddle_challenge}")
+    lines.append(
+        f"{engine.agent_name} la presenta con entusiasmo: {engine.profile.riddle_challenge}"
+    )
     if engine.memory.riddles_told:
         lines.append("")
         lines.append("ADIVINANZAS YA CONTADAS (inventa algo diferente):")

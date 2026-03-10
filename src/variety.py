@@ -482,18 +482,22 @@ class VarietyEngine:
 
     def build_fact_prompt(self, topic: str = "", hour: int | None = None) -> str:
         from src.prompts_builder import build_fact_prompt
+
         return build_fact_prompt(self, topic, hour)
 
     def build_trivia_prompt(self) -> str:
         from src.prompts_builder import build_trivia_prompt
+
         return build_trivia_prompt(self)
 
     def build_story_prompt(self, custom_theme: str = "") -> str:
         from src.prompts_builder import build_story_prompt
+
         return build_story_prompt(self, custom_theme)
 
     def build_riddle_prompt(self) -> str:
         from src.prompts_builder import build_riddle_prompt
+
         return build_riddle_prompt(self)
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

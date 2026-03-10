@@ -184,7 +184,10 @@ def build_instructions(
 
 
 async def setup_variety_engine(
-    session: AgentSession, room_metadata: dict, settings: Settings, job_logger,
+    session: AgentSession,
+    room_metadata: dict,
+    settings: Settings,
+    job_logger,
     agent_name: str = "Nebu",
 ):
     """Inicializa VarietyEngine si está habilitado. Retorna el perfil de personalidad."""
@@ -224,12 +227,17 @@ async def setup_variety_engine(
 
     profile.resolve_name(agent_name)
     session.userdata["variety"] = VarietyEngine(profile=profile, agent_name=agent_name)
-    job_logger.info("VarietyEngine enabled", extra={"profile": profile.id, "agent_name": agent_name})
+    job_logger.info(
+        "VarietyEngine enabled", extra={"profile": profile.id, "agent_name": agent_name}
+    )
     return profile
 
 
 async def send_initial_greeting(
-    session: AgentSession, settings: Settings, room_metadata: dict, job_logger,
+    session: AgentSession,
+    settings: Settings,
+    room_metadata: dict,
+    job_logger,
     agent_name: str = "Nebu",
 ) -> None:
     """Envía el saludo inicial tras el delay configurado."""

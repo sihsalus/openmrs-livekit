@@ -101,7 +101,10 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         job_logger.info("No toy_id in metadata, skipping memory fetch")
 
     instructions = build_instructions(
-        room_metadata, settings, job_logger, memory_context=memory_context,
+        room_metadata,
+        settings,
+        job_logger,
+        memory_context=memory_context,
         agent_name=agent_name,
     )
     turn_context = TurnContext()
@@ -118,12 +121,16 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         ERRORS_TOTAL.labels(type="session").inc()
         return
 
-    profile = await setup_variety_engine(session, room_metadata, settings, job_logger, agent_name=agent_name)
+    profile = await setup_variety_engine(
+        session, room_metadata, settings, job_logger, agent_name=agent_name
+    )
     session.userdata["base_instructions"] = instructions
     session.userdata["agent_name"] = agent_name
 
     transcript_sent = {"done": False}
-    _register_session_lifecycle(ctx, session, room_name, settings, profile, job_logger, transcript_sent)
+    _register_session_lifecycle(
+        ctx, session, room_name, settings, profile, job_logger, transcript_sent
+    )
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
     has_parent_in_room = setup_walkie_talkie(ctx, session, settings, job_logger)
@@ -144,7 +151,9 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         session.input.set_audio_enabled(False)
         session.output.set_audio_enabled(False)
     else:
-        await send_initial_greeting(session, settings, room_metadata, job_logger, agent_name=agent_name)
+        await send_initial_greeting(
+            session, settings, room_metadata, job_logger, agent_name=agent_name
+        )
 
     _setup_budget_timer(ctx, session, settings, room_metadata, job_logger)
 
