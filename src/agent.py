@@ -32,8 +32,10 @@ from src.metrics import (
     SESSIONS_TOTAL,
 )
 from src.moderation import ContentModerator
+from src.personality import PersonalityProfile
 from src.session import (
     NebuAgent,
+    TranscriptFlag,
     TurnContext,
     build_instructions,
     parse_room_metadata,
@@ -128,7 +130,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     session.userdata["base_instructions"] = instructions
     session.userdata["agent_name"] = agent_name
 
-    transcript_sent = {"done": False}
+    transcript_sent = TranscriptFlag()
     _register_session_lifecycle(
         ctx, session, room_name, settings, profile, job_logger, transcript_sent
     )
@@ -176,12 +178,12 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
 def _register_session_lifecycle(
     ctx: agents.JobContext,
-    session,
+    session: agents.AgentSession,
     room_name: str,
     settings: Settings,
-    profile,
+    profile: PersonalityProfile,
     job_logger,
-    transcript_sent: dict,
+    transcript_sent: TranscriptFlag,
 ) -> None:
     """Registra métricas de sesión activa y callback de cierre para transcript."""
     session_start = time.time()
@@ -191,8 +193,8 @@ def _register_session_lifecycle(
     async def _on_session_end():
         ACTIVE_SESSIONS.dec()
         SESSION_DURATION.observe(time.time() - session_start)
-        if not transcript_sent["done"]:
-            transcript_sent["done"] = True
+        if not transcript_sent.done:
+            transcript_sent.done = True
             await save_transcript(session, room_name, settings, job_logger)
 
     ctx.add_shutdown_callback(_on_session_end)

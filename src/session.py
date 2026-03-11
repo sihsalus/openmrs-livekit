@@ -40,6 +40,13 @@ class TurnContext:
     turn_id: str | None = None
 
 
+@dataclass
+class TranscriptFlag:
+    """Shared flag to ensure transcript is saved exactly once."""
+
+    done: bool = False
+
+
 class NebuAgent:
     """Agente Nebu — construye y configura la AgentSession."""
 

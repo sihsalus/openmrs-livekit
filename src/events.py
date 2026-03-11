@@ -8,13 +8,17 @@ Registra:
 - participant_connected/disconnected: walkie-talkie + transcript al cerrar
 """
 
+from __future__ import annotations
+
 import asyncio
+import logging
 import time
 
 from livekit import rtc
 from livekit.agents import AgentSession, SpeechCreatedEvent
 
 from src.config import Settings
+from src.logger import AgentLogger
 from src.metrics import (
     CHILD_SIGNALS_TOTAL,
     LLM_LATENCY,
@@ -22,7 +26,8 @@ from src.metrics import (
     TURNS_TOTAL,
 )
 from src.moderation import ContentModerator
-from src.session import TurnContext
+from src.personality import PersonalityProfile
+from src.session import TranscriptFlag, TurnContext
 from src.transcript import save_transcript
 
 # ── Room & participant naming contracts ────────────────────────────────────────
@@ -33,16 +38,26 @@ PARENT_IDENTITY_PREFIX = "user-parent-"
 
 # Keeps strong references to fire-and-forget tasks so the GC doesn't destroy them.
 _bg_tasks: set[asyncio.Task] = set()
+_logger = logging.getLogger("nebu.events")
 
 
 def _fire_and_forget(coro) -> asyncio.Task:
     task = asyncio.create_task(coro)
     _bg_tasks.add(task)
-    task.add_done_callback(_bg_tasks.discard)
+    task.add_done_callback(_on_task_done)
     return task
 
 
-def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logger):
+def _on_task_done(task: asyncio.Task) -> None:
+    _bg_tasks.discard(task)
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is not None:
+        _logger.error("Background task failed: %s", exc, exc_info=exc)
+
+
+def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logger: AgentLogger):
     """Registra handlers de walkie-talkie. Retorna _has_parent_in_room o None si está deshabilitado."""
     if not settings.enable_walkie_talkie:
         job_logger.info("Walkie-talkie mode disabled")
@@ -95,9 +110,9 @@ def setup_event_listeners(
     room_name: str,
     settings: Settings,
     turn_context: TurnContext,
-    profile,
-    job_logger,
-    transcript_sent: dict,
+    profile: PersonalityProfile,
+    job_logger: AgentLogger,
+    transcript_sent: TranscriptFlag,
     moderator: ContentModerator | None = None,
 ) -> None:
     """Registra listeners: user_input_transcribed, conversation_item_added, speech_created."""
@@ -200,6 +215,6 @@ def setup_event_listeners(
             "Participante desconectado, guardando transcript",
             extra={"participant": participant.identity},
         )
-        if not transcript_sent["done"]:
-            transcript_sent["done"] = True
+        if not transcript_sent.done:
+            transcript_sent.done = True
             _fire_and_forget(save_transcript(session, room_name, settings, job_logger))
