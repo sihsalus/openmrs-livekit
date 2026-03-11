@@ -87,5 +87,5 @@ def test_personalities_display_names():
     _, _, body = _call_wsgi(app, "/personalities")
 
     by_id = {p["id"]: p for p in json.loads(body)}
-    assert by_id["peruvian"]["display_name"] == "Nebu Etnocacerista"
-    assert by_id["roblox"]["display_name"] == "Nebu Gamer"
+    assert by_id["peruvian"]["display_name"] == "{name} Etnocacerista"
+    assert by_id["roblox"]["display_name"] == "{name} Gamer"

@@ -24,7 +24,7 @@ class TestRegistry:
 
     def test_get_profile_default(self):
         profile = get_profile()
-        assert profile.id == "peruvian"
+        assert profile.id == "neutral"
 
     def test_get_profile_by_id(self):
         for pid in ALL_PROFILE_IDS:

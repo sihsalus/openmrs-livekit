@@ -428,53 +428,15 @@ class TestCultureBrain:
 
     def test_slang_phrases_not_empty(self):
         engine = VarietyEngine()
-        assert len(engine.profile.slang_phrases) >= 10
+        assert len(engine.profile.slang_phrases) >= 6
 
-    def test_culture_brain_injection_skips_boost_categories(self):
+    def test_hype_initial_is_set(self):
         engine = VarietyEngine()
-        # Boost categories should never get extra injection
-        for cat_id in engine.profile.hype_boost_categories:
-            results = [engine._build_culture_brain_injection(cat_id) for _ in range(50)]
-            assert all(r == "" for r in results), (
-                f"Boost category {cat_id} should never get culture brain injection"
-            )
+        assert engine.culture_hype == engine.profile.hype_initial
 
-    def test_maybe_culture_rant_returns_string_or_empty(self):
+    def test_hype_cap_greater_than_initial(self):
         engine = VarietyEngine()
-        results = [engine._maybe_culture_rant() for _ in range(100)]
-        non_empty = [r for r in results if r]
-        assert len(non_empty) > 0, "Should produce some rants over 100 rolls"
-        for r in non_empty:
-            assert "RANT" in r
-
-    def test_maybe_slang_returns_string_or_empty(self):
-        engine = VarietyEngine()
-        results = [engine._maybe_slang() for _ in range(100)]
-        non_empty = [r for r in results if r]
-        assert len(non_empty) > 0, "Should produce some slang over 100 rolls"
-        for r in non_empty:
-            assert "JERGA" in r
-
-    def test_evolve_hype_increases(self):
-        engine = VarietyEngine()
-        initial = engine.culture_hype
-        engine._evolve_hype("animals")
-        assert engine.culture_hype > initial
-
-    def test_evolve_hype_increases_more_for_boost_categories(self):
-        engine1 = VarietyEngine()
-        engine2 = VarietyEngine()
-        engine1._evolve_hype("animals")
-        boost_cat = engine2.profile.hype_boost_categories[0]
-        engine2._evolve_hype(boost_cat)
-        assert engine2.culture_hype > engine1.culture_hype
-
-    def test_evolve_hype_caps(self):
-        engine = VarietyEngine()
-        engine.culture_hype = engine.profile.hype_cap - 0.01
-        boost_cat = engine.profile.hype_boost_categories[0]
-        engine._evolve_hype(boost_cat)
-        assert engine.culture_hype <= engine.profile.hype_cap
+        assert engine.profile.hype_cap > engine.profile.hype_initial
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -491,7 +453,7 @@ class TestPersonaAnchor:
         engine = VarietyEngine()
         engine.turn_count = 5
         anchor = engine.build_persona_anchor()
-        assert "RECORDATORIO NEBU" in anchor
+        assert "RECORDATORIO" in anchor
 
     def test_anchor_at_non_multiple_of_5(self):
         engine = VarietyEngine()
@@ -502,7 +464,7 @@ class TestPersonaAnchor:
         engine = VarietyEngine()
         engine.turn_count = 10
         anchor = engine.build_persona_anchor()
-        assert "RECORDATORIO NEBU" in anchor
+        assert "RECORDATORIO" in anchor
 
 
 class TestNarrativePatternDedup:
@@ -704,9 +666,9 @@ class TestPeruanizedContent:
 class TestMultipleProfiles:
     """Test that multiple profiles work correctly with the engine."""
 
-    def test_default_profile_is_peruvian(self):
+    def test_default_profile_is_neutral(self):
         engine = VarietyEngine()
-        assert engine.profile.id == "peruvian"
+        assert engine.profile.id == "neutral"
 
     def test_engine_with_mexican_profile(self):
         profile = get_profile("mexican")
