@@ -21,6 +21,7 @@ from src.metrics import (
     TURN_LATENCY,
     TURNS_TOTAL,
 )
+from src.moderation import ContentModerator
 from src.session import TurnContext
 from src.transcript import save_transcript
 
@@ -97,12 +98,13 @@ def setup_event_listeners(
     profile,
     job_logger,
     transcript_sent: dict,
+    moderator: ContentModerator | None = None,
 ) -> None:
     """Registra listeners: user_input_transcribed, conversation_item_added, speech_created."""
     _state: dict = {"turn_start": None, "filler_task": None}
 
     def on_user_transcribed(ev):
-        """Filler sound + FSM Mood Lite + Persona Anchor/Sliding Summary."""
+        """Filler sound + FSM Mood Lite + Persona Anchor/Sliding Summary + content moderation."""
         if not ev.is_final:
             return
 
@@ -111,6 +113,12 @@ def setup_event_listeners(
         if len(text) < 4 or not any(c.isalpha() for c in text):
             job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
             return
+
+        # Content moderation — detect inappropriate language
+        if moderator:
+            detected = moderator.check_text(text)
+            if detected:
+                _fire_and_forget(moderator.send_behavior_flag(detected, text))
 
         job_logger.info(
             "Turno iniciado",

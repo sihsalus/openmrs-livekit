@@ -31,6 +31,7 @@ from src.metrics import (
     SESSION_DURATION,
     SESSIONS_TOTAL,
 )
+from src.moderation import ContentModerator
 from src.session import (
     NebuAgent,
     TurnContext,
@@ -134,8 +135,17 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
     has_parent_in_room = setup_walkie_talkie(ctx, session, settings, job_logger)
+    moderator = ContentModerator(settings, room_name, job_logger)
     setup_event_listeners(
-        session, ctx.room, room_name, settings, turn_context, profile, job_logger, transcript_sent
+        session,
+        ctx.room,
+        room_name,
+        settings,
+        turn_context,
+        profile,
+        job_logger,
+        transcript_sent,
+        moderator=moderator,
     )
 
     try:
