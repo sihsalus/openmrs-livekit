@@ -114,11 +114,15 @@ def setup_event_listeners(
             job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
             return
 
-        # Content moderation — detect inappropriate language
+        # Content moderation — detect inappropriate language (async, non-blocking)
         if moderator:
-            detected = moderator.check_text(text)
-            if detected:
-                _fire_and_forget(moderator.send_behavior_flag(detected, text))
+
+            async def _moderate(t=text):
+                result = await moderator.check_full(t)
+                if result.flagged:
+                    await moderator.send_behavior_flag(result, t)
+
+            _fire_and_forget(_moderate())
 
         job_logger.info(
             "Turno iniciado",
