@@ -2,22 +2,14 @@
 
 import pytest
 
-from src.config import Settings, reset_settings
-
-
-@pytest.fixture(autouse=True)
-def _reset():
-    """Reset singleton between tests."""
-    reset_settings()
-    yield
-    reset_settings()
+from src.config import Settings
 
 
 class TestSettingsDefaults:
     def test_loads_with_required_env_vars(self):
         s = Settings()
         assert s.livekit_url == "ws://localhost:7880"
-        assert s.openai_model == "gpt-4o"
+        assert s.openai_model == "gpt-4.1-mini"
         assert s.agent_name == "Nebu"
 
     def test_greeting_enabled_by_default(self):

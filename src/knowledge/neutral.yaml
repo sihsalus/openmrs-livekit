@@ -1,0 +1,200 @@
+# neutral.yaml — Conocimiento general (culturalmente neutro) para Nebu.
+#
+# Datos universales sobre ciencia, historia y naturaleza,
+# sin sesgo hacia ninguna cultura o pais especifico.
+# Apropiado para ninos de toda Latinoamerica.
+#
+# Cargado por: knowledge_loader.py -> build_knowledge_injection(module_name)
+# Referenciado desde: personalities/neutral.yaml -> knowledge_module
+
+meta:
+  sections:
+    historia:
+      format: "CONOCIMIENTO GENERAL ({nombre}, {periodo}): {para_ninos} Dato extra: {dato_extra}"
+    filosofia:
+      format: "DATO CURIOSO — {nombre} ({termino_original}): {para_ninos}"
+    figura:
+      format: "PERSONAJE HISTORICO — {nombre}, {titulo}: {para_ninos}"
+    innovacion:
+      format: "INNOVACION — {nombre} ({campo}): {para_ninos}"
+    tradicion:
+      format: "TRADICION MUNDIAL — {titulo}: {para_ninos}"
+  vocab_key: vocabulario
+  vocab_chance: 0.3
+  vocab_format: "DATO DE VOCABULARIO: '{palabra}' = {significado}. Compartelo con el nino si encaja."
+
+# -- Historia --
+historia:
+  - nombre: "La Gran Biblioteca de Alejandria"
+    periodo: "Siglo III a.C. — Siglo VII d.C."
+    descripcion: >-
+      Centro del saber del mundo antiguo que recogio
+      cientos de miles de rollos de papiro.
+    para_ninos: >-
+      Hace mas de 2000 anios existio una biblioteca TAN grande
+      que tenia TODO el conocimiento del mundo. Gente viajaba
+      desde muy lejos solo para leer ahi.
+    dato_extra: >-
+      Se dice que todo barco que llegaba al puerto tenia que
+      prestar sus libros para que los copiaran.
+
+  - nombre: "Las piramides de Giza"
+    periodo: "2580 — 2560 a.C."
+    descripcion: >-
+      Monumentos funerarios del antiguo Egipto, maravilla
+      del mundo antiguo que perdura hasta hoy.
+    para_ninos: >-
+      Las piramides de Egipto se construyeron hace mas de
+      4500 anios con millones de bloques de piedra y TODAVIA
+      estan de pie. Nadie sabe exactamente como lo hicieron.
+    dato_extra: >-
+      La Gran Piramide fue el edificio mas alto del mundo
+      durante casi 4000 anios.
+
+  - nombre: "La Ruta de la Seda"
+    periodo: "Siglo II a.C. — Siglo XV"
+    descripcion: >-
+      Red de rutas comerciales que conectaba Asia con Europa
+      y facilitaba el intercambio cultural.
+    para_ninos: >-
+      Imagina un camino tan largo que cruzaba montanias,
+      desiertos y oceanos para llevar tesoros de un lado
+      del mundo al otro. Asi era la Ruta de la Seda.
+    dato_extra: >-
+      No solo se comerciaba seda; tambien pasaban ideas,
+      inventos, comida y hasta enfermedades.
+
+# -- Filosofia / Conceptos --
+filosofia:
+  - nombre: "Curiosidad cientifica"
+    termino_original: "Curiositas"
+    descripcion: >-
+      El impulso humano de querer entender el mundo.
+    para_ninos: >-
+      La curiosidad es tu superpoder. Cada vez que preguntas
+      por que, tu cerebro se hace mas fuerte. Los mas grandes
+      descubrimientos empezaron con alguien diciendo hmm que raro.
+
+  - nombre: "Empatia"
+    termino_original: "Empatheia"
+    descripcion: >-
+      Capacidad de comprender los sentimientos de otros.
+    para_ninos: >-
+      La empatia es como tener un radar para los sentimientos
+      de los demas. Cuando entiendes como se siente alguien
+      puedes ser un mejor amigo y un mejor ser humano.
+
+  - nombre: "Resiliencia"
+    termino_original: "Resilire"
+    descripcion: >-
+      Capacidad de recuperarse ante la adversidad.
+    para_ninos: >-
+      Ser resiliente es como ser un resorte: aunque te aplasten
+      vuelves a saltar. Los errores no son el final sino trampolines
+      para el siguiente intento.
+
+# -- Figuras --
+figura:
+  - nombre: "Marie Curie"
+    titulo: "Pionera de la radiactividad"
+    descripcion: >-
+      Primera persona en ganar dos premios Nobel en ciencias distintas.
+    para_ninos: >-
+      Marie Curie descubrio cosas INVISIBLES que cambiaron la
+      medicina para siempre. Gano dos premios Nobel, algo que
+      casi nadie ha logrado.
+
+  - nombre: "Leonardo da Vinci"
+    titulo: "El genio universal"
+    descripcion: >-
+      Artista, inventor, cientifico e ingeniero renacentista.
+    para_ninos: >-
+      Leonardo da Vinci pintaba, inventaba maquinas voladoras,
+      estudiaba el cuerpo humano y disenaba puentes. Era como
+      tener un superpoder en TODO.
+
+  - nombre: "Charles Darwin"
+    titulo: "Padre de la evolucion"
+    descripcion: >-
+      Naturalista que propuso la teoria de la seleccion natural.
+    para_ninos: >-
+      Darwin viajo por el mundo observando animales y descubrio
+      que todas las criaturas van cambiando poquito a poquito
+      durante millones de anios. Increible no?
+
+# -- Innovaciones --
+innovacion:
+  - nombre: "La imprenta"
+    campo: "Comunicacion"
+    descripcion: >-
+      Inventada por Gutenberg, revoluciono la difusion del conocimiento.
+    para_ninos: >-
+      Antes de la imprenta cada libro se copiaba A MANO y tardaban
+      meses. La imprenta hizo que los libros llegaran a todos.
+
+  - nombre: "La vacuna"
+    campo: "Medicina"
+    descripcion: >-
+      Edward Jenner creo la primera vacuna contra la viruela en 1796.
+    para_ninos: >-
+      Las vacunas son como un entrenamiento para tu cuerpo. Le
+      ensenan a defenderse de los virus ANTES de que te enfermen.
+
+  - nombre: "La electricidad domestica"
+    campo: "Tecnologia"
+    descripcion: >-
+      La electrificacion transformo la vida cotidiana en el siglo XX.
+    para_ninos: >-
+      Imagina un mundo sin luz electrica, sin nevera, sin cargador.
+      La electricidad cambio TODO y ahora la usamos sin ni pensarlo.
+
+# -- Tradiciones --
+tradicion:
+  - titulo: "Dia de Muertos"
+    descripcion: >-
+      Celebracion latinoamericana para honrar a los seres queridos fallecidos.
+    para_ninos: >-
+      En muchos paises de Latinoamerica hay un dia especial donde
+      se recuerda con alegria y flores a las personas que ya no estan.
+
+  - titulo: "Ano Nuevo Lunar"
+    descripcion: >-
+      Celebracion milenaria en Asia que marca el inicio del calendario lunar.
+    para_ninos: >-
+      Millones de personas en el mundo celebran el Ano Nuevo con
+      dragones, fuegos artificiales y comida especial en una fiesta
+      que dura varios dias.
+
+  - titulo: "Carnaval"
+    descripcion: >-
+      Fiesta popular que se celebra en muchos paises con musica y disfraces.
+    para_ninos: >-
+      El Carnaval es la fiesta mas colorida del mundo. En muchos
+      paises la gente sale a bailar, disfrazarse y pasarla increible.
+
+# -- Vocabulario --
+vocabulario:
+  - palabra: "hipotesis"
+    significado: "Una idea que quieres comprobar con experimentos"
+    uso: "Cuando el nino propone una explicacion para algo"
+  - palabra: "biodiversidad"
+    significado: "La variedad de seres vivos en un lugar"
+    uso: "Al hablar de animales, plantas o ecosistemas"
+  - palabra: "galaxia"
+    significado: "Un grupo gigante de estrellas, planetas y polvo cosmico"
+    uso: "Cuando se habla del espacio o las estrellas"
+  - palabra: "fotosintesis"
+    significado: "El proceso con el que las plantas convierten la luz en alimento"
+    uso: "Al hablar de plantas o la naturaleza"
+  - palabra: "ecosistema"
+    significado: "Comunidad de seres vivos que dependen unos de otros"
+    uso: "Al hablar de naturaleza o medio ambiente"
+  - palabra: "atomo"
+    significado: "La pieza mas pequenita de la que esta hecho TODO"
+    uso: "Cuando se habla del mundo microscopico"
+  - palabra: "evolucion"
+    significado: "Los cambios que sufren los seres vivos a lo largo de miles de anios"
+    uso: "Al hablar de animales, fosiles o dinosaurios"
+  - palabra: "gravedad"
+    significado: "La fuerza invisible que nos mantiene pegados al suelo"
+    uso: "Cuando se habla de espacio, planetas o fisica"
