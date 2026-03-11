@@ -268,6 +268,11 @@ class Settings(BaseSettings):
         description="Enable parent pause mode for multi-participant rooms",
     )
 
+    enable_content_moderation: bool = Field(
+        default=True,
+        description="Enable two-layer content moderation (regex + OpenAI Moderation API). Non-blocking, ~0ms latency impact.",
+    )
+
     @model_validator(mode="after")
     def validate_provider_api_keys(self) -> "Settings":
         """Falla en startup si el proveedor seleccionado no tiene API key configurada."""

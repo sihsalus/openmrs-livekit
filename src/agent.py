@@ -135,7 +135,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
     has_parent_in_room = setup_walkie_talkie(ctx, session, settings, job_logger)
-    moderator = ContentModerator(settings, room_name, job_logger)
+    moderator = ContentModerator(settings, room_name, job_logger) if settings.enable_content_moderation else None
     setup_event_listeners(
         session,
         ctx.room,
