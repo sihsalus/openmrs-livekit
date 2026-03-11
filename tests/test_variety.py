@@ -1,4 +1,5 @@
 """Tests for VarietyEngine v4 — parametrizable personality system."""
+
 from src.variety import (
     VarietyEngine,
     BANNED_FACTS,
@@ -108,7 +109,11 @@ class TestFactPrompt:
         engine = VarietyEngine()
         prompt = engine.build_fact_prompt()
         # v4 uses profile.culture_angle_label
-        assert engine.profile.culture_angle_label in prompt or "culture" in prompt.lower() or "ÁNGULO" in prompt
+        assert (
+            engine.profile.culture_angle_label in prompt
+            or "culture" in prompt.lower()
+            or "ÁNGULO" in prompt
+        )
 
 
 class TestMoodSystem:
@@ -388,8 +393,9 @@ class TestSpecifics:
     def test_all_categories_have_specifics(self):
         engine = VarietyEngine()
         for cat in engine.profile.fact_categories:
-            assert cat["id"] in engine.profile.category_specifics, \
+            assert cat["id"] in engine.profile.category_specifics, (
                 f"Missing specifics for {cat['id']}"
+            )
 
     def test_pick_specific_topic(self):
         engine = VarietyEngine()
@@ -401,6 +407,7 @@ class TestSpecifics:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # v4 NEW: Culture Brain tests (parametrized)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 class TestCultureBrain:
     def test_culture_brain_chance_is_positive(self):
@@ -428,8 +435,9 @@ class TestCultureBrain:
         # Boost categories should never get extra injection
         for cat_id in engine.profile.hype_boost_categories:
             results = [engine._build_culture_brain_injection(cat_id) for _ in range(50)]
-            assert all(r == "" for r in results), \
+            assert all(r == "" for r in results), (
                 f"Boost category {cat_id} should never get culture brain injection"
+            )
 
     def test_maybe_culture_rant_returns_string_or_empty(self):
         engine = VarietyEngine()
@@ -472,6 +480,7 @@ class TestCultureBrain:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # v4 NEW: Patch tests
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 
 class TestPersonaAnchor:
     def test_anchor_at_turn_0_is_empty(self):
@@ -621,8 +630,9 @@ class TestKnowledgeInjection:
     def test_all_profiles_have_knowledge_injector(self):
         for pid in ["peruvian", "mexican", "kpop", "roblox"]:
             profile = get_profile(pid)
-            assert profile.knowledge_injector is not None, \
+            assert profile.knowledge_injector is not None, (
                 f"{pid}: knowledge_injector must not be None"
+            )
             result = profile.knowledge_injector("test_category")
             assert isinstance(result, str)
 
@@ -682,8 +692,11 @@ class TestPeruanizedContent:
 
     def test_story_themes_have_andean_themes(self):
         andean_count = sum(
-            1 for t in PERU.story_themes
-            if any(w in t.lower() for w in ["inca", "andes", "quechua", "pachamama", "cusco", "andino"])
+            1
+            for t in PERU.story_themes
+            if any(
+                w in t.lower() for w in ["inca", "andes", "quechua", "pachamama", "cusco", "andino"]
+            )
         )
         assert andean_count >= 3, "Should have multiple andean-themed stories"
 

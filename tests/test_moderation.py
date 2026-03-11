@@ -208,11 +208,17 @@ class TestOpenAIModerationAPI:
         """Should not flag clean children's content."""
         mock_scores = MagicMock()
         for attr in [
-            "harassment", "harassment_threatening",
-            "self_harm", "self_harm_intent", "self_harm_instructions",
-            "sexual", "sexual_minors",
-            "violence", "violence_graphic",
-            "hate", "hate_threatening",
+            "harassment",
+            "harassment_threatening",
+            "self_harm",
+            "self_harm_intent",
+            "self_harm_instructions",
+            "sexual",
+            "sexual_minors",
+            "violence",
+            "violence_graphic",
+            "hate",
+            "hate_threatening",
         ]:
             setattr(mock_scores, attr, 0.01)
 
@@ -237,10 +243,16 @@ class TestOpenAIModerationAPI:
         """sexual/minors has a very low threshold (0.05) for child safety."""
         mock_scores = MagicMock()
         for attr in [
-            "harassment", "harassment_threatening",
-            "self_harm", "self_harm_intent", "self_harm_instructions",
-            "sexual", "violence", "violence_graphic",
-            "hate", "hate_threatening",
+            "harassment",
+            "harassment_threatening",
+            "self_harm",
+            "self_harm_intent",
+            "self_harm_instructions",
+            "sexual",
+            "violence",
+            "violence_graphic",
+            "hate",
+            "hate_threatening",
         ]:
             setattr(mock_scores, attr, 0.01)
         mock_scores.sexual_minors = 0.06  # Just above 0.05 threshold

@@ -1,4 +1,5 @@
 """Tests for Settings validation."""
+
 import pytest
 
 from src.config import Settings, reset_settings

@@ -1,4 +1,5 @@
 """Tests for all @function_tool implementations."""
+
 import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 
@@ -43,22 +44,24 @@ class TestWeatherTool:
 
         mock_geo_response = MagicMock()
         mock_geo_response.status = 200
-        mock_geo_response.json = AsyncMock(return_value={
-            "results": [{"latitude": 4.6, "longitude": -74.08, "name": "Bogotá"}]
-        })
+        mock_geo_response.json = AsyncMock(
+            return_value={"results": [{"latitude": 4.6, "longitude": -74.08, "name": "Bogotá"}]}
+        )
         mock_geo_response.__aenter__ = AsyncMock(return_value=mock_geo_response)
         mock_geo_response.__aexit__ = AsyncMock(return_value=False)
 
         mock_weather_response = MagicMock()
         mock_weather_response.status = 200
-        mock_weather_response.json = AsyncMock(return_value={
-            "current": {
-                "temperature_2m": 18.5,
-                "relative_humidity_2m": 72,
-                "weather_code": 3,
-                "wind_speed_10m": 12.3,
+        mock_weather_response.json = AsyncMock(
+            return_value={
+                "current": {
+                    "temperature_2m": 18.5,
+                    "relative_humidity_2m": 72,
+                    "weather_code": 3,
+                    "wind_speed_10m": 12.3,
+                }
             }
-        })
+        )
         mock_weather_response.__aenter__ = AsyncMock(return_value=mock_weather_response)
         mock_weather_response.__aexit__ = AsyncMock(return_value=False)
 
@@ -96,7 +99,9 @@ class TestWeatherTool:
     async def test_network_error_returns_fallback(self, fake_context):
         from src.tools.weather_tool import get_weather
 
-        with patch("src.tools.weather_tool.aiohttp.ClientSession", side_effect=Exception("Network error")):
+        with patch(
+            "src.tools.weather_tool.aiohttp.ClientSession", side_effect=Exception("Network error")
+        ):
             result = await get_weather._func(fake_context, city="Bogota")
 
         assert "No pude consultar" in result
@@ -220,12 +225,14 @@ class TestWebSearchTool:
 
         mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "results": [
-                {"title": "Noticia importante", "content": "El presidente fue vacado hoy."},
-                {"title": "Otra noticia", "content": "Detalles del evento."},
-            ]
-        })
+        mock_response.json = AsyncMock(
+            return_value={
+                "results": [
+                    {"title": "Noticia importante", "content": "El presidente fue vacado hoy."},
+                    {"title": "Otra noticia", "content": "Detalles del evento."},
+                ]
+            }
+        )
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock(return_value=False)
 
@@ -250,13 +257,15 @@ class TestWebSearchTool:
 
         mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "web": {
-                "results": [
-                    {"title": "Resultado Brave", "description": "Info desde Brave Search."},
-                ]
+        mock_response.json = AsyncMock(
+            return_value={
+                "web": {
+                    "results": [
+                        {"title": "Resultado Brave", "description": "Info desde Brave Search."},
+                    ]
+                }
             }
-        })
+        )
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock(return_value=False)
 
