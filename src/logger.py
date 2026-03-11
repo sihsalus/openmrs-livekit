@@ -21,16 +21,16 @@ class JSONFormatter(logging.Formatter):
         }
 
         # Agregar campos extra si existen
-        if hasattr(record, "room"):
-            log_data["room"] = record.room
-        if hasattr(record, "participant"):
-            log_data["participant"] = record.participant
-        if hasattr(record, "agent_id"):
-            log_data["agent_id"] = record.agent_id
-        if hasattr(record, "job_id"):
-            log_data["job_id"] = record.job_id
-        if hasattr(record, "extra_data"):
-            log_data.update(record.extra_data)
+        known_extras = ("room", "participant", "agent_id", "job_id")
+        for key in known_extras:
+            if hasattr(record, key):
+                log_data[key] = getattr(record, key)
+
+        # Capturar cualquier extra adicional pasado via logger.warning(..., extra={...})
+        _builtin = {*logging.LogRecord("", 0, "", 0, "", (), None).__dict__, "message", "asctime"}
+        for key, val in record.__dict__.items():
+            if key not in _builtin and key not in log_data:
+                log_data[key] = val
 
         # Agregar excepción si existe
         if record.exc_info:

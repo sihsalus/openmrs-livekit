@@ -86,8 +86,7 @@ async def backend_request(
 
         body = await resp.text()
         job_logger.warning(
-            f"{label} rejected by backend",
-            extra={"status": resp.status, "body": body[:200]},
+            f"{label} rejected: HTTP {resp.status} — {body[:200]}",
         )
         return None
 
@@ -95,5 +94,5 @@ async def backend_request(
         job_logger.warning(f"{label} timed out (>{timeout_seconds}s)")
         return None
     except Exception as exc:
-        job_logger.warning(f"Error in {label}", extra={"error": str(exc)})
+        job_logger.warning(f"{label} failed: {exc}")
         return None
