@@ -369,6 +369,18 @@ class TestTimeFlavor:
         assert "tarde" in flavor.lower() or "noche" in flavor.lower()
 
 
+class TestSessionStats:
+    def test_get_session_stats(self):
+        engine = VarietyEngine()
+        stats = engine.get_session_stats()
+        assert stats["turnCount"] == 0
+        assert stats["mood"] == engine.profile.default_mood
+        assert stats["rapport"] == engine.profile.rapport_levels[0]["value"]
+        assert stats["factsTold"] == 0
+        assert "cultureHype" in stats
+        assert "profileId" in stats
+
+
 class TestSpecifics:
     def test_all_categories_have_specifics(self):
         engine = VarietyEngine()
@@ -671,4 +683,13 @@ class TestMultipleProfiles:
         assert engine.profile.id == "roblox"
         prompt = engine.build_fact_prompt()
         assert "DATO CURIOSO" in prompt
+
+    def test_all_profiles_produce_valid_stats(self):
+        for pid in ["peruvian", "mexican", "kpop", "roblox"]:
+            profile = get_profile(pid)
+            engine = VarietyEngine(profile=profile)
+            stats = engine.get_session_stats()
+            assert stats["profileId"] == pid
+            assert stats["turnCount"] == 0
+            assert "cultureHype" in stats
 

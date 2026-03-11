@@ -516,3 +516,17 @@ class VarietyEngine:
 
     def tick(self):
         self.turn_count += 1
+
+    def get_session_stats(self) -> dict:
+        return {
+            "turnCount": self.turn_count,
+            "mood": self._mood_value,
+            "rapport": self.rapport_value,
+            "factsTold": len(self.memory.facts_told),
+            "riddlesTold": len(self.memory.riddles_told),
+            "favoriteCategory": self.favorite_category,
+            "sessionMinutes": round(self.session_minutes, 2),
+            "consecutiveFacts": self._consecutive_facts,
+            "cultureHype": round(self.culture_hype, 2),
+            "profileId": self.profile.id,
+        }

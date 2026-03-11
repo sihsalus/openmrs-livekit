@@ -44,17 +44,29 @@ async def save_transcript(
     transcript = "\n".join(lines)
     message_count = len(lines)
 
+    engagement_stats = None
+    variety = session.userdata.get("variety")
+    if variety is not None:
+        try:
+            engagement_stats = variety.get_session_stats()
+        except Exception:
+            job_logger.warning("Failed to collect engagement stats")
+
     try:
+        payload: dict = {
+            "roomName": room_name,
+            "transcript": transcript,
+            "messageCount": message_count,
+        }
+        if engagement_stats:
+            payload["engagementStats"] = engagement_stats
+
         result = await backend_request(
             settings,
             "POST",
             "voice/sessions/transcript",
             job_logger,
-            json={
-                "roomName": room_name,
-                "transcript": transcript,
-                "messageCount": message_count,
-            },
+            json=payload,
             label="save transcript",
         )
         if result is not None:
