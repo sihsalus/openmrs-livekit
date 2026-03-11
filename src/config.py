@@ -270,7 +270,7 @@ class Settings(BaseSettings):
 
     enable_content_moderation: bool = Field(
         default=True,
-        description="Enable two-layer content moderation (regex + OpenAI Moderation API). Non-blocking, ~0ms latency impact.",
+        description="Enable content moderation",
     )
 
     @model_validator(mode="after")
