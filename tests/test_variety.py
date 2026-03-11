@@ -369,26 +369,6 @@ class TestTimeFlavor:
         assert "tarde" in flavor.lower() or "noche" in flavor.lower()
 
 
-class TestSessionStats:
-    def test_get_session_stats(self):
-        engine = VarietyEngine()
-        stats = engine.get_session_stats()
-        assert stats["turns"] == 0
-        assert stats["mood"] == "curioso"
-        assert stats["rapport"] == engine.profile.rapport_levels[0]["value"]
-        assert stats["facts_told"] == 0
-        assert "culture_hype" in stats
-        assert "profile" in stats
-
-    def test_debug_status(self):
-        engine = VarietyEngine()
-        status = engine.debug_status()
-        assert "Nebu Status" in status
-        assert engine.profile.debug_version_label in status
-        assert "Mood" in status
-        assert engine.profile.hype_field_name in status
-
-
 class TestSpecifics:
     def test_all_categories_have_specifics(self):
         engine = VarietyEngine()
@@ -692,19 +672,3 @@ class TestMultipleProfiles:
         prompt = engine.build_fact_prompt()
         assert "DATO CURIOSO" in prompt
 
-    def test_all_profiles_produce_valid_debug(self):
-        for pid in ["peruvian", "mexican", "kpop", "roblox"]:
-            profile = get_profile(pid)
-            engine = VarietyEngine(profile=profile)
-            status = engine.debug_status()
-            assert "Nebu Status" in status
-            assert profile.hype_field_name in status
-
-    def test_all_profiles_produce_valid_stats(self):
-        for pid in ["peruvian", "mexican", "kpop", "roblox"]:
-            profile = get_profile(pid)
-            engine = VarietyEngine(profile=profile)
-            stats = engine.get_session_stats()
-            assert stats["profile"] == pid
-            assert stats["turns"] == 0
-            assert "culture_hype" in stats

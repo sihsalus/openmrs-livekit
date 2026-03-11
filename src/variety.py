@@ -516,32 +516,3 @@ class VarietyEngine:
 
     def tick(self):
         self.turn_count += 1
-
-    def get_session_stats(self) -> dict:
-        return {
-            "turns": self.turn_count,
-            "mood": self._mood_value,
-            "rapport": self.rapport_value,
-            "facts_told": len(self.memory.facts_told),
-            "riddles_told": len(self.memory.riddles_told),
-            "favorite_category": self.favorite_category,
-            "session_minutes": round(self.session_minutes, 1),
-            "consecutive_facts": self._consecutive_facts,
-            "culture_hype": round(self.culture_hype, 2),
-            "profile": self.profile.id,
-        }
-
-    def debug_status(self) -> str:
-        stats = self.get_session_stats()
-        return (
-            f"🎭 {self.agent_name} Status ({self.profile.debug_version_label})\n"
-            f"├─ Profile: {self.profile.id}\n"
-            f"├─ Mood: {self._mood_value}\n"
-            f"├─ Rapport: {self.rapport_value}\n"
-            f"├─ Turnos: {stats['turns']}\n"
-            f"├─ Facts contados: {stats['facts_told']}\n"
-            f"├─ Combo actual: x{stats['consecutive_facts']}\n"
-            f"├─ {self.profile.hype_field_name}: {stats['culture_hype']}\n"
-            f"├─ Cat favorita: {stats['favorite_category'] or '(aún no)'}\n"
-            f"└─ Sesión: {stats['session_minutes']} min"
-        )

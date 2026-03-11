@@ -1,13 +1,14 @@
 """Tests for all @function_tool implementations."""
 
 import datetime
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tests.conftest import FakeRunContext
-from src.variety import VarietyEngine
 from src.config import Settings
+from tests.conftest import FakeRunContext
+
+pytestmark = pytest.mark.asyncio
 
 
 # ── datetime_tool ────────────────────────────────────────────────────────────
@@ -211,6 +212,7 @@ def _mock_settings(**overrides):
         "brave_search_api_key": None,
         "serpapi_api_key": None,
         "web_search_max_results": 3,
+        "stt_language": "es",
     }
     defaults.update(overrides)
     mock = MagicMock(spec=Settings)
@@ -220,8 +222,14 @@ def _mock_settings(**overrides):
 
 
 class TestWebSearchTool:
+    def _make_tool(self, **overrides):
+        """Create a web_search tool via the factory with mock settings."""
+        from src.tools.web_search_tool import make_web_search
+
+        return make_web_search(_mock_settings(**overrides))
+
     async def test_tavily_search_success(self, fake_context):
-        from src.tools.web_search_tool import web_search
+        tool = self._make_tool()
 
         mock_response = MagicMock()
         mock_response.status = 200
@@ -241,19 +249,17 @@ class TestWebSearchTool:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        settings = _mock_settings()
-
-        with (
-            patch("src.tools.web_search_tool.aiohttp.ClientSession", return_value=mock_session),
-            patch("src.tools.web_search_tool.get_settings", return_value=settings),
-        ):
-            result = await web_search._func(fake_context, query="noticias Peru")
+        with patch("src.tools.web_search_tool.aiohttp.ClientSession", return_value=mock_session):
+            result = await tool._func(fake_context, query="noticias Peru")
 
         assert "Noticia importante" in result
         assert "presidente" in result
 
     async def test_brave_search_success(self, fake_context):
-        from src.tools.web_search_tool import web_search
+        tool = self._make_tool(
+            web_search_provider="brave",
+            brave_search_api_key="BSA-test-key",
+        )
 
         mock_response = MagicMock()
         mock_response.status = 200
@@ -274,57 +280,38 @@ class TestWebSearchTool:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        settings = _mock_settings(
-            web_search_provider="brave",
-            brave_search_api_key="BSA-test-key",
-        )
-
-        with (
-            patch("src.tools.web_search_tool.aiohttp.ClientSession", return_value=mock_session),
-            patch("src.tools.web_search_tool.get_settings", return_value=settings),
-        ):
-            result = await web_search._func(fake_context, query="noticias Peru")
+        with patch("src.tools.web_search_tool.aiohttp.ClientSession", return_value=mock_session):
+            result = await tool._func(fake_context, query="noticias Peru")
 
         assert "Resultado Brave" in result
 
-    async def test_provider_not_configured(self, fake_context):
-        from src.tools.web_search_tool import web_search
+    async def test_unknown_provider_returns_error(self, fake_context):
+        tool = self._make_tool(web_search_provider="unknown_provider")
 
-        settings = _mock_settings(web_search_provider=None)
+        result = await tool._func(fake_context, query="test")
 
-        with patch("src.tools.web_search_tool.get_settings", return_value=settings):
-            result = await web_search._func(fake_context, query="test")
-
-        assert "no está habilitada" in result
+        assert "desconocido" in result
 
     async def test_missing_api_key(self, fake_context):
-        from src.tools.web_search_tool import web_search
+        tool = self._make_tool(tavily_api_key=None)
 
-        settings = _mock_settings(tavily_api_key=None)
-
-        with patch("src.tools.web_search_tool.get_settings", return_value=settings):
-            result = await web_search._func(fake_context, query="test")
+        result = await tool._func(fake_context, query="test")
 
         assert "Falta" in result
 
     async def test_network_error_returns_fallback(self, fake_context):
-        from src.tools.web_search_tool import web_search
+        tool = self._make_tool()
 
-        settings = _mock_settings()
-
-        with (
-            patch(
-                "src.tools.web_search_tool.aiohttp.ClientSession",
-                side_effect=Exception("Network error"),
-            ),
-            patch("src.tools.web_search_tool.get_settings", return_value=settings),
+        with patch(
+            "src.tools.web_search_tool.aiohttp.ClientSession",
+            side_effect=Exception("Network error"),
         ):
-            result = await web_search._func(fake_context, query="test")
+            result = await tool._func(fake_context, query="test")
 
         assert "No pude realizar" in result
 
     async def test_no_results_message(self, fake_context):
-        from src.tools.web_search_tool import web_search
+        tool = self._make_tool()
 
         mock_response = MagicMock()
         mock_response.status = 200
@@ -337,25 +324,20 @@ class TestWebSearchTool:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        settings = _mock_settings()
-
-        with (
-            patch("src.tools.web_search_tool.aiohttp.ClientSession", return_value=mock_session),
-            patch("src.tools.web_search_tool.get_settings", return_value=settings),
-        ):
-            result = await web_search._func(fake_context, query="asdfghjkl123")
+        with patch("src.tools.web_search_tool.aiohttp.ClientSession", return_value=mock_session):
+            result = await tool._func(fake_context, query="asdfghjkl123")
 
         assert "No encontré resultados" in result
 
-    async def test_blocked_without_parental_consent(self, fake_context):
-        from src.tools.web_search_tool import web_search
+    async def test_consent_gate_in_get_tools(self):
+        """Parental consent gate is enforced by get_tools(), not the tool itself."""
+        from src.tools import get_tools
 
         settings = _mock_settings(web_search_parental_consent=False)
+        tools = get_tools(settings)
 
-        with patch("src.tools.web_search_tool.get_settings", return_value=settings):
-            result = await web_search._func(fake_context, query="noticias Peru")
-
-        assert "consentimiento parental" in result
+        tool_names = [getattr(t, "name", "") for t in tools]
+        assert "web_search" not in tool_names
 
     async def test_pii_email_stripped_from_query(self, fake_context):
         from src.tools.web_search_tool import _sanitize_query
