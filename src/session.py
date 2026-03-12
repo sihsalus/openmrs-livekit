@@ -188,6 +188,22 @@ def build_instructions(
     return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
 
 
+def _resolve_flag(metadata: dict, key: str, default: bool) -> bool:
+    """Lee un flag booleano del room metadata con coerción segura.
+
+    Maneja strings ("true"/"false") que el backend podría enviar,
+    evitando que "false" sea truthy en Python.
+    """
+    val = metadata.get(key)
+    if val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ("true", "1", "yes")
+    return bool(val)
+
+
 async def setup_variety_engine(
     session: AgentSession,
     room_metadata: dict,
@@ -195,8 +211,13 @@ async def setup_variety_engine(
     job_logger,
     agent_name: str = "Nebu",
 ):
-    """Inicializa VarietyEngine si está habilitado. Retorna el perfil de personalidad."""
-    if not settings.enable_variety_engine:
+    """Inicializa VarietyEngine si está habilitado. Retorna el perfil de personalidad.
+
+    El usuario puede activar/desactivar via room metadata ('enable_variety_engine').
+    Si no viene en metadata, se usa el valor global del env como fallback.
+    """
+    enabled = _resolve_flag(room_metadata, "enable_variety_engine", settings.enable_variety_engine)
+    if not enabled:
         session.userdata["variety"] = None
         job_logger.info("VarietyEngine disabled - using hardcoded neutral profile")
         return SimpleNamespace(id="neutral", name="Neutral")
