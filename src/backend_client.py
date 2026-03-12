@@ -28,7 +28,7 @@ def _get_session(settings: Settings) -> aiohttp.ClientSession:
     global _session
     if _session is None or _session.closed:
         _session = aiohttp.ClientSession(
-            base_url=settings.agent_backend_url.rstrip("/"),
+            base_url=settings.agent_backend_url.rstrip("/") + "/",
             headers={"x-agent-secret": settings.agent_internal_secret},
             timeout=aiohttp.ClientTimeout(total=10),
             connector=aiohttp.TCPConnector(limit=20, keepalive_timeout=60),
