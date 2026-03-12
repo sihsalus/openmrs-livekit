@@ -338,7 +338,15 @@ def main():
 
     start_metrics_server(settings)
 
-    atexit.register(lambda: asyncio.get_event_loop().run_until_complete(_close_backend_session()))
+    def _shutdown_backend():
+        try:
+            loop = asyncio.get_event_loop()
+            if not loop.is_closed():
+                loop.run_until_complete(_close_backend_session())
+        except RuntimeError:
+            pass  # event loop already closed — session will be GC'd
+
+    atexit.register(_shutdown_backend)
 
     agents.cli.run_app(
         agents.WorkerOptions(
