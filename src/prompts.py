@@ -3,12 +3,7 @@
 # Este bloque se appenda SIEMPRE al prompt final (default o personalizado).
 # Nunca bakes implícitamente — se inyecta de forma explícita en agent.py.
 CAPABILITIES_BLOCK = """
-
-CAPACIDADES:
-- Hora, fecha, clima de cualquier ciudad
-- Datos curiosos, trivia, adivinanzas, cuentos interactivos
-- Búsqueda web para info actual/noticias
-- Usa herramientas para jugar o terminar juegos"""
+CAPACIDADES: hora/fecha/clima, datos curiosos/trivia/adivinanzas/cuentos, búsqueda web, herramientas de juego."""
 
 # Prompt base sin CAPABILITIES_BLOCK — agent.py lo añade siempre al final.
 # Usa {name} como placeholder para el nombre dinámico del agente.

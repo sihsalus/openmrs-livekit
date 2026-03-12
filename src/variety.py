@@ -28,26 +28,26 @@ from src.personality import PersonalityProfile
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 BANNED_FACTS = [
-    "los pájaros no tienen Twitter / redes sociales",
-    "los flamencos son rosados por los camarones",
-    "los delfines duermen con un ojo abierto",
-    "los gatos tienen 9 vidas",
-    "la Gran Muralla China se ve desde el espacio",
-    "los perros ven en blanco y negro",
-    "el corazón de un camarón está en su cabeza",
-    "las vacas tienen mejores amigos",
-    "los pulpos tienen 3 corazones",
-    "los humanos usan solo el 10% del cerebro",
-    "los diamantes son carbón comprimido",
-    "la miel no se echa a perder / nunca caduca",
-    "el plátano es una baya / la fresa no es una baya",
-    "los bebés tienen más huesos que los adultos",
-    "la lengua es el músculo más fuerte",
-    "los koalas duermen 22 horas",
-    "los goldfish tienen 3 segundos de memoria",
-    "Cleopatra está más cerca de nosotros que de las pirámides",
-    "el Everest no es la montaña más alta desde la base",
-    "los rayos son más calientes que el sol",
+    "pájaros-Twitter/redes sociales",
+    "flamencos rosados-camarones",
+    "delfines-ojo abierto",
+    "gatos-9 vidas",
+    "Muralla China-espacio",
+    "perros-blanco y negro",
+    "corazón camarón-cabeza",
+    "vacas-mejores amigos",
+    "pulpos-3 corazones",
+    "10% del cerebro",
+    "diamantes-carbón",
+    "miel nunca caduca",
+    "plátano baya / fresa no baya",
+    "bebés-más huesos",
+    "lengua-músculo más fuerte",
+    "koalas-22 horas",
+    "goldfish-3 segundos memoria",
+    "Cleopatra-pirámides",
+    "Everest-no más alta desde base",
+    "rayos-más calientes que sol",
 ]
 
 WILDCARD_CHANCE = 0.12
@@ -68,24 +68,17 @@ class MemoryTracker:
     responsabilidades con el tracking de lo ya dicho.
 
     Maxlens justificados:
-    - fact_categories_used  maxlen=10: ~2 rotaciones completas antes del reset;
-                                       suficiente para evitar clustering de temas
-    - styles_used           maxlen=4:  ~mitad de los estilos disponibles;
-                                       fuerza alternancia sin sobre-restringir
-    - trivia_categories_used maxlen=8: cubre la mayoría de categorías de trivia
-                                       antes de reciclar
+    - fact_categories_used  maxlen=10: ~2 rotaciones completas
+    - styles_used           maxlen=4:  fuerza alternancia
+    - trivia_categories_used maxlen=8: cubre mayoría antes de reciclar
     - story_themes_used     maxlen=8:  ídem trivia
-    - catchphrases_used     maxlen=4:  por slot (pre/post); ventana pequeña
-                                       para que las frases se sientan frescas
-    - pattern_history       maxlen=6:  cubre los arquetipos narrativos comunes
-                                       antes de ciclar (Patch 2)
-    - agent_responses       maxlen=8:  ~8 turnos de output real del LLM
-                                       realimentados para dedup textual
+    - catchphrases_used     maxlen=4:  por slot (pre/post)
+    - pattern_history       maxlen=6:  arquetipos narrativos
+    - agent_responses       maxlen=5:  output real del LLM (~80 chars c/u)
 
     Deques con maxlen fijo:
-    - facts_told    maxlen=25:  balance costo de contexto LLM vs. cobertura
-    - riddles_told  maxlen=15:  las adivinanzas tienen menos variedad;
-                                ventana más pequeña es suficiente
+    - facts_told    maxlen=15:  balance costo de contexto LLM vs. cobertura
+    - riddles_told  maxlen=10:  ventana suficiente para adivinanzas
     """
 
     # Rotating deques — Python evicts oldest entries automatically at maxlen
@@ -100,11 +93,11 @@ class MemoryTracker:
         }
     )
     pattern_history: deque = field(default_factory=lambda: deque(maxlen=6))
-    agent_responses: deque = field(default_factory=lambda: deque(maxlen=8))
+    agent_responses: deque = field(default_factory=lambda: deque(maxlen=5))
 
     # Anti-repetition deques (maxlen auto-evicts oldest)
-    facts_told: deque = field(default_factory=lambda: deque(maxlen=25))
-    riddles_told: deque = field(default_factory=lambda: deque(maxlen=15))
+    facts_told: deque = field(default_factory=lambda: deque(maxlen=15))
+    riddles_told: deque = field(default_factory=lambda: deque(maxlen=10))
 
     def record_fact(self, summary: str):
         self.facts_told.append(summary)
@@ -113,8 +106,8 @@ class MemoryTracker:
         self.riddles_told.append(summary)
 
     def record_agent_response(self, text: str):
-        """Record what the LLM actually said (first ~150 chars) for anti-repetition."""
-        condensed = text.strip()[:150]
+        """Record what the LLM actually said (first ~80 chars) for anti-repetition."""
+        condensed = text.strip()[:80]
         if condensed:
             self.agent_responses.append(condensed)
 

@@ -181,9 +181,7 @@ def build_instructions(
     memory_block = ""
     if memory_context:
         memory_block = (
-            "\n\nMEMORIA DE SESIONES ANTERIORES:\n"
-            "Usa esta información para personalizar la conversación. "
-            "No repitas datos que ya le contaste.\n" + memory_context
+            "\n\nMEMORIA PREVIA (no repitas datos ya contados):\n" + memory_context
         )
         job_logger.info("Memory context inyectado en prompt", extra={"length": len(memory_context)})
 

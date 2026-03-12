@@ -66,11 +66,11 @@ class TestFactPrompt:
         assert "NO REPETIR" in prompt
         assert "pulpos" in prompt
 
-    def test_record_fact_caps_at_25(self):
+    def test_record_fact_caps_at_15(self):
         engine = VarietyEngine()
         for i in range(30):
             engine.record_fact(f"Fact {i}")
-        assert len(engine.memory.facts_told) == 25
+        assert len(engine.memory.facts_told) == 15
 
     def test_build_fact_prompt_with_topic(self):
         engine = VarietyEngine()
@@ -320,7 +320,7 @@ class TestRiddles:
         engine = VarietyEngine()
         engine.record_riddle("Tiene ojos y no ve")
         prompt = engine.build_riddle_prompt()
-        assert "ADIVINANZAS YA CONTADAS" in prompt
+        assert "Ya contadas" in prompt
         assert "ojos" in prompt
 
     def test_record_riddle_caps_at_15(self):
