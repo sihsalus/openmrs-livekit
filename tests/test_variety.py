@@ -323,11 +323,11 @@ class TestRiddles:
         assert "Ya contadas" in prompt
         assert "ojos" in prompt
 
-    def test_record_riddle_caps_at_15(self):
+    def test_record_riddle_caps_at_10(self):
         engine = VarietyEngine()
         for i in range(20):
             engine.record_riddle(f"Riddle {i}")
-        assert len(engine.memory.riddles_told) == 15
+        assert len(engine.memory.riddles_told) == 10
 
 
 class TestTick:
@@ -598,17 +598,17 @@ class TestAgentResponseFeedback:
         assert len(engine.memory.agent_responses) == 1
         assert "pulpos" in engine.memory.agent_responses[0]
 
-    def test_record_agent_response_truncates_at_150(self):
+    def test_record_agent_response_truncates_at_80(self):
         engine = VarietyEngine()
         long_text = "A" * 300
         engine.record_agent_response(long_text)
-        assert len(engine.memory.agent_responses[0]) == 150
+        assert len(engine.memory.agent_responses[0]) == 80
 
-    def test_record_agent_response_caps_at_8(self):
+    def test_record_agent_response_caps_at_5(self):
         engine = VarietyEngine()
         for i in range(12):
             engine.record_agent_response(f"Response {i}")
-        assert len(engine.memory.agent_responses) == 8
+        assert len(engine.memory.agent_responses) == 5
 
     def test_record_agent_response_ignores_empty(self):
         engine = VarietyEngine()
@@ -620,13 +620,13 @@ class TestAgentResponseFeedback:
         engine = VarietyEngine()
         engine.record_agent_response("Los pájaros no tienen Twitter jaja")
         prompt = engine.build_fact_prompt()
-        assert "YA DIJISTE TEXTUALMENTE" in prompt
+        assert "YA DIJISTE" in prompt
         assert "pájaros" in prompt
 
     def test_fact_prompt_no_section_without_responses(self):
         engine = VarietyEngine()
         prompt = engine.build_fact_prompt()
-        assert "YA DIJISTE TEXTUALMENTE" not in prompt
+        assert "YA DIJISTE" not in prompt
 
 
 class TestPeruanizedContent:
