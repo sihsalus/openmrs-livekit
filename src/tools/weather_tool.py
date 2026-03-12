@@ -91,5 +91,5 @@ async def get_weather(
             f"humedad {humidity} por ciento, viento a {wind} kilómetros por hora."
         )
     except Exception as exc:
-        logger.warning("Error consultando clima", extra={"city": city, "error": str(exc)})
+        logger.warning("Weather query failed", extra={"city": city, "error": str(exc)})
         return f"No pude consultar el clima para {city} en este momento."

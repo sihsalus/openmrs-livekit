@@ -22,33 +22,13 @@ from collections import deque
 from dataclasses import dataclass, field
 
 from src.personality import PersonalityProfile
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# 🚫 DATOS PROHIBIDOS — Universales, no dependen del perfil
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-BANNED_FACTS = [
-    "pájaros-Twitter/redes sociales",
-    "flamencos rosados-camarones",
-    "delfines-ojo abierto",
-    "gatos-9 vidas",
-    "Muralla China-espacio",
-    "perros-blanco y negro",
-    "corazón camarón-cabeza",
-    "vacas-mejores amigos",
-    "pulpos-3 corazones",
-    "10% del cerebro",
-    "diamantes-carbón",
-    "miel nunca caduca",
-    "plátano baya / fresa no baya",
-    "bebés-más huesos",
-    "lengua-músculo más fuerte",
-    "koalas-22 horas",
-    "goldfish-3 segundos memoria",
-    "Cleopatra-pirámides",
-    "Everest-no más alta desde base",
-    "rayos-más calientes que sol",
-]
+from src.prompt_flavor import evolve_hype
+from src.prompts_builder import (
+    build_fact_prompt,
+    build_riddle_prompt,
+    build_story_prompt,
+    build_trivia_prompt,
+)
 
 WILDCARD_CHANCE = 0.12
 IMPERFECTION_CHANCE = 0.18
@@ -215,15 +195,25 @@ class VarietyEngine:
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     def detect_child_signal(self, child_message: str) -> str:
-        """Detectar señales del input del niño para adaptar mood."""
-        msg = child_message.lower()
-        if any(w in msg for w in ["no sé", "aburrido", "otra cosa", "ya"]):
+        """Detect child engagement signals to adapt mood.
+
+        Uses prefix matching with word boundaries to catch conjugations
+        (e.g. "aburr" matches "aburrido", "aburrí", "aburrida").
+        """
+        msg = f" {child_message.lower()} "  # pad for boundary matching
+
+        def _has(phrases):
+            """Check if any phrase appears with left word boundary."""
+            return any(f" {w}" in msg for w in phrases)
+
+        # Order matters: more specific patterns first
+        if _has(["no sé", "aburr", "otra cosa", "ya no", "ya me", "ya basta"]):
             return "disengaged"
-        if any(w in msg for w in ["más", "cuéntame", "y qué más", "sigue", "otro"]):
+        if _has(["cuéntame", "y qué más", "sigue", "otro más"]) or " más " in msg:
             return "hooked"
-        if any(w in msg for w in ["por qué", "cómo", "pero"]):
+        if _has(["por qué", "cómo funciona", "cómo es"]):
             return "curious"
-        if any(w in msg for w in ["jaja", "jeje", "gracioso", "chistoso"]):
+        if _has(["jaja", "jeje", "gracioso", "chistoso", "qué risa"]):
             return "amused"
         if "?" in msg:
             return "questioning"
@@ -452,10 +442,12 @@ class VarietyEngine:
         specific_options = self.profile.category_specifics.get(category_id, [])
         if not specific_options:
             return ""
-        used_in_cat = [s for s in self.memory.facts_told if f"[{category_id}]" in s]
-        available = [
-            s for s in specific_options if not any(s.lower() in u.lower() for u in used_in_cat)
-        ]
+        # Build set of already-used topics for this category (exact match)
+        prefix = f"[{category_id}] sobre "
+        used_topics = {
+            s[len(prefix):].lower() for s in self.memory.facts_told if s.startswith(prefix)
+        }
+        available = [s for s in specific_options if s.lower() not in used_topics]
         if not available:
             available = specific_options
         return random.choice(available)
@@ -473,24 +465,49 @@ class VarietyEngine:
     # 📝 PROMPT BUILDERS — delegados a src.prompts_builder
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    def build_fact_prompt(self, topic: str = "", hour: int | None = None) -> str:
-        from src.prompts_builder import build_fact_prompt
+    def prepare_fact_turn(self, topic: str = "") -> dict:
+        """Mutate engine state for a fact turn. Returns context dict for rendering."""
+        category = self.pick_fact_category()
+        style = self.pick_delivery_style()
+        specific = self._pick_specific_topic(category["id"])
 
-        return build_fact_prompt(self, topic, hour)
+        if self.turn_count > 0 and self.turn_count % random.randint(3, 4) == 0:
+            self.evolve_mood()
+
+        self.culture_hype = evolve_hype(self.culture_hype, self.profile, category["id"])
+
+        self.memory.record_fact(f"[{category['id']}] sobre {specific or category['label']}")
+        self._last_category_label = category["label"]
+        self._last_specific_topic = specific
+
+        return {"category": category, "style": style, "specific": specific, "topic": topic}
+
+    def prepare_story_turn(self, custom_theme: str = "") -> dict:
+        """Mutate engine state for a story turn. Returns context dict."""
+        theme = custom_theme or self.pick_story_theme()
+        if self.profile.story_moods:
+            self._mood_value = random.choice(self.profile.story_moods)
+        return {"theme": theme}
+
+    def prepare_riddle_turn(self) -> dict:
+        """Mutate engine state for a riddle turn. Returns context dict."""
+        if self.profile.riddle_moods:
+            self._mood_value = random.choice(self.profile.riddle_moods)
+        return {}
+
+    def build_fact_prompt(self, topic: str = "", hour: int | None = None) -> str:
+        ctx = self.prepare_fact_turn(topic)
+        return build_fact_prompt(self, ctx, hour)
 
     def build_trivia_prompt(self) -> str:
-        from src.prompts_builder import build_trivia_prompt
-
         return build_trivia_prompt(self)
 
     def build_story_prompt(self, custom_theme: str = "") -> str:
-        from src.prompts_builder import build_story_prompt
-
-        return build_story_prompt(self, custom_theme)
+        ctx = self.prepare_story_turn(custom_theme)
+        return build_story_prompt(self, ctx)
 
     def build_riddle_prompt(self) -> str:
-        from src.prompts_builder import build_riddle_prompt
-
+        self.prepare_riddle_turn()
         return build_riddle_prompt(self)
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

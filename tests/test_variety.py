@@ -1,8 +1,8 @@
 """Tests for VarietyEngine v4 — parametrizable personality system."""
 
+from src.prompts import BANNED_FACTS
 from src.variety import (
     VarietyEngine,
-    BANNED_FACTS,
     IMPERFECTION_CHANCE,
 )
 from src.personalities import get_profile

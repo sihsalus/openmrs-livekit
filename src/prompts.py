@@ -1,4 +1,28 @@
-"""System prompts externalizados para el agente."""
+"""System prompts and constants for the agent."""
+
+# Overused/viral facts the LLM must never repeat (compact keyword format).
+BANNED_FACTS = [
+    "pájaros-Twitter/redes sociales",
+    "flamencos rosados-camarones",
+    "delfines-ojo abierto",
+    "gatos-9 vidas",
+    "Muralla China-espacio",
+    "perros-blanco y negro",
+    "corazón camarón-cabeza",
+    "vacas-mejores amigos",
+    "pulpos-3 corazones",
+    "10% del cerebro",
+    "diamantes-carbón",
+    "miel nunca caduca",
+    "plátano baya / fresa no baya",
+    "bebés-más huesos",
+    "lengua-músculo más fuerte",
+    "koalas-22 horas",
+    "goldfish-3 segundos memoria",
+    "Cleopatra-pirámides",
+    "Everest-no más alta desde base",
+    "rayos-más calientes que sol",
+]
 
 # Este bloque se appenda SIEMPRE al prompt final (default o personalizado).
 # Nunca bakes implícitamente — se inyecta de forma explícita en agent.py.

@@ -55,9 +55,9 @@ def _prewarm_models(proc: agents.JobProcess, enable_turn_detection: bool):
         from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
         proc.userdata["turn_detection"] = MultilingualModel()
-        logger.info("Modelos precargados: Silero VAD + Turn Detection")
+        logger.info("Models preloaded: Silero VAD + Turn Detection")
     else:
-        logger.info("Modelos precargados: Silero VAD")
+        logger.info("Models preloaded: Silero VAD")
 
 
 def make_prewarm(settings: Settings):
@@ -74,11 +74,11 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         room=room_name,
         session_id=session_id,
     )
-    job_logger.info("Iniciando entrypoint del agente")
+    job_logger.info("Starting agent entrypoint")
 
     if not room_name.startswith(AGENT_ROOM_PREFIX):
         job_logger.info(
-            "Sala ignorada - no es para agente",
+            "Room ignored - not an agent room",
             extra={"room": room_name, "reason": "prefix_filter"},
         )
         return
@@ -86,10 +86,10 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     try:
         await ctx.connect()
     except Exception as e:
-        job_logger.error("Error conectando al room", extra={"error": str(e)}, exc_info=True)
+        job_logger.error("Failed to connect to room", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="connect").inc()
         return
-    job_logger.info("Conectado al room", extra={"room": ctx.room.name})
+    job_logger.info("Connected to room", extra={"room": ctx.room.name})
 
     room_metadata = parse_room_metadata(ctx, job_logger)
 
@@ -120,7 +120,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
             turn_context=turn_context,
         )
     except Exception as e:
-        job_logger.error("Error creando sesión", extra={"error": str(e)}, exc_info=True)
+        job_logger.error("Failed to create session", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="session").inc()
         return
 
@@ -157,12 +157,12 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     try:
         await session.start(room=ctx.room, agent=agent)
     except Exception as e:
-        job_logger.error("Error iniciando sesión de voz", extra={"error": str(e)}, exc_info=True)
+        job_logger.error("Failed to start voice session", extra={"error": str(e)}, exc_info=True)
         return
-    job_logger.info("Sesión iniciada y escuchando")
+    job_logger.info("Session started and listening")
 
     if has_parent_in_room and has_parent_in_room():
-        job_logger.info("Padre ya presente en la sala - iniciando en modo walkie-talkie")
+        job_logger.info("Parent already in room - starting in walkie-talkie mode")
         session.interrupt()
         session.input.set_audio_enabled(False)
         session.output.set_audio_enabled(False)
@@ -173,7 +173,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     _setup_budget_timer(ctx, session, settings, room_metadata, job_logger)
 
-    job_logger.info("Agente activo y escuchando")
+    job_logger.info("Agent active and listening")
 
 
 def _register_session_lifecycle(
@@ -290,22 +290,35 @@ def _build_wsgi_app():
 
 
 def start_metrics_server(settings: Settings) -> None:
-    """Inicia un servidor HTTP para /metrics y /personalities."""
+    """Start threaded HTTP server for /metrics and /personalities."""
     if not settings.api_enabled:
-        logger.info("Servidor de métricas deshabilitado (API_ENABLED=false)")
+        logger.info("Metrics server disabled (API_ENABLED=false)")
         return
 
-    from wsgiref.simple_server import WSGIRequestHandler, make_server
+    from socketserver import ThreadingMixIn
+
+    from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
+
+    class _ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
+        """WSGI server that handles each request in a new thread."""
+
+        daemon_threads = True
 
     class _SilentHandler(WSGIRequestHandler):
         def log_message(self, *_):
             pass
 
     app = _build_wsgi_app()
-    httpd = make_server("0.0.0.0", settings.api_port, app, handler_class=_SilentHandler)
+    httpd = make_server(
+        "0.0.0.0",
+        settings.api_port,
+        app,
+        server_class=_ThreadingWSGIServer,
+        handler_class=_SilentHandler,
+    )
     thread = threading.Thread(target=httpd.serve_forever, name="metrics-server", daemon=True)
     thread.start()
-    logger.info("Metrics server iniciado", extra={"port": settings.api_port})
+    logger.info("Metrics server started", extra={"port": settings.api_port})
 
 
 def main():
@@ -314,7 +327,7 @@ def main():
     setup_logging(settings)
 
     logger.info(
-        "Iniciando Nebu Agent",
+        "Starting Nebu Agent",
         extra={
             "version": AGENT_VERSION,
             "agent_name": settings.agent_name,
@@ -340,11 +353,11 @@ def main():
 
     def _shutdown_backend():
         try:
-            loop = asyncio.get_event_loop()
-            if not loop.is_closed():
-                loop.run_until_complete(_close_backend_session())
-        except RuntimeError:
-            pass  # event loop already closed — session will be GC'd
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(_close_backend_session())
+            loop.close()
+        except Exception:
+            pass  # event loop issues at shutdown — session will be GC'd
 
     atexit.register(_shutdown_backend)
 

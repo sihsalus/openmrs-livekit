@@ -25,7 +25,7 @@ async def save_transcript(
     try:
         messages = session.history.items
     except Exception as exc:
-        job_logger.warning("No se pudo acceder a history", extra={"error": str(exc)})
+        job_logger.warning("Failed to access history", extra={"error": str(exc)})
         return
 
     lines = []
@@ -70,7 +70,7 @@ async def save_transcript(
             label="save transcript",
         )
         if result is not None:
-            job_logger.info("Transcript guardado", extra={"messages": message_count})
+            job_logger.info("Transcript saved", extra={"messages": message_count})
     except Exception as exc:
         ERRORS_TOTAL.labels(type="transcript").inc()
-        job_logger.warning("Error guardando transcript", extra={"error": str(exc)})
+        job_logger.warning("Failed to save transcript", extra={"error": str(exc)})

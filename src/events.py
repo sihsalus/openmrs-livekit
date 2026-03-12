@@ -73,16 +73,16 @@ def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logg
         session.interrupt()
         session.input.set_audio_enabled(False)
         session.output.set_audio_enabled(False)
-        job_logger.info("AI pausado - modo walkie-talkie activo")
+        job_logger.info("AI paused - walkie-talkie mode active")
 
     async def _resume_from_walkie_talkie():
         session.input.set_audio_enabled(True)
         session.output.set_audio_enabled(True)
-        job_logger.info("AI reanudado - modo walkie-talkie finalizado")
+        job_logger.info("AI resumed - walkie-talkie mode ended")
 
     @ctx.room.on("participant_connected")
     def on_participant_connected(participant: rtc.RemoteParticipant):
-        job_logger.info("Nuevo participante", extra={"participant": participant.identity})
+        job_logger.info("Participant connected", extra={"participant": participant.identity})
         if _is_parent(participant):
             job_logger.info(
                 "Padre conectado - pausando AI para walkie-talkie",
@@ -92,7 +92,7 @@ def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logg
 
     @ctx.room.on("participant_disconnected")
     def on_participant_disconnected(participant: rtc.RemoteParticipant):
-        job_logger.info("Participante desconectado", extra={"participant": participant.identity})
+        job_logger.info("Participant disconnected", extra={"participant": participant.identity})
         if _is_parent(participant) and not _has_parent_in_room():
             job_logger.info(
                 "Padre desconectado - reanudando AI",
@@ -126,7 +126,7 @@ def setup_event_listeners(
         _state["turn_start"] = time.time()
         text = ev.transcript.strip()
         if len(text) < 4 or not any(c.isalpha() for c in text):
-            job_logger.debug("Transcripción descartada (ruido)", extra={"text": text})
+            job_logger.debug("Transcription discarded (noise)", extra={"text": text})
             return
 
         # Content moderation — detect inappropriate language (async, non-blocking)

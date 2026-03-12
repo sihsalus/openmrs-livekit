@@ -136,12 +136,12 @@ class NebuAgent:
 def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict:
     """Parsea la metadata JSON del room. Retorna dict vacío si falta o es inválida."""
     if not ctx.room.metadata:
-        job_logger.warning("Room metadata vacia")
+        job_logger.warning("Room metadata empty")
         return {}
     try:
         metadata = json.loads(ctx.room.metadata)
         job_logger.info(
-            "Metadata parseada",
+            "Metadata parsed",
             extra={
                 "keys": list(metadata.keys()),
                 "has_age": metadata.get("owner_age") is not None,
@@ -151,7 +151,7 @@ def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict:
         )
         return metadata
     except json.JSONDecodeError as e:
-        job_logger.error("Error parseando metadata", extra={"error": str(e)})
+        job_logger.error("Failed to parse metadata", extra={"error": str(e)})
         return {}
 
 
@@ -171,19 +171,19 @@ def build_instructions(
     )
     owner_context = _build_owner_context(room_metadata)
     if custom_prompt:
-        job_logger.info("Usando prompt personalizado", extra={"length": len(custom_prompt)})
+        job_logger.info("Using custom prompt", extra={"length": len(custom_prompt)})
     else:
-        job_logger.info("Usando prompt por defecto")
+        job_logger.info("Using default prompt")
         custom_prompt = get_system_prompt(name=agent_name)
     if owner_context:
-        job_logger.info("Contexto del owner inyectado en prompt")
+        job_logger.info("Owner context injected into prompt")
 
     memory_block = ""
     if memory_context:
         memory_block = (
             "\n\nMEMORIA PREVIA (no repitas datos ya contados):\n" + memory_context
         )
-        job_logger.info("Memory context inyectado en prompt", extra={"length": len(memory_context)})
+        job_logger.info("Memory context injected into prompt", extra={"length": len(memory_context)})
 
     return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
 
@@ -255,11 +255,11 @@ async def send_initial_greeting(
         if raw_greeting
         else get_greeting(name=agent_name)
     )
-    job_logger.info("Enviando greeting inicial")
+    job_logger.info("Sending initial greeting")
     try:
         await session.say(greeting_text)
     except Exception as e:
-        job_logger.error("Error enviando greeting", extra={"error": str(e)}, exc_info=True)
+        job_logger.error("Failed to send greeting", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="greeting").inc()
 
 

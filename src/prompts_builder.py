@@ -10,17 +10,15 @@ usando su API pública.
 
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING
 
 from src.prompt_flavor import (
     build_culture_injection,
-    evolve_hype,
     maybe_culture_rant,
     maybe_knowledge,
     maybe_slang,
 )
-from src.variety import BANNED_FACTS
+from src.prompts import BANNED_FACTS
 
 if TYPE_CHECKING:
     from src.variety import VarietyEngine
@@ -28,23 +26,17 @@ if TYPE_CHECKING:
 
 def build_fact_prompt(
     engine: VarietyEngine,
-    topic: str = "",
+    ctx: dict,
     hour: int | None = None,
 ) -> str:
     """
-    Construye el prompt completo para generar un dato curioso.
-    v4: Parametrizable + patches + personalidad configurable.
+    Render the fact prompt from pre-computed context.
+    All state mutation happens in VarietyEngine.prepare_fact_turn().
     """
-    category = engine.pick_fact_category()
-    style = engine.pick_delivery_style()
-    specific = engine._pick_specific_topic(category["id"])
-
-    # Evolucionar mood cada 3-4 turnos
-    if engine.turn_count > 0 and engine.turn_count % random.randint(3, 4) == 0:
-        engine.evolve_mood()
-
-    # Evolucionar hype
-    engine.culture_hype = evolve_hype(engine.culture_hype, engine.profile, category["id"])
+    category = ctx["category"]
+    style = ctx["style"]
+    specific = ctx["specific"]
+    topic = ctx["topic"]
 
     lines = []
 
@@ -167,11 +159,6 @@ def build_fact_prompt(
         f"lenguaje simple con {engine.profile.flavor_label}."
     )
 
-    # Registrar para tracking
-    engine.memory.record_fact(f"[{category['id']}] sobre {specific or category['label']}")
-    engine._last_category_label = category["label"]
-    engine._last_specific_topic = specific
-
     return "\n".join(lines)
 
 
@@ -190,10 +177,9 @@ def build_trivia_prompt(engine: VarietyEngine) -> str:
     return "\n".join(lines)
 
 
-def build_story_prompt(engine: VarietyEngine, custom_theme: str = "") -> str:
-    theme = custom_theme or engine.pick_story_theme()
-    if engine.profile.story_moods:
-        engine._mood_value = random.choice(engine.profile.story_moods)
+def build_story_prompt(engine: VarietyEngine, ctx: dict) -> str:
+    """Render story prompt. State mutation in VarietyEngine.prepare_story_turn()."""
+    theme = ctx["theme"]
 
     lines = [
         "## PERSONALIDAD",
@@ -214,8 +200,7 @@ def build_story_prompt(engine: VarietyEngine, custom_theme: str = "") -> str:
 
 
 def build_riddle_prompt(engine: VarietyEngine) -> str:
-    if engine.profile.riddle_moods:
-        engine._mood_value = random.choice(engine.profile.riddle_moods)
+    """Render riddle prompt. State mutation in VarietyEngine.prepare_riddle_turn()."""
     lines = [
         "## PERSONALIDAD",
         engine.get_mood_instruction(),

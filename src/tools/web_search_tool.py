@@ -316,7 +316,7 @@ def make_web_search(settings: Settings):
             return _format_results(results)
         except Exception:
             ERRORS_TOTAL.labels(type="web_search").inc()
-            logger.error("Error en búsqueda web", extra={"provider": provider})
+            logger.error("Web search failed", extra={"provider": provider})
             return "No pude realizar la búsqueda en este momento."
 
     return web_search
