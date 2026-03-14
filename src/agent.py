@@ -296,7 +296,6 @@ def start_metrics_server(settings: Settings) -> None:
         return
 
     from socketserver import ThreadingMixIn
-
     from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
     class _ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
