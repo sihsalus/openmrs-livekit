@@ -57,13 +57,21 @@ def _on_task_done(task: asyncio.Task) -> None:
         _logger.error("Background task failed: %s", exc, exc_info=exc)
 
 
-def setup_walkie_talkie(ctx, session: AgentSession, settings: Settings, job_logger: AgentLogger, room_metadata: dict | None = None):
+def setup_walkie_talkie(
+    ctx,
+    session: AgentSession,
+    settings: Settings,
+    job_logger: AgentLogger,
+    room_metadata: dict | None = None,
+):
     """Registra handlers de walkie-talkie. Retorna _has_parent_in_room o None si está deshabilitado.
 
     El usuario puede activar/desactivar via room metadata ('enable_walkie_talkie').
     Si no viene en metadata, se usa el valor global del env como fallback.
     """
-    enabled = _resolve_flag(room_metadata or {}, "enable_walkie_talkie", settings.enable_walkie_talkie)
+    enabled = _resolve_flag(
+        room_metadata or {}, "enable_walkie_talkie", settings.enable_walkie_talkie
+    )
     if not enabled:
         job_logger.info("Walkie-talkie mode disabled")
         return None

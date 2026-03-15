@@ -210,7 +210,9 @@ def build_riddle_prompt(engine: VarietyEngine) -> str:
     ]
     if engine.profile.riddle_culture_hint:
         lines.append(engine.profile.riddle_culture_hint)
-    lines.append(f"{engine.agent_name} la presenta con entusiasmo: {engine.profile.riddle_challenge}")
+    lines.append(
+        f"{engine.agent_name} la presenta con entusiasmo: {engine.profile.riddle_challenge}"
+    )
     if engine.memory.riddles_told:
         lines.append("Ya contadas: " + ", ".join(list(engine.memory.riddles_told)[-6:]))
     return "\n".join(lines)

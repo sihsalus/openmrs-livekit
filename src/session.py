@@ -180,10 +180,10 @@ def build_instructions(
 
     memory_block = ""
     if memory_context:
-        memory_block = (
-            "\n\nMEMORIA PREVIA (no repitas datos ya contados):\n" + memory_context
+        memory_block = "\n\nMEMORIA PREVIA (no repitas datos ya contados):\n" + memory_context
+        job_logger.info(
+            "Memory context injected into prompt", extra={"length": len(memory_context)}
         )
-        job_logger.info("Memory context injected into prompt", extra={"length": len(memory_context)})
 
     return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
 

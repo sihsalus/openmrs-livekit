@@ -445,7 +445,7 @@ class VarietyEngine:
         # Build set of already-used topics for this category (exact match)
         prefix = f"[{category_id}] sobre "
         used_topics = {
-            s[len(prefix):].lower() for s in self.memory.facts_told if s.startswith(prefix)
+            s[len(prefix) :].lower() for s in self.memory.facts_told if s.startswith(prefix)
         }
         available = [s for s in specific_options if s.lower() not in used_topics]
         if not available:
