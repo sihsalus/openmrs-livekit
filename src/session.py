@@ -296,9 +296,13 @@ def _build_owner_context(room_metadata: dict) -> str:
     if age := room_metadata.get("owner_age"):
         lines.append(f"- Edad: {sanitize(age, 10)} años")
     if interests := room_metadata.get("owner_interests"):
+        if isinstance(interests, list):
+            interests = ", ".join(str(i) for i in interests)
         lines.append(f"- Intereses: {sanitize(interests, 500)}")
     if goals := room_metadata.get("learning_goals"):
         lines.append(f"- Objetivos de aprendizaje: {sanitize(goals, 500)}")
+    if voice := room_metadata.get("voice_preference"):
+        lines.append(f"- Preferencia de voz: {sanitize(voice, 50)}")
     if not lines:
         return ""
     return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)
