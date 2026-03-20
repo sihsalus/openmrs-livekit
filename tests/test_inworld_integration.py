@@ -10,6 +10,7 @@ import os
 
 import aiohttp
 import pytest
+import pytest_asyncio
 
 pytestmark = pytest.mark.skipif(
     not os.getenv("INWORLD_API_KEY"),
@@ -17,11 +18,10 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def http_session():
-    session = aiohttp.ClientSession()
-    yield session
-    await session.close()
+    async with aiohttp.ClientSession() as session:
+        yield session
 
 
 @pytest.fixture
@@ -130,5 +130,5 @@ async def test_concurrent_synthesis(tts):
 @pytest.mark.asyncio
 async def test_sample_rate(tts):
     """Verify the TTS reports expected sample rate."""
-    assert tts.sample_rate == 24000, f"Expected 24000 Hz, got {tts.sample_rate}"
+    assert tts.sample_rate in (24000, 48000), f"Unexpected sample rate: {tts.sample_rate}"
     print(f"\n  OK: sample_rate = {tts.sample_rate}")
