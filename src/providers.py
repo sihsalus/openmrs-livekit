@@ -112,7 +112,7 @@ def _build_stt_provider(provider: str, settings: Settings):
             interim_results=True,
             smart_format=settings.deepgram_smart_format,
             punctuate=settings.deepgram_punctuate,
-            profanity_filter=False,
+            profanity_filter=True,
             endpointing_ms=settings.deepgram_endpointing_ms,
         )
 
