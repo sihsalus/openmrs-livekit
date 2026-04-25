@@ -10,6 +10,7 @@ At session start, calls the backend's vector memory service to load:
 from src.backend_client import backend_request
 from src.config import Settings
 from src.logger import get_logger
+from src.prompt_budget import truncate_to_tokens
 
 logger = get_logger("nebu.memory")
 
@@ -53,11 +54,12 @@ async def fetch_memory_context(
 
     context = data.get("context", "")
     if context and context.strip():
+        context = truncate_to_tokens(context.strip(), max(12, settings.llm_max_input_tokens // 6))
         job_logger.info(
             "Memory context loaded",
             extra={"toy_id": toy_id, "context_len": len(context)},
         )
-        return context.strip()
+        return context
 
     job_logger.info("Memory context empty (new toy/child)")
     return None

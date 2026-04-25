@@ -17,6 +17,7 @@ from livekit.agents import RunContext, function_tool
 from src.config import Settings
 from src.logger import get_logger
 from src.metrics import ERRORS_TOTAL
+from src.prompt_budget import BudgetSection, compose_budgeted_text, truncate_to_tokens
 
 logger = get_logger("nebu.tools.web_search")
 
@@ -229,34 +230,54 @@ async def _search_wikipedia(
 
 
 _KIDS_SAFE_INSTRUCTION = (
-    "\n\nIMPORTANTE: Estás hablando con un niño. "
-    "Al presentar estos resultados, usa lenguaje apropiado para niños. "
-    "Si algún resultado contiene temas violentos, sexuales, de drogas "
-    "o inapropiados para menores, omítelo y responde solo con la "
-    "información segura. Si no hay nada apropiado, di que no encontraste "
-    "información sobre el tema."
+    "\n\nIMPORTANTE: habla para un niño y omite cualquier contenido inseguro o adulto."
 )
 
 
-_MAX_SNIPPET_CHARS = 300  # ~75 tokens por snippet
-
-
-def _format_results(results: list[dict]) -> str:
+def _format_results(results: list[dict], total_tokens: int) -> str:
     """Formatea resultados de búsqueda para el LLM con instrucción kids-safe."""
     if not results:
         return "No encontré resultados relevantes para esa búsqueda."
     lines = []
     for i, r in enumerate(results, 1):
         title = r.get("title", "Sin título")[:80]
-        snippet = r.get("snippet", "")[:_MAX_SNIPPET_CHARS]
+        snippet = truncate_to_tokens(r.get("snippet", ""), 8)
         lines.append(f"{i}. {title}: {snippet}")
-    return "Resultados de búsqueda:\n" + "\n".join(lines) + _KIDS_SAFE_INSTRUCTION
+    payload, _meta = compose_budgeted_text(
+        [
+            BudgetSection(
+                name="results_header",
+                text="Resultados de búsqueda:\n",
+                required=True,
+                max_tokens=4,
+                min_tokens=3,
+                trim_priority=10,
+            ),
+            BudgetSection(
+                name="results_body",
+                text="\n".join(lines),
+                required=True,
+                max_tokens=max(12, total_tokens - 8),
+                min_tokens=10,
+                trim_priority=20,
+            ),
+            BudgetSection(
+                name="kids_safe_instruction",
+                text=_KIDS_SAFE_INSTRUCTION,
+                max_tokens=8,
+                trim_priority=100,
+            ),
+        ],
+        total_tokens=total_tokens,
+    )
+    return payload
 
 
 def make_web_search(settings: Settings):
     """Factory que retorna la tool web_search con settings capturadas en closure."""
     provider = settings.web_search_provider
     max_results = settings.web_search_max_results
+    result_budget_tokens = max(16, settings.llm_max_input_tokens // 2)
     tavily_api_key = settings.tavily_api_key
     brave_api_key = settings.brave_search_api_key
     serpapi_api_key = settings.serpapi_api_key
@@ -313,7 +334,7 @@ def make_web_search(settings: Settings):
                 else:
                     return f"Proveedor de búsqueda desconocido: {provider}"
 
-            return _format_results(results)
+            return _format_results(results, result_budget_tokens)
         except Exception:
             ERRORS_TOTAL.labels(type="web_search").inc()
             logger.error("Web search failed", extra={"provider": provider})

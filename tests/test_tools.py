@@ -147,6 +147,7 @@ class TestStartTrivia:
         assert "MODO JUEGO: TRIVIA" in call_args
         assert "Base instructions" in call_args
         assert "Trivia iniciada" in result
+        assert len(call_args) < 500
 
     async def test_includes_category_hint(self, fake_context):
         from src.tools.games import start_trivia
@@ -254,6 +255,7 @@ class TestWebSearchTool:
 
         assert "Noticia importante" in result
         assert "presidente" in result
+        assert len(result) < 300
 
     async def test_brave_search_success(self, fake_context):
         tool = self._make_tool(

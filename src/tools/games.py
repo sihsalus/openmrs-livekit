@@ -14,43 +14,25 @@ Usa session.userdata["base_instructions"] como prompt base para:
 
 from livekit.agents import RunContext, function_tool
 
-TRIVIA_INSTRUCTIONS = """
-MODO JUEGO: TRIVIA
-Estas jugando trivia con el usuario. Reglas:
-1. Haz una pregunta de conocimiento general apropiada para ninos
-2. Espera la respuesta del usuario
-3. Di si es correcta o incorrecta, y explica brevemente
-4. Lleva la cuenta del puntaje (correctas/total)
-5. Despues de cada respuesta, pregunta si quiere otra pregunta o parar
-6. Adapta la dificultad segun las respuestas
-7. Celebra los aciertos con entusiasmo y anima en los errores
-Manten tu personalidad durante todo el juego.
-"""
+from src.prompt_budget import BudgetSection, compose_budgeted_text
 
-RIDDLE_INSTRUCTIONS = """
-MODO JUEGO: ADIVINANZAS
-Estas jugando adivinanzas con el usuario. Reglas:
-1. Cuenta una adivinanza apropiada para ninos
-2. Espera la respuesta del usuario
-3. Si no adivina, da una pista
-4. Maximo 3 pistas antes de revelar la respuesta
-5. Celebra cuando adivine correctamente
-6. Pregunta si quiere otra adivinanza o parar
-Manten tu personalidad durante todo el juego.
-"""
+TRIVIA_INSTRUCTIONS = (
+    "\n\nMODO JUEGO: TRIVIA\n"
+    "Haz 1 pregunta para ninos, espera respuesta, corrige breve, lleva puntaje, "
+    "ajusta dificultad y pregunta si quiere seguir."
+)
 
-STORY_INSTRUCTIONS = """
-MODO JUEGO: CUENTO INTERACTIVO
-Estas creando un cuento interactivo con el usuario. Reglas:
-1. Comienza una historia corta y emocionante
-2. En momentos clave, ofrece 2-3 opciones al usuario para decidir que pasa
-3. Continua la historia segun la eleccion del usuario
-4. Incluye elementos educativos sutilmente
-5. La historia debe tener un inicio, desarrollo y final
-6. Manten los segmentos cortos (2-3 oraciones por turno)
-7. Pregunta si quiere otra historia al terminar
-Manten tu personalidad durante todo el juego.
-"""
+RIDDLE_INSTRUCTIONS = (
+    "\n\nMODO JUEGO: ADIVINANZAS\n"
+    "Cuenta 1 adivinanza, espera respuesta, da hasta 3 pistas, revela si hace falta "
+    "y pregunta si quiere otra."
+)
+
+STORY_INSTRUCTIONS = (
+    "\n\nMODO JUEGO: CUENTO INTERACTIVO\n"
+    "Crea una historia corta por turnos, ofrece 2-3 opciones, sigue la eleccion "
+    "del nino y cierra con mensaje positivo."
+)
 
 
 def _get_base_instructions(context: RunContext) -> str:
@@ -63,14 +45,58 @@ def _get_variety(context: RunContext):
     return context.session.userdata.get("variety")
 
 
+def _budget_update(
+    context: RunContext,
+    *,
+    personality_block: str = "",
+    mode_block: str = "",
+    hint_block: str = "",
+) -> str:
+    settings = context.session.userdata.get("settings")
+    total_tokens = getattr(settings, "llm_max_input_tokens", 76)
+    base = _get_base_instructions(context)
+    updated, _meta = compose_budgeted_text(
+        [
+            BudgetSection(
+                name="base_instructions",
+                text=base,
+                required=True,
+                max_tokens=max(24, total_tokens - 22),
+                min_tokens=max(18, total_tokens // 2),
+                trim_priority=20,
+            ),
+            BudgetSection(
+                name="personality_block",
+                text=personality_block,
+                max_tokens=6,
+                trim_priority=80,
+            ),
+            BudgetSection(
+                name="mode_block",
+                text=mode_block,
+                required=True,
+                max_tokens=18,
+                min_tokens=10,
+                trim_priority=30,
+            ),
+            BudgetSection(
+                name="hint_block",
+                text=hint_block,
+                max_tokens=4,
+                trim_priority=100,
+            ),
+        ],
+        total_tokens=total_tokens,
+    )
+    return updated
+
+
 @function_tool(
     name="start_trivia",
     description="Start a trivia game. Use when the user wants to play trivia or answer questions.",
 )
 async def start_trivia(context: RunContext) -> str:
     """Start a trivia game with the user."""
-    base = _get_base_instructions(context)
-
     variety = _get_variety(context)
     personality_block = ""
     category_hint = ""
@@ -84,7 +110,12 @@ async def start_trivia(context: RunContext) -> str:
         variety.tick()
 
     await context.session.current_agent.update_instructions(
-        base + personality_block + "\n\n" + TRIVIA_INSTRUCTIONS + category_hint
+        _budget_update(
+            context,
+            personality_block=personality_block,
+            mode_block=TRIVIA_INSTRUCTIONS,
+            hint_block=category_hint,
+        )
     )
     return f"Trivia iniciada. Haz la primera pregunta al usuario.{category_hint}"
 
@@ -95,8 +126,6 @@ async def start_trivia(context: RunContext) -> str:
 )
 async def start_riddles(context: RunContext) -> str:
     """Start a riddle/adivinanza game with the user."""
-    base = _get_base_instructions(context)
-
     variety = _get_variety(context)
     riddle_context = ""
     personality_block = ""
@@ -110,7 +139,12 @@ async def start_riddles(context: RunContext) -> str:
         variety.tick()
 
     await context.session.current_agent.update_instructions(
-        base + personality_block + "\n\n" + RIDDLE_INSTRUCTIONS + riddle_context
+        _budget_update(
+            context,
+            personality_block=personality_block,
+            mode_block=RIDDLE_INSTRUCTIONS,
+            hint_block=riddle_context,
+        )
     )
     return "Adivinanzas iniciadas. Cuenta la primera adivinanza al usuario."
 
@@ -121,8 +155,6 @@ async def start_riddles(context: RunContext) -> str:
 )
 async def start_story(context: RunContext) -> str:
     """Start an interactive storytelling session."""
-    base = _get_base_instructions(context)
-
     variety = _get_variety(context)
     theme_hint = ""
     personality_block = ""
@@ -138,7 +170,12 @@ async def start_story(context: RunContext) -> str:
         variety.tick()
 
     await context.session.current_agent.update_instructions(
-        base + personality_block + "\n\n" + STORY_INSTRUCTIONS + theme_hint
+        _budget_update(
+            context,
+            personality_block=personality_block,
+            mode_block=STORY_INSTRUCTIONS,
+            hint_block=theme_hint,
+        )
     )
     return f"Cuento interactivo iniciado. Comienza una historia emocionante.{theme_hint}"
 

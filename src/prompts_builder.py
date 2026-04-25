@@ -142,13 +142,13 @@ def build_fact_prompt(
     if engine.memory.facts_told:
         lines.append("")
         lines.append("## NO REPETIR (ya contados)")
-        lines.append(", ".join(list(engine.memory.facts_told)[-8:]))
+        lines.append(", ".join(list(engine.memory.facts_told)[-4:]))
 
     # 11b) Feedback loop: lo que realmente dijiste
     if engine.memory.agent_responses:
         lines.append("")
         lines.append("## YA DIJISTE (no repitas)")
-        lines.append(" | ".join(f'"{r}"' for r in engine.memory.agent_responses))
+        lines.append(" | ".join(f'"{r}"' for r in list(engine.memory.agent_responses)[-2:]))
 
     # 12) Reglas finales
     lines.append("")
@@ -194,7 +194,7 @@ def build_story_prompt(engine: VarietyEngine, ctx: dict) -> str:
     lines.append(f"{engine.agent_name} narra y puede meter comentarios.")
 
     if engine.memory.story_themes_used:
-        lines.append("Temas ya usados: " + ", ".join(list(engine.memory.story_themes_used)[-5:]))
+        lines.append("Temas ya usados: " + ", ".join(list(engine.memory.story_themes_used)[-3:]))
 
     return "\n".join(lines)
 
@@ -214,5 +214,5 @@ def build_riddle_prompt(engine: VarietyEngine) -> str:
         f"{engine.agent_name} la presenta con entusiasmo: {engine.profile.riddle_challenge}"
     )
     if engine.memory.riddles_told:
-        lines.append("Ya contadas: " + ", ".join(list(engine.memory.riddles_told)[-6:]))
+        lines.append("Ya contadas: " + ", ".join(list(engine.memory.riddles_told)[-4:]))
     return "\n".join(lines)

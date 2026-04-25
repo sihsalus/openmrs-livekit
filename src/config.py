@@ -1,6 +1,7 @@
-"""Configuración centralizada con Pydantic Settings"""
+"""Configuración centralizada con Pydantic Settings."""
 
 from importlib.metadata import PackageNotFoundError, version
+from typing import Any
 from typing import Literal
 
 try:
@@ -123,7 +124,7 @@ class Settings(BaseSettings):
     )
     deepgram_punctuate: bool = Field(default=True, description="Habilitar puntuación automática")
     deepgram_endpointing_ms: int = Field(
-        default=300, description="Milisegundos de silencio para finalizar (200-1000ms)"
+        default=25, description="Milisegundos de silencio para finalizar — 25ms = default del plugin nova-3, óptimo con turn_detection=stt"
     )
     stt_language: str = Field(
         default="es", description="Idioma para STT (BCP-47 base: 'es', 'en', 'fr', etc.)"
@@ -156,9 +157,25 @@ class Settings(BaseSettings):
         default=0.6,
         description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva",
     )
-    llm_max_tokens: int = Field(
-        default=500,
-        description="Tokens máximos de respuesta — 500 = respuestas completas sin cortes",
+    llm_max_input_tokens: int = Field(
+        default=76,
+        description="Presupuesto aproximado de tokens de entrada por turno",
+    )
+    llm_max_output_tokens: int = Field(
+        default=24,
+        description="Tokens máximos de salida por turno",
+    )
+    llm_soft_limit_tokens: int = Field(
+        default=100,
+        description="Presupuesto blando total por turno (entrada + salida)",
+    )
+    llm_hard_limit_tokens: int = Field(
+        default=120,
+        description="Límite absoluto total por turno (entrada + salida)",
+    )
+    llm_max_tokens: int | None = Field(
+        default=None,
+        description="Alias legacy de llm_max_output_tokens para compatibilidad temporal",
     )
 
     # ============= VAD Settings (Valores por defecto de LiveKit Silero VAD) =============
@@ -273,6 +290,28 @@ class Settings(BaseSettings):
         description="Enable content moderation",
     )
 
+    # ═══════════════════════════════════════════════════════════════
+    # Latency Tuning
+    # ═══════════════════════════════════════════════════════════════
+    turn_detection_mode: Literal["stt", "vad"] = Field(
+        default="stt",
+        description="Modo de detección de turno: 'stt' delega al endpointing del STT (más rápido), 'vad' usa solo Silero",
+    )
+    vad_prefix_padding_duration: float = Field(
+        default=0.2,
+        description="Padding de audio antes del inicio de habla (segundos) — 0.2 reduce latencia vs 0.5 default",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_legacy_llm_aliases(cls, data: Any) -> Any:
+        """Mapea aliases legacy antes de validar el modelo."""
+        if not isinstance(data, dict):
+            return data
+        if data.get("llm_max_tokens") is not None and data.get("llm_max_output_tokens") is None:
+            data["llm_max_output_tokens"] = data["llm_max_tokens"]
+        return data
+
     @model_validator(mode="after")
     def validate_provider_api_keys(self) -> "Settings":
         """Falla en startup si el proveedor seleccionado no tiene API key configurada."""
@@ -300,6 +339,27 @@ class Settings(BaseSettings):
         if self.stt_provider == "deepgram" and not self.deepgram_api_key:
             raise ValueError("STT_PROVIDER=deepgram requiere DEEPGRAM_API_KEY")
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_llm_token_budget(self) -> "Settings":
+        """Valida coherencia del presupuesto de tokens por turno."""
+        if self.llm_max_input_tokens <= 0:
+            raise ValueError("llm_max_input_tokens debe ser mayor que 0")
+        if self.llm_max_output_tokens <= 0:
+            raise ValueError("llm_max_output_tokens debe ser mayor que 0")
+        if self.llm_soft_limit_tokens <= 0:
+            raise ValueError("llm_soft_limit_tokens debe ser mayor que 0")
+        if self.llm_hard_limit_tokens <= 0:
+            raise ValueError("llm_hard_limit_tokens debe ser mayor que 0")
+        total = self.llm_max_input_tokens + self.llm_max_output_tokens
+        if self.llm_soft_limit_tokens > self.llm_hard_limit_tokens:
+            raise ValueError("llm_soft_limit_tokens no puede superar llm_hard_limit_tokens")
+        if total > self.llm_hard_limit_tokens:
+            raise ValueError(
+                "llm_max_input_tokens + llm_max_output_tokens no puede superar "
+                "llm_hard_limit_tokens"
+            )
         return self
 
     @property
@@ -338,6 +398,7 @@ class Settings(BaseSettings):
 ║  Log Level:        {self.log_level:<40} ║
 ║  LiveKit URL:      {self.livekit_url:<40} ║
 ║  LLM:              {llm_label:<40} ║
+║  LLM Budget:       {f"{self.llm_max_input_tokens}+{self.llm_max_output_tokens} / {self.llm_soft_limit_tokens}-{self.llm_hard_limit_tokens}":<40} ║
 ║  STT:              {self.stt_provider:<40} ║
 ║  TTS:              {self.tts_provider:<40} ║
 ║  Greeting:         {str(self.greeting_enabled):<40} ║

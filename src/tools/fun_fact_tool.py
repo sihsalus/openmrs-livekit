@@ -12,6 +12,8 @@ Nosotros solo lo guiamos para que no se repita.
 
 from livekit.agents import RunContext, function_tool
 
+from src.prompt_budget import truncate_to_tokens
+
 
 @function_tool(
     name="get_fun_fact",
@@ -34,4 +36,6 @@ async def get_fun_fact(
     prompt = variety.build_fact_prompt(topic=topic)
     variety.tick()
 
-    return prompt
+    settings = context.session.userdata.get("settings")
+    max_tokens = min(48, max(24, getattr(settings, "llm_max_input_tokens", 76) // 2))
+    return truncate_to_tokens(prompt, max_tokens)

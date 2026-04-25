@@ -27,6 +27,7 @@ from src.metrics import (
 )
 from src.moderation import ContentModerator
 from src.personality import PersonalityProfile
+from src.prompt_budget import BudgetSection, compose_budgeted_text
 from src.session import TranscriptFlag, TurnContext, _resolve_flag
 from src.transcript import save_transcript
 
@@ -189,8 +190,32 @@ def setup_event_listeners(
         summary = variety.build_sliding_summary()
         if anchor or summary:
             base = session.userdata.get("base_instructions", "")
-            extra = ("\n" + anchor if anchor else "") + ("\n" + summary if summary else "")
-            _fire_and_forget(session.current_agent.update_instructions(base + extra))
+            updated, _meta = compose_budgeted_text(
+                [
+                    BudgetSection(
+                        name="base_instructions",
+                        text=base,
+                        required=True,
+                        max_tokens=max(24, settings.llm_max_input_tokens - 12),
+                        min_tokens=max(18, settings.llm_max_input_tokens // 2),
+                        trim_priority=20,
+                    ),
+                    BudgetSection(
+                        name="persona_anchor",
+                        text=("\n" + anchor) if anchor else "",
+                        max_tokens=5,
+                        trim_priority=70,
+                    ),
+                    BudgetSection(
+                        name="sliding_summary",
+                        text=("\n" + summary) if summary else "",
+                        max_tokens=7,
+                        trim_priority=100,
+                    ),
+                ],
+                total_tokens=settings.llm_max_input_tokens,
+            )
+            _fire_and_forget(session.current_agent.update_instructions(updated))
 
     def on_conversation_item(ev):
         """Latencia LLM + anti-repetición (si VarietyEngine activo)."""

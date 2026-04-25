@@ -28,6 +28,7 @@ from src.metrics import (
     TTS_AUDIO_DURATION,
     TTS_TTFB,
 )
+from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tokens, truncate_text
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
 from src.providers import build_llm, build_stt, build_tts
 
@@ -116,10 +117,16 @@ class NebuAgent:
         tts.on("metrics_collected", self._on_tts_metrics)
 
         session = AgentSession(
-            vad=silero.VAD.load(),
+            vad=silero.VAD.load(
+                min_silence_duration=self.settings.vad_min_silence_duration,
+                activation_threshold=self.settings.vad_activation_threshold,
+                min_speech_duration=self.settings.vad_min_speech_duration,
+                prefix_padding_duration=self.settings.vad_prefix_padding_duration,
+            ),
             stt=stt,
             llm=llm,
             tts=tts,
+            turn_detection=self.settings.turn_detection_mode,
             userdata={},
             allow_interruptions=self.settings.allow_interruptions,
             min_interruption_words=self.settings.min_interruption_words,
@@ -185,7 +192,69 @@ def build_instructions(
             "Memory context injected into prompt", extra={"length": len(memory_context)}
         )
 
-    return custom_prompt + owner_context + memory_block + CAPABILITIES_BLOCK
+    total_tokens = settings.llm_max_input_tokens
+    instructions, budget_meta = compose_budgeted_text(
+        [
+            BudgetSection(
+                name="custom_prompt",
+                text=custom_prompt,
+                required=True,
+                max_tokens=max(28, total_tokens - 20),
+                min_tokens=max(18, total_tokens // 2),
+                trim_priority=20,
+            ),
+            BudgetSection(
+                name="owner_context",
+                text=owner_context,
+                max_tokens=min(14, max(6, total_tokens // 5)),
+                trim_priority=80,
+            ),
+            BudgetSection(
+                name="memory_block",
+                text=memory_block,
+                max_tokens=min(14, max(6, total_tokens // 6)),
+                trim_priority=100,
+            ),
+            BudgetSection(
+                name="capabilities_block",
+                text=CAPABILITIES_BLOCK,
+                required=True,
+                max_tokens=min(16, max(8, total_tokens // 5)),
+                min_tokens=6,
+                trim_priority=10,
+            ),
+        ],
+        total_tokens=total_tokens,
+    )
+    approx_tokens = _estimate_tokens(instructions)
+    if budget_meta["truncated_sections"] or budget_meta["hard_truncated"]:
+        job_logger.warning(
+            "Instruction prompt truncated to fit budget",
+            extra={
+                "approx_prompt_tokens": approx_tokens,
+                "input_budget_tokens": settings.llm_max_input_tokens,
+                "truncated_sections": budget_meta["truncated_sections"],
+                "dropped_sections": budget_meta["dropped_sections"],
+                "hard_truncated": budget_meta["hard_truncated"],
+            },
+        )
+    elif approx_tokens >= int(settings.llm_max_input_tokens * 0.8):
+        job_logger.warning(
+            "Instruction prompt near input budget",
+            extra={
+                "approx_prompt_tokens": approx_tokens,
+                "input_budget_tokens": settings.llm_max_input_tokens,
+            },
+        )
+    else:
+        job_logger.info(
+            "Instruction prompt budgeted",
+            extra={
+                "approx_prompt_tokens": approx_tokens,
+                "input_budget_tokens": settings.llm_max_input_tokens,
+            },
+        )
+    return instructions
 
 
 def _resolve_flag(metadata: dict, key: str, default: bool) -> bool:
@@ -319,3 +388,13 @@ def _sanitize_custom_prompt(prompt: str, max_chars: int) -> str:
     prompt = prompt.strip()[:max_chars]
     prompt = "".join(c for c in prompt if c >= " " or c in "\n\t")
     return _INJECTION_PATTERNS.sub("", prompt)
+
+
+def _estimate_tokens(text: str) -> int:
+    """Estimación rápida para presupuestar prompts sin tokenizer del proveedor."""
+    return estimate_tokens(text)
+
+
+def _truncate_text(text: str, max_chars: int) -> str:
+    """Recorta texto preservando el inicio, donde viven reglas e instrucciones críticas."""
+    return truncate_text(text, max_chars)
