@@ -158,11 +158,11 @@ class Settings(BaseSettings):
         description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva",
     )
     llm_max_input_tokens: int = Field(
-        default=76,
+        default=100,
         description="Presupuesto aproximado de tokens de entrada por turno",
     )
     llm_max_output_tokens: int = Field(
-        default=24,
+        default=28,
         description="Tokens máximos de salida por turno",
     )
     llm_soft_limit_tokens: int = Field(
@@ -244,7 +244,7 @@ class Settings(BaseSettings):
 
     # ============= Security =============
     max_custom_prompt_chars: int = Field(
-        default=4096,
+        default=512,
         description="Tamaño máximo en caracteres para prompts personalizados (anti-injection)",
     )
 

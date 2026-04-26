@@ -206,7 +206,9 @@ def build_instructions(
             BudgetSection(
                 name="owner_context",
                 text=owner_context,
-                max_tokens=min(14, max(6, total_tokens // 5)),
+                required=bool(owner_context),
+                max_tokens=min(18, max(10, total_tokens // 4)),
+                min_tokens=10 if owner_context else 0,
                 trim_priority=80,
             ),
             BudgetSection(
@@ -361,20 +363,20 @@ def _build_owner_context(room_metadata: dict) -> str:
 
     lines = []
     if name := room_metadata.get("owner_name"):
-        lines.append(f"- Nombre del niño: {sanitize(name, 100)}")
+        lines.append(f"- Nombre: {sanitize(name, 80)}")
     if age := room_metadata.get("owner_age"):
         lines.append(f"- Edad: {sanitize(age, 10)} años")
     if interests := room_metadata.get("owner_interests"):
         if isinstance(interests, list):
-            interests = ", ".join(str(i) for i in interests)
-        lines.append(f"- Intereses: {sanitize(interests, 500)}")
+            interests = ", ".join(str(i) for i in interests[:3])  # Solo top 3 intereses
+        lines.append(f"- Intereses: {sanitize(interests, 120)}")
     if goals := room_metadata.get("learning_goals"):
-        lines.append(f"- Objetivos de aprendizaje: {sanitize(goals, 500)}")
+        lines.append(f"- Aprendizaje: {sanitize(goals, 100)}")
     if voice := room_metadata.get("voice_preference"):
-        lines.append(f"- Preferencia de voz: {sanitize(voice, 50)}")
+        lines.append(f"- Voz: {sanitize(voice, 30)}")
     if not lines:
         return ""
-    return "\n\nCONTEXTO DE ESTA SESIÓN:\n" + "\n".join(lines)
+    return "\n\nCONTEXTO:\n" + "\n".join(lines)
 
 
 _INJECTION_PATTERNS = re.compile(
