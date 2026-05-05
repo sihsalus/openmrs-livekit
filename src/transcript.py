@@ -7,7 +7,7 @@ from livekit.agents import AgentSession
 from src.backend_client import backend_request, is_backend_configured
 from src.config import Settings
 from src.logger import get_logger
-from src.metrics import ERRORS_TOTAL
+from src.metrics import ERRORS_TOTAL, TRANSCRIPT_SAVE_RESULT
 
 logger = get_logger("nebu.transcript")
 
@@ -20,12 +20,14 @@ async def save_transcript(
 ) -> None:
     """Envía el transcript completo al backend en un único HTTP call al cierre de sesión."""
     if not is_backend_configured(settings):
+        TRANSCRIPT_SAVE_RESULT.labels(result="no_backend").inc()
         return
 
     try:
         messages = session.history.items
     except Exception as exc:
         job_logger.warning("Failed to access history", extra={"error": str(exc)})
+        TRANSCRIPT_SAVE_RESULT.labels(result="exception").inc()
         return
 
     lines = []
@@ -39,6 +41,7 @@ async def save_transcript(
             lines.append(f"[{label}]: {text.strip()}")
 
     if not lines:
+        TRANSCRIPT_SAVE_RESULT.labels(result="empty").inc()
         return
 
     transcript = "\n".join(lines)
@@ -70,7 +73,11 @@ async def save_transcript(
             label="save transcript",
         )
         if result is not None:
+            TRANSCRIPT_SAVE_RESULT.labels(result="ok").inc()
             job_logger.info("Transcript saved", extra={"messages": message_count})
+        else:
+            TRANSCRIPT_SAVE_RESULT.labels(result="http_error").inc()
     except Exception as exc:
         ERRORS_TOTAL.labels(type="transcript").inc()
+        TRANSCRIPT_SAVE_RESULT.labels(result="exception").inc()
         job_logger.warning("Failed to save transcript", extra={"error": str(exc)})

@@ -236,7 +236,12 @@ def _setup_budget_timer(
         ctx.shutdown()
 
     budget_task = asyncio.create_task(_budget_timer())
-    ctx.add_shutdown_callback(lambda: budget_task.cancel())
+
+    async def _cancel_budget_task() -> None:
+        # add_shutdown_callback espera coroutines; Task.cancel() retorna bool.
+        budget_task.cancel()
+
+    ctx.add_shutdown_callback(_cancel_budget_task)
 
 
 def make_entrypoint(settings: Settings):

@@ -24,16 +24,25 @@ _session: aiohttp.ClientSession | None = None
 
 
 def _get_session(settings: Settings) -> aiohttp.ClientSession:
-    """Return (or lazily create) a long-lived ClientSession with keep-alive."""
+    """Return (or lazily create) a long-lived ClientSession with keep-alive.
+
+    No usamos `base_url=`: aiohttp descarta el path del base_url y sólo
+    respeta scheme://host:port, lo que rompía silenciosamente cualquier URL
+    con prefix tipo `/api/v1`. La URL completa se construye en cada request.
+    """
     global _session
     if _session is None or _session.closed:
         _session = aiohttp.ClientSession(
-            base_url=settings.agent_backend_url.rstrip("/") + "/",
             headers={"x-agent-secret": settings.agent_internal_secret},
             timeout=aiohttp.ClientTimeout(total=10),
             connector=aiohttp.TCPConnector(limit=20, keepalive_timeout=60),
         )
     return _session
+
+
+def _build_url(settings: Settings, path: str) -> str:
+    base = settings.agent_backend_url.rstrip("/")
+    return f"{base}/{path.lstrip('/')}"
 
 
 async def close_session() -> None:
@@ -79,7 +88,7 @@ async def backend_request(
         if timeout_seconds != 10:
             kwargs["timeout"] = aiohttp.ClientTimeout(total=timeout_seconds)
 
-        resp = await request_method(f"/{path.lstrip('/')}", **kwargs)
+        resp = await request_method(_build_url(settings, path), **kwargs)
 
         if resp.status == 200:
             return await resp.json()

@@ -1,6 +1,7 @@
 """Shared fixtures for Nebu agent tests."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -10,12 +11,17 @@ import pytest
 @pytest.fixture(autouse=True)
 def _env_defaults(monkeypatch):
     """Provide required env vars for any test that imports Settings."""
+    monkeypatch.chdir(Path(__file__).resolve().parents[1])
     defaults = {
         "LIVEKIT_URL": "ws://localhost:7880",
         "LIVEKIT_API_KEY": "test-key",
         "LIVEKIT_API_SECRET": "test-secret",
         "OPENAI_API_KEY": "sk-test",
         "ELEVENLABS_API_KEY": "el-test",
+        "INWORLD_API_KEY": "iw-test",
+        "DEEPGRAM_API_KEY": "dg-test",
+        "TTS_PROVIDER": "openai",
+        "STT_PROVIDER": "openai",
     }
     for k, v in defaults.items():
         monkeypatch.setenv(k, v)

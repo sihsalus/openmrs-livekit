@@ -49,7 +49,6 @@ def _build_llm_provider(provider: str, settings: Settings):
         return openai.LLM(
             model=settings.openai_model,
             temperature=settings.llm_temperature,
-            max_completion_tokens=settings.llm_max_output_tokens,
         )
 
     if provider == "anthropic":
@@ -59,7 +58,6 @@ def _build_llm_provider(provider: str, settings: Settings):
             model=settings.anthropic_model,
             api_key=settings.anthropic_api_key,
             temperature=settings.llm_temperature,
-            max_tokens=settings.llm_max_output_tokens,
         )
 
     if provider == "groq":
@@ -69,7 +67,6 @@ def _build_llm_provider(provider: str, settings: Settings):
             api_key=settings.groq_api_key,
             base_url="https://api.groq.com/openai/v1",
             temperature=settings.llm_temperature,
-            max_completion_tokens=settings.llm_max_output_tokens,
         )
 
     if provider == "xai":
@@ -79,8 +76,31 @@ def _build_llm_provider(provider: str, settings: Settings):
             api_key=settings.xai_api_key,
             base_url="https://api.x.ai/v1",
             temperature=settings.llm_temperature,
-            max_completion_tokens=settings.llm_max_output_tokens,
         )
+
+    if provider == "google":
+        from livekit.plugins import google
+
+        kwargs: dict = {
+            "model": settings.google_model,
+            "api_key": settings.google_api_key,
+            "temperature": settings.llm_temperature,
+        }
+        if settings.llm_apply_token_limits:
+            kwargs["max_output_tokens"] = settings.llm_max_output_tokens
+        return google.LLM(**kwargs)
+
+    if provider == "mistral":
+        # Mistral es compatible con la API de OpenAI
+        kwargs: dict = {
+            "model": settings.mistral_model,
+            "api_key": settings.mistral_api_key,
+            "base_url": "https://api.mistral.ai/v1",
+            "temperature": settings.llm_temperature,
+        }
+        if settings.llm_apply_token_limits:
+            kwargs["max_completion_tokens"] = settings.llm_max_output_tokens
+        return openai.LLM(**kwargs)
 
     raise ValueError(f"LLM provider desconocido: {provider}")
 
@@ -106,6 +126,17 @@ def _build_stt_provider(provider: str, settings: Settings):
 
     if provider == "deepgram":
         from livekit.plugins import deepgram
+
+        if settings.deepgram_use_flux:
+            kwargs: dict = {
+                "model": "flux-general-multi",
+                "language_hint": [settings.stt_language],
+                "eot_threshold": settings.deepgram_eot_threshold,
+                "eot_timeout_ms": settings.deepgram_eot_timeout_ms,
+            }
+            if settings.deepgram_eager_eot_threshold is not None:
+                kwargs["eager_eot_threshold"] = settings.deepgram_eager_eot_threshold
+            return deepgram.STTv2(**kwargs)
 
         return deepgram.STT(
             model=settings.deepgram_model,

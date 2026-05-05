@@ -83,9 +83,7 @@ async def _search_tavily(
         "api_key": api_key,
         "query": query,
         "max_results": max_results,
-        "search_depth": "advanced",
-        "topic": "news",
-        "time_range": "w",
+        "search_depth": "basic",
         "include_answer": "basic",
         "include_raw_content": False,
         "include_images": False,
@@ -277,7 +275,7 @@ def make_web_search(settings: Settings):
     """Factory que retorna la tool web_search con settings capturadas en closure."""
     provider = settings.web_search_provider
     max_results = settings.web_search_max_results
-    result_budget_tokens = max(16, settings.llm_max_input_tokens // 2)
+    result_budget_tokens = max(16, getattr(settings, "llm_max_input_tokens", 76) // 2)
     tavily_api_key = settings.tavily_api_key
     brave_api_key = settings.brave_search_api_key
     serpapi_api_key = settings.serpapi_api_key

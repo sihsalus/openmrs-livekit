@@ -50,6 +50,16 @@ ERRORS_TOTAL = Counter(
     ["type"],
 )
 
+# Resultado de cada intento de guardado de transcript.
+# result ∈ {ok, http_error, empty, exception, no_backend}
+# Alertar en Grafana si http_error o empty crecen — la regresión de marzo 2026
+# pasó silenciosa porque el fallo solo iba a logs.
+TRANSCRIPT_SAVE_RESULT = Counter(
+    "nebu_agent_transcript_save_result_total",
+    "Resultado del guardado de transcript al backend",
+    ["result"],
+)
+
 # Turnos conversacionales procesados (por personalidad)
 TURNS_TOTAL = Counter(
     "nebu_agent_turns_total",

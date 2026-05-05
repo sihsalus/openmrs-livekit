@@ -22,6 +22,7 @@ dependencies = [
     "livekit-plugins-inworld",
     "livekit-plugins-deepgram",
     "livekit-plugins-turn-detector",
+    "livekit-plugins-google",
 
     # Configuration
     "pydantic-settings",

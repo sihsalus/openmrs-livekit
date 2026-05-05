@@ -12,7 +12,24 @@ Nosotros solo lo guiamos para que no se repita.
 
 from livekit.agents import RunContext, function_tool
 
-from src.prompt_budget import truncate_to_tokens
+from src.prompt_budget import estimate_tokens, truncate_to_tokens
+
+
+def _truncate_fact_prompt(prompt: str, max_tokens: int) -> str:
+    """Recorta preservando la sección del dato curioso, no solo el prefacio."""
+    if estimate_tokens(prompt) <= max_tokens:
+        return prompt
+
+    marker = "## DATO CURIOSO"
+    if marker not in prompt:
+        return truncate_to_tokens(prompt, max_tokens)
+
+    prefix, suffix = prompt.split(marker, 1)
+    prefix_budget = min(18, max_tokens // 3)
+    prefix_text = truncate_to_tokens(prefix.rstrip(), prefix_budget)
+    remaining_tokens = max(8, max_tokens - estimate_tokens(prefix_text) - 1)
+    suffix_text = truncate_to_tokens(f"{marker}{suffix}", remaining_tokens)
+    return f"{prefix_text}\n...\n{suffix_text}"
 
 
 @function_tool(
@@ -37,5 +54,5 @@ async def get_fun_fact(
     variety.tick()
 
     settings = context.session.userdata.get("settings")
-    max_tokens = min(48, max(24, getattr(settings, "llm_max_input_tokens", 76) // 2))
-    return truncate_to_tokens(prompt, max_tokens)
+    max_tokens = min(96, max(60, getattr(settings, "llm_max_input_tokens", 76)))
+    return _truncate_fact_prompt(prompt, max_tokens)

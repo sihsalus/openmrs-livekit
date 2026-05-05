@@ -192,6 +192,19 @@ def build_instructions(
             "Memory context injected into prompt", extra={"length": len(memory_context)}
         )
 
+    if not settings.llm_apply_token_limits:
+        instructions = custom_prompt
+        if owner_context:
+            instructions += owner_context
+        if memory_block:
+            instructions += memory_block
+        instructions += "\n\n" + CAPABILITIES_BLOCK.strip()
+        job_logger.info(
+            "Instruction prompt built without token budget",
+            extra={"approx_prompt_tokens": _estimate_tokens(instructions)},
+        )
+        return instructions
+
     total_tokens = settings.llm_max_input_tokens
     instructions, budget_meta = compose_budgeted_text(
         [

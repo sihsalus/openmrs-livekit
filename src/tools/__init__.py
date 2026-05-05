@@ -14,10 +14,7 @@ def get_tools(settings: Settings) -> list:
         get_current_datetime,
         get_weather,
         get_fun_fact,
-        start_trivia,
-        start_riddles,
-        start_story,
-        end_game,
+        # start_trivia, start_riddles, start_story, end_game — disabled: Groq rejects no-param tool schemas
     ]
 
     if settings.web_search_provider is not None and settings.web_search_parental_consent:

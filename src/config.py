@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     livekit_api_secret: str = Field(..., description="API Secret de LiveKit")
 
     # ============= LLM Configuration =============
-    llm_provider: Literal["openai", "anthropic", "groq", "xai"] = Field(
+    llm_provider: Literal["openai", "anthropic", "groq", "xai", "google", "mistral"] = Field(
         default="openai", description="Proveedor LLM principal"
     )
     llm_fallback_providers: str = Field(
@@ -61,6 +61,18 @@ class Settings(BaseSettings):
     xai_model: str = Field(
         default="grok-3-mini",
         description="Modelo xAI (grok-3-mini, grok-3, grok-2-1212)",
+    )
+    google_api_key: str | None = Field(default=None, description="API Key de Google Gemini (GOOGLE_API_KEY)")
+    google_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Modelo Gemini (gemini-2.5-flash, gemini-2.0-flash-001)",
+    )
+
+    # ============= Mistral Configuration =============
+    mistral_api_key: str | None = Field(default=None, description="API Key de Mistral AI (console.mistral.ai)")
+    mistral_model: str = Field(
+        default="ministral-8b-latest",
+        description="Modelo Mistral (ministral-8b-latest, ministral-3b-latest, mistral-small-latest)",
     )
 
     # ============= TTS Configuration =============
@@ -126,6 +138,18 @@ class Settings(BaseSettings):
     deepgram_endpointing_ms: int = Field(
         default=25, description="Milisegundos de silencio para finalizar — 25ms = default del plugin nova-3, óptimo con turn_detection=stt"
     )
+    deepgram_use_flux: bool = Field(
+        default=False, description="Usar Deepgram Flux (STTv2) con turn detection semántico"
+    )
+    deepgram_eot_threshold: float = Field(
+        default=0.7, description="Flux: umbral de confianza para EndOfTurn (0.5-0.9)"
+    )
+    deepgram_eager_eot_threshold: float | None = Field(
+        default=None, description="Flux: umbral para EagerEndOfTurn — arranca LLM preemptivo 150-250ms antes. None=deshabilitado"
+    )
+    deepgram_eot_timeout_ms: int = Field(
+        default=3000, description="Flux: timeout en ms para forzar EndOfTurn si no hay señal del modelo"
+    )
     stt_language: str = Field(
         default="es", description="Idioma para STT (BCP-47 base: 'es', 'en', 'fr', etc.)"
     )
@@ -157,20 +181,24 @@ class Settings(BaseSettings):
         default=0.6,
         description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva",
     )
+    llm_apply_token_limits: bool = Field(
+        default=False,
+        description="Aplicar límites de tokens para prompt/respuesta",
+    )
     llm_max_input_tokens: int = Field(
-        default=100,
+        default=760,
         description="Presupuesto aproximado de tokens de entrada por turno",
     )
     llm_max_output_tokens: int = Field(
-        default=28,
+        default=240,
         description="Tokens máximos de salida por turno",
     )
     llm_soft_limit_tokens: int = Field(
-        default=100,
+        default=1000,
         description="Presupuesto blando total por turno (entrada + salida)",
     )
     llm_hard_limit_tokens: int = Field(
-        default=120,
+        default=1200,
         description="Límite absoluto total por turno (entrada + salida)",
     )
     llm_max_tokens: int | None = Field(
@@ -244,7 +272,7 @@ class Settings(BaseSettings):
 
     # ============= Security =============
     max_custom_prompt_chars: int = Field(
-        default=512,
+        default=5120,
         description="Tamaño máximo en caracteres para prompts personalizados (anti-injection)",
     )
 
@@ -319,6 +347,8 @@ class Settings(BaseSettings):
             "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
             "groq": ("groq_api_key", "GROQ_API_KEY"),
             "xai": ("xai_api_key", "XAI_API_KEY"),
+            "google": ("google_api_key", "GOOGLE_API_KEY"),
+            "mistral": ("mistral_api_key", "MISTRAL_API_KEY"),
         }
         if self.llm_provider in llm_requirements:
             field, env = llm_requirements[self.llm_provider]
@@ -344,6 +374,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_llm_token_budget(self) -> "Settings":
         """Valida coherencia del presupuesto de tokens por turno."""
+        if not self.llm_apply_token_limits:
+            return self
         if self.llm_max_input_tokens <= 0:
             raise ValueError("llm_max_input_tokens debe ser mayor que 0")
         if self.llm_max_output_tokens <= 0:
@@ -370,6 +402,8 @@ class Settings(BaseSettings):
             "anthropic": self.anthropic_model,
             "groq": self.groq_model,
             "xai": self.xai_model,
+            "google": self.google_model,
+            "mistral": self.mistral_model,
         }.get(self.llm_provider, self.openai_model)
 
     @field_validator("vad_activation_threshold")
@@ -390,6 +424,7 @@ class Settings(BaseSettings):
         """Retorna un resumen de la configuración (sin secretos)"""
         v = AGENT_VERSION
         llm_label = f"{self.llm_provider}/{self.active_llm_model}"
+        budget_mode = "ON" if self.llm_apply_token_limits else "OFF"
         return f"""
 ╔══════════════════════════════════════════════════════════════╗
 ║                    NEBU AGENT v{v:<29}║
@@ -398,6 +433,7 @@ class Settings(BaseSettings):
 ║  Log Level:        {self.log_level:<40} ║
 ║  LiveKit URL:      {self.livekit_url:<40} ║
 ║  LLM:              {llm_label:<40} ║
+    ║  LLM Limits:       {budget_mode:<40} ║
 ║  LLM Budget:       {f"{self.llm_max_input_tokens}+{self.llm_max_output_tokens} / {self.llm_soft_limit_tokens}-{self.llm_hard_limit_tokens}":<40} ║
 ║  STT:              {self.stt_provider:<40} ║
 ║  TTS:              {self.tts_provider:<40} ║
