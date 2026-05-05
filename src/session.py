@@ -17,7 +17,6 @@ from types import SimpleNamespace
 from livekit import agents
 from livekit.agents import AgentSession
 from livekit.agents.metrics import EOUMetrics, LLMMetrics, STTMetrics, TTSMetrics
-from livekit.plugins import silero
 
 from src.config import Settings
 from src.logger import get_logger
@@ -30,7 +29,6 @@ from src.metrics import (
 )
 from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tokens, truncate_text
 from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
-from src.providers import build_llm, build_stt, build_tts
 
 logger = get_logger("nebu.session")
 
@@ -105,6 +103,10 @@ class NebuAgent:
         turn_context: TurnContext | None = None,
     ) -> AgentSession:
         """Crea una sesión de agente con la configuración actual."""
+        from livekit.plugins import silero
+
+        from src.providers import build_llm, build_stt, build_tts
+
         self._job_logger = job_logger
         self._turn_context = turn_context
 

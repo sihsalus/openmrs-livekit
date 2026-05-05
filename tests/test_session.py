@@ -28,7 +28,8 @@ def test_build_instructions_truncates_memory_first_when_budget_enabled():
 
     result = build_instructions(room_metadata, settings, logger, memory_context=memory_context)
 
-    assert "MEMORIA PREVIA" not in result
+    assert "MEMORIA PREVIA" in result
+    assert memory_context not in result
     assert "REGLAS IMPORTANTES" in result
     assert "CONTEXTO:" in result
     assert "Nombre: Luna" in result
@@ -66,5 +67,6 @@ def test_invalid_total_budget_raises():
             llm_apply_token_limits=True,
             llm_max_input_tokens=110,
             llm_max_output_tokens=20,
+            llm_soft_limit_tokens=115,
             llm_hard_limit_tokens=120,
         )
