@@ -46,10 +46,13 @@ def _build_with_fallback(
 def _build_llm_provider(provider: str, settings: Settings):
     """Construye una instancia LLM para un proveedor específico."""
     if provider == "openai":
-        return openai.LLM(
-            model=settings.openai_model,
-            temperature=settings.llm_temperature,
-        )
+        kwargs: dict = {
+            "model": settings.openai_model,
+            "temperature": settings.llm_temperature,
+        }
+        if settings.llm_apply_token_limits:
+            kwargs["max_completion_tokens"] = settings.llm_max_output_tokens
+        return openai.LLM(**kwargs)
 
     if provider == "anthropic":
         from livekit.plugins import anthropic
@@ -62,21 +65,27 @@ def _build_llm_provider(provider: str, settings: Settings):
 
     if provider == "groq":
         # Groq es compatible con la API de OpenAI — se usa el plugin de OpenAI con base_url diferente
-        return openai.LLM(
-            model=settings.groq_model,
-            api_key=settings.groq_api_key,
-            base_url="https://api.groq.com/openai/v1",
-            temperature=settings.llm_temperature,
-        )
+        kwargs: dict = {
+            "model": settings.groq_model,
+            "api_key": settings.groq_api_key,
+            "base_url": "https://api.groq.com/openai/v1",
+            "temperature": settings.llm_temperature,
+        }
+        if settings.llm_apply_token_limits:
+            kwargs["max_completion_tokens"] = settings.llm_max_output_tokens
+        return openai.LLM(**kwargs)
 
     if provider == "xai":
         # xAI (Grok) también es compatible con la API de OpenAI
-        return openai.LLM(
-            model=settings.xai_model,
-            api_key=settings.xai_api_key,
-            base_url="https://api.x.ai/v1",
-            temperature=settings.llm_temperature,
-        )
+        kwargs: dict = {
+            "model": settings.xai_model,
+            "api_key": settings.xai_api_key,
+            "base_url": "https://api.x.ai/v1",
+            "temperature": settings.llm_temperature,
+        }
+        if settings.llm_apply_token_limits:
+            kwargs["max_completion_tokens"] = settings.llm_max_output_tokens
+        return openai.LLM(**kwargs)
 
     if provider == "google":
         from livekit.plugins import google

@@ -28,7 +28,7 @@ from src.metrics import (
     TTS_TTFB,
 )
 from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tokens, truncate_text
-from src.prompts import CAPABILITIES_BLOCK, get_greeting, get_system_prompt
+from src.prompts import CAPABILITIES_BLOCK, CONVERSATION_POLICY_BLOCK, get_greeting, get_system_prompt
 
 logger = get_logger("nebu.session")
 
@@ -200,6 +200,7 @@ def build_instructions(
             instructions += owner_context
         if memory_block:
             instructions += memory_block
+        instructions += "\n\n" + CONVERSATION_POLICY_BLOCK.strip()
         instructions += "\n\n" + CAPABILITIES_BLOCK.strip()
         job_logger.info(
             "Instruction prompt built without token budget",
@@ -231,6 +232,14 @@ def build_instructions(
                 text=memory_block,
                 max_tokens=min(14, max(6, total_tokens // 6)),
                 trim_priority=100,
+            ),
+            BudgetSection(
+                name="conversation_policy",
+                text=CONVERSATION_POLICY_BLOCK,
+                required=True,
+                max_tokens=min(72, max(42, total_tokens // 8)),
+                min_tokens=36,
+                trim_priority=5,
             ),
             BudgetSection(
                 name="capabilities_block",

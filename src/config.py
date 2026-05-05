@@ -182,7 +182,7 @@ class Settings(BaseSettings):
         description="Temperatura LLM (0.0-2.0) — 0.6 = respuestas directas sin aleatoriedad excesiva",
     )
     llm_apply_token_limits: bool = Field(
-        default=False,
+        default=True,
         description="Aplicar límites de tokens para prompt/respuesta",
     )
     llm_max_input_tokens: int = Field(
@@ -190,15 +190,15 @@ class Settings(BaseSettings):
         description="Presupuesto aproximado de tokens de entrada por turno",
     )
     llm_max_output_tokens: int = Field(
-        default=240,
+        default=120,
         description="Tokens máximos de salida por turno",
     )
     llm_soft_limit_tokens: int = Field(
-        default=1000,
+        default=840,
         description="Presupuesto blando total por turno (entrada + salida)",
     )
     llm_hard_limit_tokens: int = Field(
-        default=1200,
+        default=900,
         description="Límite absoluto total por turno (entrada + salida)",
     )
     llm_max_tokens: int | None = Field(
@@ -304,7 +304,7 @@ class Settings(BaseSettings):
     )
 
     enable_variety_engine: bool = Field(
-        default=False,
+        default=True,
         description="Enable anti-repetition FSM and sliding context (~10MB RAM overhead)",
     )
 

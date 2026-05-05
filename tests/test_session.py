@@ -1,7 +1,7 @@
 import pytest
 
 from src.config import Settings
-from src.prompts import CAPABILITIES_BLOCK
+from src.prompts import CAPABILITIES_BLOCK, CONVERSATION_POLICY_BLOCK
 from src.session import build_instructions
 
 
@@ -33,6 +33,7 @@ def test_build_instructions_truncates_memory_first_when_budget_enabled():
     assert "REGLAS IMPORTANTES" in result
     assert "CONTEXTO:" in result
     assert "Nombre: Luna" in result
+    assert "tema adulto" in result
     assert CAPABILITIES_BLOCK.strip() in result
     assert len(result) <= settings.llm_max_input_tokens * 4
 
@@ -53,7 +54,23 @@ def test_build_instructions_no_truncation_when_budget_disabled():
     assert "REGLAS IMPORTANTES" in result
     assert "CONTEXTO:" in result
     assert "Nombre: Luna" in result
+    assert CONVERSATION_POLICY_BLOCK.strip() in result
     assert CAPABILITIES_BLOCK.strip() in result
+
+
+def test_custom_prompt_still_gets_non_optional_safety_policy():
+    settings = Settings(llm_apply_token_limits=False)
+    logger = DummyLogger()
+
+    result = build_instructions(
+        {"agent_prompt": "Eres Luna y hablas de ciencia divertida."},
+        settings,
+        logger,
+    )
+
+    assert "Eres Luna" in result
+    assert "temas adultos" in result
+    assert "adulto de confianza" in result
 
 
 def test_legacy_llm_max_tokens_alias_maps_to_output_budget():
