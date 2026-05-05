@@ -151,6 +151,30 @@ async def test_backend_request_returns_none_on_404(cleanup_session):
         await runner.cleanup()
 
 
+async def test_backend_request_accepts_empty_200_response(cleanup_session):
+    """Endpoints internos pueden responder 200 sin JSON, como save transcript."""
+
+    async def handler(_request: web.Request) -> web.Response:
+        return web.Response(status=200)
+
+    app = web.Application()
+    app.router.add_post("/api/v1/voice/sessions/transcript", handler)
+    runner, host, port = await _start_server(app)
+    try:
+        settings = _settings(f"http://{host}:{port}/api/v1")
+        result = await backend_request(
+            settings,
+            "POST",
+            "voice/sessions/transcript",
+            _Log(),
+            json={"roomName": "r1", "transcript": "hola", "messageCount": 1},
+            label="save transcript",
+        )
+        assert result == {}
+    finally:
+        await runner.cleanup()
+
+
 async def test_backend_request_skips_when_unconfigured():
     """Sin backend_url o sin secret no debe abrir socket ni crashear."""
     settings = _settings(None, secret=None)

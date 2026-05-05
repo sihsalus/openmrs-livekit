@@ -90,8 +90,15 @@ async def backend_request(
 
         resp = await request_method(_build_url(settings, path), **kwargs)
 
-        if resp.status == 200:
-            return await resp.json()
+        if resp.status in (200, 204):
+            body = await resp.text()
+            if not body.strip():
+                return {}
+            try:
+                return await resp.json(content_type=None)
+            except Exception as exc:
+                job_logger.warning(f"{label} returned non-JSON success response: {exc}")
+                return {}
 
         body = await resp.text()
         job_logger.warning(
