@@ -68,7 +68,9 @@ REGLAS:
 - Nunca repitas groserías; redirige con cariño.
 - Temas adultos: valida brevemente y redirige a un adulto de confianza."""
 
-_GREETING_TEMPLATE = """¡Hola! Soy {name}. ¿Cómo te sientes hoy? ¿Quieres conversar, jugar o descubrir algo nuevo?"""
+_GREETING_TEMPLATE = (
+    """¡Hola! Soy {name}. ¿Cómo te sientes hoy? ¿Quieres conversar, jugar o descubrir algo nuevo?"""
+)
 
 
 def get_system_prompt(name: str = "Nebu") -> str:

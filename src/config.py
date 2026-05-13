@@ -1,8 +1,7 @@
 """Configuración centralizada con Pydantic Settings."""
 
 from importlib.metadata import PackageNotFoundError, version
-from typing import Any
-from typing import Literal
+from typing import Any, Literal
 
 try:
     AGENT_VERSION = version("nebu-agent")
@@ -62,14 +61,18 @@ class Settings(BaseSettings):
         default="grok-3-mini",
         description="Modelo xAI (grok-3-mini, grok-3, grok-2-1212)",
     )
-    google_api_key: str | None = Field(default=None, description="API Key de Google Gemini (GOOGLE_API_KEY)")
+    google_api_key: str | None = Field(
+        default=None, description="API Key de Google Gemini (GOOGLE_API_KEY)"
+    )
     google_model: str = Field(
         default="gemini-2.5-flash",
         description="Modelo Gemini (gemini-2.5-flash, gemini-2.0-flash-001)",
     )
 
     # ============= Mistral Configuration =============
-    mistral_api_key: str | None = Field(default=None, description="API Key de Mistral AI (console.mistral.ai)")
+    mistral_api_key: str | None = Field(
+        default=None, description="API Key de Mistral AI (console.mistral.ai)"
+    )
     mistral_model: str = Field(
         default="ministral-8b-latest",
         description="Modelo Mistral (ministral-8b-latest, ministral-3b-latest, mistral-small-latest)",
@@ -136,7 +139,8 @@ class Settings(BaseSettings):
     )
     deepgram_punctuate: bool = Field(default=True, description="Habilitar puntuación automática")
     deepgram_endpointing_ms: int = Field(
-        default=25, description="Milisegundos de silencio para finalizar — 25ms = default del plugin nova-3, óptimo con turn_detection=stt"
+        default=25,
+        description="Milisegundos de silencio para finalizar — 25ms = default del plugin nova-3, óptimo con turn_detection=stt",
     )
     deepgram_use_flux: bool = Field(
         default=False, description="Usar Deepgram Flux (STTv2) con turn detection semántico"
@@ -145,10 +149,12 @@ class Settings(BaseSettings):
         default=0.7, description="Flux: umbral de confianza para EndOfTurn (0.5-0.9)"
     )
     deepgram_eager_eot_threshold: float | None = Field(
-        default=None, description="Flux: umbral para EagerEndOfTurn — arranca LLM preemptivo 150-250ms antes. None=deshabilitado"
+        default=None,
+        description="Flux: umbral para EagerEndOfTurn — arranca LLM preemptivo 150-250ms antes. None=deshabilitado",
     )
     deepgram_eot_timeout_ms: int = Field(
-        default=3000, description="Flux: timeout en ms para forzar EndOfTurn si no hay señal del modelo"
+        default=3000,
+        description="Flux: timeout en ms para forzar EndOfTurn si no hay señal del modelo",
     )
     stt_language: str = Field(
         default="es", description="Idioma para STT (BCP-47 base: 'es', 'en', 'fr', etc.)"

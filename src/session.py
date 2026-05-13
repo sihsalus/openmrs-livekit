@@ -28,7 +28,12 @@ from src.metrics import (
     TTS_TTFB,
 )
 from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tokens, truncate_text
-from src.prompts import CAPABILITIES_BLOCK, CONVERSATION_POLICY_BLOCK, get_greeting, get_system_prompt
+from src.prompts import (
+    CAPABILITIES_BLOCK,
+    CONVERSATION_POLICY_BLOCK,
+    get_greeting,
+    get_system_prompt,
+)
 
 logger = get_logger("nebu.session")
 
@@ -237,16 +242,14 @@ def build_instructions(
                 name="conversation_policy",
                 text=CONVERSATION_POLICY_BLOCK,
                 required=True,
-                max_tokens=min(72, max(42, total_tokens // 8)),
-                min_tokens=36,
+                min_tokens=estimate_tokens(CONVERSATION_POLICY_BLOCK),
                 trim_priority=5,
             ),
             BudgetSection(
                 name="capabilities_block",
                 text=CAPABILITIES_BLOCK,
                 required=True,
-                max_tokens=min(16, max(8, total_tokens // 5)),
-                min_tokens=6,
+                min_tokens=estimate_tokens(CAPABILITIES_BLOCK),
                 trim_priority=10,
             ),
         ],
