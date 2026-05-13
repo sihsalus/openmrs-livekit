@@ -16,6 +16,8 @@ def _env_defaults(monkeypatch):
         "LIVEKIT_API_SECRET": "test-secret",
         "OPENAI_API_KEY": "sk-test",
         "ELEVENLABS_API_KEY": "el-test",
+        "INWORLD_API_KEY": "iw-test",
+        "DEEPGRAM_API_KEY": "dg-test",
     }
     for k, v in defaults.items():
         monkeypatch.setenv(k, v)
