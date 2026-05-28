@@ -15,8 +15,9 @@ import functools
 import threading
 import time
 
-from livekit import agents
+from livekit import agents, rtc
 from livekit.agents import Agent
+from livekit.agents.voice.room_io import AudioOutputOptions, RoomOptions
 from livekit.plugins import silero
 
 from src.backend_client import close_session as _close_backend_session
@@ -155,8 +156,22 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         moderator=moderator,
     )
 
+    # Opus RED: duplica frames anteriores en cada paquete para tolerar
+    # pérdida de paquetes WiFi (~+30% bitrate, sub-30kbps total para voz).
+    # Crítico para clientes ESP32 sobre WiFi 2.4GHz donde el jitter buffer
+    # es limitado y el rebuffer es audible.
+    room_options = RoomOptions(
+        audio_output=AudioOutputOptions(
+            track_publish_options=rtc.TrackPublishOptions(
+                source=rtc.TrackSource.SOURCE_MICROPHONE,
+                red=True,
+                dtx=False,
+            )
+        )
+    )
+
     try:
-        await session.start(room=ctx.room, agent=agent)
+        await session.start(room=ctx.room, agent=agent, room_options=room_options)
     except Exception as e:
         job_logger.error("Failed to start voice session", extra={"error": str(e)}, exc_info=True)
         return
