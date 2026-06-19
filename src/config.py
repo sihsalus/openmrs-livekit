@@ -4,7 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Literal
 
 try:
-    AGENT_VERSION = version("nebu-agent")
+    AGENT_VERSION = version("openmrs-encounter-compiler")
 except PackageNotFoundError:
     AGENT_VERSION = "dev"
 

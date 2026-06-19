@@ -1,14 +1,14 @@
 [project]
-name = "nebu-agent"
-version = "2.0.0"
-description = "Nebu - LiveKit Voice Agent for interactive learning"
+name = "openmrs-encounter-compiler"
+version = "0.1.0"
+description = "LiveKit agent foundation for compiling clinical encounters into reviewable OpenMRS drafts"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
-    {name = "Flow Telligence"}
+    {name = "NEBUAI"}
 ]
-keywords = ["livekit", "voice-agent", "ai", "tts", "stt"]
+keywords = ["openmrs", "livekit", "voice-agent", "clinical-ai", "human-in-the-loop"]
 
 dependencies = [
     # LiveKit core
@@ -58,11 +58,11 @@ noise-cancellation = [
 ]
 
 all = [
-    "nebu-agent[dev,deepgram,noise-cancellation]",
+    "openmrs-encounter-compiler[dev,deepgram,noise-cancellation]",
 ]
 
 [project.scripts]
-nebu-agent = "src.agent:main"
+openmrs-encounter-compiler = "src.agent:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
