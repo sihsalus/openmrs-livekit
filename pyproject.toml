@@ -1,5 +1,5 @@
 [project]
-name = "openmrs-encounter-compiler"
+name = "openmrs-livekit"
 version = "0.1.0"
 description = "LiveKit agent foundation for compiling clinical encounters into reviewable OpenMRS drafts"
 readme = "README.md"
@@ -58,11 +58,11 @@ noise-cancellation = [
 ]
 
 all = [
-    "openmrs-encounter-compiler[dev,deepgram,noise-cancellation]",
+    "openmrs-livekit[dev,deepgram,noise-cancellation]",
 ]
 
 [project.scripts]
-openmrs-encounter-compiler = "src.agent:main"
+openmrs-livekit = "src.agent:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
