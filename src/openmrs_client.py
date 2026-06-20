@@ -29,6 +29,15 @@ CONCEPT_MAP: dict[str, tuple[str, str]] = {
     "note": ("162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Text of encounter note"),
 }
 
+NUMERIC_CONCEPTS = {
+    "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "mmHg",
+    "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "mmHg",
+    "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "DEG C",
+    "5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "cm",
+    "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "beats/min",
+    "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "breaths/min",
+}
+
 _session: aiohttp.ClientSession | None = None
 
 
@@ -178,8 +187,16 @@ async def create_encounter(
             "subject": {"reference": f"Patient/{patient_uuid}", "type": "Patient"},
             "encounter": {"reference": f"Encounter/{encounter_uuid}", "type": "Encounter"},
             "effectiveDateTime": now,
-            "valueString": obs.get("value", ""),
         }
+        value_raw = obs.get("value", "")
+        unit = NUMERIC_CONCEPTS.get(concept_uuid)
+        if unit:
+            try:
+                obs_payload["valueQuantity"] = {"value": float(value_raw), "unit": unit}
+            except (ValueError, TypeError):
+                obs_payload["valueString"] = value_raw
+        else:
+            obs_payload["valueString"] = value_raw
         obs_result = await fhir_request(settings, "POST", "Observation", json=obs_payload)
         if obs_result:
             created_obs.append(obs_result.get("id"))
