@@ -43,7 +43,7 @@ from src.session import (
     send_initial_greeting,
     setup_variety_engine,
 )
-from src.tools import get_tools
+from src.tools import get_tools, init_dispatcher
 from src.transcript import save_transcript
 
 logger = get_logger("nebu.agent")
@@ -103,6 +103,9 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         memory_context = await fetch_memory_context(toy_id, settings, job_logger)
     else:
         job_logger.info("No toy_id in metadata, skipping memory fetch")
+
+    # Initialize tool dispatcher — must be done before tools are used
+    init_dispatcher(settings)
 
     instructions = build_instructions(
         room_metadata,
