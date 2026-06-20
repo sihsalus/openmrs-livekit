@@ -22,6 +22,11 @@ def get_tools(settings: Settings) -> list:
 
         tools.append(make_web_search(settings))
 
+    if settings.enable_openmrs_tools:
+        from .openmrs_tools import make_openmrs_tools
+
+        tools.extend(make_openmrs_tools(settings))
+
     return tools
 
 

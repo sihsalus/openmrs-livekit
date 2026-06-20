@@ -345,6 +345,17 @@ class Settings(BaseSettings):
         default=None, description="Secret compartido para llamadas internas agente→backend"
     )
 
+    # ============= OpenMRS Integration =============
+    enable_openmrs_tools: bool = Field(
+        default=False, description="Enable OpenMRS FHIR encounter tools"
+    )
+    openmrs_base_url: str = Field(
+        default="http://localhost/openmrs",
+        description="OpenMRS base URL (e.g. http://localhost/openmrs)",
+    )
+    openmrs_username: str = Field(default="admin", description="OpenMRS username")
+    openmrs_password: str = Field(default="Admin123", description="OpenMRS password")
+
     # ═══════════════════════════════════════════════════════════════
     # Feature Flags - Optimización para ESP32
     # ═══════════════════════════════════════════════════════════════
