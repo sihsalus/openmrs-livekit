@@ -68,7 +68,7 @@ async def record_clinical_fact(
 
     room = context.session.userdata.get("room")
     if room:
-        draft_payload = {
+        draft_payload: dict[str, object] = {
             "patientUuid": draft.patient_uuid,
             "facts": [
                 {"kind": f.kind, "value": f.value, "confidence": f.confidence, "status": f.status}
@@ -138,7 +138,7 @@ async def submit_encounter(context: RunContext, patient_uuid: str = "") -> str:
 
     from src.openmrs_client import CONCEPT_MAP
 
-    observations = []
+    observations: list[dict[str, object]] = []
     for fact in draft.facts:
         concept_uuid = fact.openmrs_concept_uuid
         display = fact.kind

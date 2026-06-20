@@ -13,7 +13,7 @@ import asyncio
 import json
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from livekit import agents
 from livekit.agents import AgentSession
@@ -119,7 +119,7 @@ class NebuAgent:
         stt.on("metrics_collected", self._on_stt_metrics)
         tts.on("metrics_collected", self._on_tts_metrics)
 
-        session = AgentSession(
+        session: AgentSession[Any] = AgentSession(
             vad=silero.VAD.load(
                 min_silence_duration=self.settings.vad_min_silence_duration,
                 activation_threshold=self.settings.vad_activation_threshold,
@@ -151,7 +151,7 @@ def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict[str, object]
     try:
         metadata = json.loads(ctx.room.metadata)
         job_logger.info("Metadata parsed", extra={"keys": list(metadata.keys())})
-        return metadata
+        return cast(dict[str, object], metadata)
     except json.JSONDecodeError as e:
         job_logger.error("Failed to parse metadata", extra={"error": str(e)})
         return {}

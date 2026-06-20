@@ -53,9 +53,9 @@ async def save_transcript(
     transcript = "\n".join(lines)
     redaction_count = 0
     if settings.transcript_redaction_enabled and not settings.transcript_raw_storage_allowed:
-        result = deidentify_text(transcript)
-        transcript = result.text
-        redaction_count = result.redaction_count
+        deidentification_result = deidentify_text(transcript)
+        transcript = deidentification_result.text
+        redaction_count = deidentification_result.redaction_count
 
     message_count = len(lines)
 

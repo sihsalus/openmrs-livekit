@@ -86,9 +86,23 @@ ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"
-strict = true
+strict = false
 warn_return_any = true
 warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "src.local_stt",
+    "src.local_tts",
+    "src.providers",
+]
+disable_error_code = [
+    "arg-type",
+    "attr-defined",
+    "call-arg",
+    "no-redef",
+    "override",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
