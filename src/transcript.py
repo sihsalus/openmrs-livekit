@@ -6,6 +6,7 @@ from livekit.agents import AgentSession
 
 from src.backend_client import backend_request, is_backend_configured
 from src.config import Settings
+from src.deidentification import deidentify_text
 from src.logger import get_logger
 from src.metrics import ERRORS_TOTAL, TRANSCRIPT_SAVE_RESULT
 
@@ -19,6 +20,11 @@ async def save_transcript(
     job_logger,
 ) -> None:
     """Envía el transcript completo al backend en un único HTTP call al cierre de sesión."""
+    if not settings.enable_transcript_save:
+        TRANSCRIPT_SAVE_RESULT.labels(result="disabled").inc()
+        job_logger.info("Transcript save disabled by configuration")
+        return
+
     if not is_backend_configured(settings):
         TRANSCRIPT_SAVE_RESULT.labels(result="no_backend").inc()
         return
@@ -45,6 +51,12 @@ async def save_transcript(
         return
 
     transcript = "\n".join(lines)
+    redaction_count = 0
+    if settings.transcript_redaction_enabled and not settings.transcript_raw_storage_allowed:
+        result = deidentify_text(transcript)
+        transcript = result.text
+        redaction_count = result.redaction_count
+
     message_count = len(lines)
 
     engagement_stats = None
@@ -60,6 +72,9 @@ async def save_transcript(
             "roomName": room_name,
             "transcript": transcript,
             "messageCount": message_count,
+            "redacted": settings.transcript_redaction_enabled
+            and not settings.transcript_raw_storage_allowed,
+            "redactionCount": redaction_count,
         }
         if engagement_stats:
             payload["engagementStats"] = engagement_stats

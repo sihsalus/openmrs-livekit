@@ -4,7 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Literal
 
 try:
-    AGENT_VERSION = version("openmrs-encounter-compiler")
+    AGENT_VERSION = version("openmrs-livekit")
 except PackageNotFoundError:
     AGENT_VERSION = "dev"
 
@@ -312,6 +312,18 @@ class Settings(BaseSettings):
     max_custom_prompt_chars: int = Field(
         default=5120,
         description="Tamaño máximo en caracteres para prompts personalizados (anti-injection)",
+    )
+    enable_transcript_save: bool = Field(
+        default=False,
+        description="Persistir transcripts al backend. Debe quedar deshabilitado para demos con PHI.",
+    )
+    transcript_redaction_enabled: bool = Field(
+        default=True,
+        description="Redactar PHI obvia antes de guardar transcripts o enviarlos a servicios externos.",
+    )
+    transcript_raw_storage_allowed: bool = Field(
+        default=False,
+        description="Permitir storage de transcript sin redaccion. Solo usar con contrato/BAA y aprobacion explicita.",
     )
 
     # ============= TTS Fallback =============
