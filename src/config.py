@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     livekit_api_secret: str = Field(..., description="API Secret de LiveKit")
 
     # ============= LLM Configuration =============
-    llm_provider: Literal["openai", "anthropic", "groq", "xai", "google", "mistral"] = Field(
-        default="openai", description="Proveedor LLM principal"
+    llm_provider: Literal["openai", "anthropic", "groq", "xai", "google", "mistral", "ollama"] = (
+        Field(default="openai", description="Proveedor LLM principal")
     )
     llm_fallback_providers: str = Field(
         default="",
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     )
 
     # ============= OpenAI Configuration =============
-    openai_api_key: str = Field(..., description="API Key de OpenAI")
+    openai_api_key: str | None = Field(default=None, description="API Key de OpenAI")
     openai_model: str = Field(default="gpt-4.1-mini", description="Modelo OpenAI para LLM")
     openai_stt_model: str = Field(default="gpt-4o-mini-transcribe", description="Modelo STT")
 
@@ -78,10 +78,20 @@ class Settings(BaseSettings):
         description="Modelo Mistral (ministral-8b-latest, ministral-3b-latest, mistral-small-latest)",
     )
 
-    # ============= TTS Configuration =============
-    tts_provider: Literal["elevenlabs", "openai", "cartesia", "google", "deepgram", "inworld"] = (
-        Field(default="inworld", description="Proveedor de TTS")
+    # ============= Ollama Configuration (Local) =============
+    ollama_base_url: str = Field(
+        default="http://localhost:11434/v1",
+        description="Ollama OpenAI-compatible API base URL",
     )
+    ollama_model: str = Field(
+        default="qwen3:8b",
+        description="Modelo Ollama (qwen3:8b, medgemma:latest, gemma3:latest)",
+    )
+
+    # ============= TTS Configuration =============
+    tts_provider: Literal[
+        "elevenlabs", "openai", "cartesia", "google", "deepgram", "inworld", "piper"
+    ] = Field(default="inworld", description="Proveedor de TTS")
     elevenlabs_api_key: str | None = Field(default=None, description="API Key de ElevenLabs")
     voice_id: str = Field(default="wnQAQM2xwHFeVXM7PQOq", description="Voice ID (ElevenLabs)")
     openai_tts_voice: str = Field(
@@ -122,11 +132,33 @@ class Settings(BaseSettings):
         description="Delay máximo en ms antes de forzar envío del buffer — evita esperas largas en frases cortas",
     )
 
+    # ============= Whisper Configuration (Local) =============
+    whisper_model_size: str = Field(
+        default="medium",
+        description="Whisper model size (tiny, base, small, medium, large-v3)",
+    )
+    whisper_compute_type: str = Field(
+        default="int8", description="Whisper compute type (int8, float16, float32)"
+    )
+    whisper_beam_size: int = Field(default=5, description="Whisper beam search size")
+
+    # ============= Piper Configuration (Local) =============
+    piper_binary: str = Field(
+        default="/srv/piper/piper/piper", description="Path to Piper binary"
+    )
+    piper_model_path: str = Field(
+        default="/srv/piper/voices/es_MX-claude-high.onnx",
+        description="Path to Piper ONNX voice model",
+    )
+    piper_length_scale: float = Field(
+        default=1.0, description="Piper speech speed (1.0 = normal)"
+    )
+
     # ============= Deepgram Configuration =============
     deepgram_api_key: str | None = Field(default=None, description="API Key Deepgram")
 
     # STT Provider
-    stt_provider: Literal["openai", "deepgram"] = Field(
+    stt_provider: Literal["openai", "deepgram", "whisper"] = Field(
         default="deepgram", description="Proveedor de STT"
     )
 
@@ -350,6 +382,7 @@ class Settings(BaseSettings):
     def validate_provider_api_keys(self) -> "Settings":
         """Falla en startup si el proveedor seleccionado no tiene API key configurada."""
         llm_requirements: dict[str, tuple[str, str]] = {
+            "openai": ("openai_api_key", "OPENAI_API_KEY"),
             "anthropic": ("anthropic_api_key", "ANTHROPIC_API_KEY"),
             "groq": ("groq_api_key", "GROQ_API_KEY"),
             "xai": ("xai_api_key", "XAI_API_KEY"),
@@ -374,6 +407,8 @@ class Settings(BaseSettings):
 
         if self.stt_provider == "deepgram" and not self.deepgram_api_key:
             raise ValueError("STT_PROVIDER=deepgram requiere DEEPGRAM_API_KEY")
+        if self.stt_provider == "openai" and not self.openai_api_key:
+            raise ValueError("STT_PROVIDER=openai requiere OPENAI_API_KEY")
 
         return self
 
@@ -410,6 +445,7 @@ class Settings(BaseSettings):
             "xai": self.xai_model,
             "google": self.google_model,
             "mistral": self.mistral_model,
+            "ollama": self.ollama_model,
         }.get(self.llm_provider, self.openai_model)
 
     @field_validator("vad_activation_threshold")
