@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 
-from livekit.agents import tts, utils
+from livekit.agents import APIConnectOptions, tts
 
 from src.logger import get_logger
 
@@ -34,16 +34,33 @@ class PiperTTS(tts.TTS):
         )
         self._config = config or PiperConfig()
 
-    def synthesize(self, text: str) -> tts.ChunkedStream:
-        return PiperChunkedStream(tts=self, text=text, config=self._config)
+    def synthesize(
+        self,
+        text: str,
+        *,
+        conn_options: APIConnectOptions | None = None,
+    ) -> tts.ChunkedStream:
+        return PiperChunkedStream(
+            tts=self,
+            text=text,
+            config=self._config,
+            conn_options=conn_options or APIConnectOptions(),
+        )
 
 
 class PiperChunkedStream(tts.ChunkedStream):
-    def __init__(self, *, tts: PiperTTS, text: str, config: PiperConfig) -> None:
-        super().__init__(tts=tts, input_text=text)
+    def __init__(
+        self,
+        *,
+        tts: PiperTTS,
+        text: str,
+        config: PiperConfig,
+        conn_options: APIConnectOptions,
+    ) -> None:
+        super().__init__(tts=tts, input_text=text, conn_options=conn_options)
         self._config = config
 
-    async def _run(self) -> None:
+    async def _run(self, output_emitter: tts.AudioEmitter) -> None:
         cmd = [
             self._config.piper_binary,
             "--model",
@@ -70,10 +87,10 @@ class PiperChunkedStream(tts.ChunkedStream):
             logger.error("Piper failed", extra={"returncode": proc.returncode, "stderr": err_msg})
             return
 
-        frame = utils.AudioFrame(
-            data=stdout,
+        output_emitter.initialize(
+            request_id="piper-local",
             sample_rate=PIPER_SAMPLE_RATE,
             num_channels=1,
-            samples_per_channel=len(stdout) // 2,
+            mime_type="audio/pcm",
         )
-        self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=self._request_id))
+        output_emitter.push(stdout)

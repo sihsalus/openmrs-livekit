@@ -80,7 +80,9 @@ class AgentLogger(logging.LoggerAdapter[logging.Logger]):
         super().__init__(logger, extra or {})
 
     def process(
-        self, msg: str, kwargs: Any  # noqa: ANN401
+        self,
+        msg: str,
+        kwargs: Any,  # noqa: ANN401
     ) -> tuple[str, Any]:
         extra: dict[str, Any] = {**(self.extra or {}), **kwargs.pop("extra", {})}
         kwargs["extra"] = extra
