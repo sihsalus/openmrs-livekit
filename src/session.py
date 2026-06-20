@@ -31,6 +31,9 @@ from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tok
 from src.prompts import (
     CAPABILITIES_BLOCK,
     CONVERSATION_POLICY_BLOCK,
+    get_clinical_capabilities_block,
+    get_clinical_greeting,
+    get_clinical_system_prompt,
     get_greeting,
     get_system_prompt,
 )
@@ -186,6 +189,9 @@ def build_instructions(
     owner_context = _build_owner_context(room_metadata)
     if custom_prompt:
         job_logger.info("Using custom prompt", extra={"length": len(custom_prompt)})
+    elif settings.enable_openmrs_tools:
+        job_logger.info("Using clinical prompt")
+        custom_prompt = get_clinical_system_prompt()
     else:
         job_logger.info("Using default prompt")
         custom_prompt = get_system_prompt(name=agent_name)
@@ -199,14 +205,20 @@ def build_instructions(
             "Memory context injected into prompt", extra={"length": len(memory_context)}
         )
 
+    caps_block = (
+        get_clinical_capabilities_block() if settings.enable_openmrs_tools else CAPABILITIES_BLOCK
+    )
+    policy_block = "" if settings.enable_openmrs_tools else CONVERSATION_POLICY_BLOCK
+
     if not settings.llm_apply_token_limits:
         instructions = custom_prompt
         if owner_context:
             instructions += owner_context
         if memory_block:
             instructions += memory_block
-        instructions += "\n\n" + CONVERSATION_POLICY_BLOCK.strip()
-        instructions += "\n\n" + CAPABILITIES_BLOCK.strip()
+        if policy_block:
+            instructions += "\n\n" + policy_block.strip()
+        instructions += "\n\n" + caps_block.strip()
         job_logger.info(
             "Instruction prompt built without token budget",
             extra={"approx_prompt_tokens": _estimate_tokens(instructions)},
@@ -240,16 +252,16 @@ def build_instructions(
             ),
             BudgetSection(
                 name="conversation_policy",
-                text=CONVERSATION_POLICY_BLOCK,
-                required=True,
-                min_tokens=estimate_tokens(CONVERSATION_POLICY_BLOCK),
+                text=policy_block,
+                required=bool(policy_block),
+                min_tokens=estimate_tokens(policy_block) if policy_block else 0,
                 trim_priority=5,
             ),
             BudgetSection(
                 name="capabilities_block",
-                text=CAPABILITIES_BLOCK,
+                text=caps_block,
                 required=True,
-                min_tokens=estimate_tokens(CAPABILITIES_BLOCK),
+                min_tokens=estimate_tokens(caps_block),
                 trim_priority=10,
             ),
         ],
@@ -369,11 +381,12 @@ async def send_initial_greeting(
         return
     await asyncio.sleep(settings.greeting_delay)
     raw_greeting = room_metadata.get("greeting")
-    greeting_text = (
-        _sanitize_custom_prompt(raw_greeting, settings.max_custom_prompt_chars)
-        if raw_greeting
-        else get_greeting(name=agent_name)
-    )
+    if raw_greeting:
+        greeting_text = _sanitize_custom_prompt(raw_greeting, settings.max_custom_prompt_chars)
+    elif settings.enable_openmrs_tools:
+        greeting_text = get_clinical_greeting()
+    else:
+        greeting_text = get_greeting(name=agent_name)
     job_logger.info("Sending initial greeting")
     try:
         await session.say(greeting_text)
