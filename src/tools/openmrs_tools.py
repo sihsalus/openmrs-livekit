@@ -124,11 +124,19 @@ async def submit_encounter(context: RunContext, patient_uuid: str = "") -> str:
     if not target_uuid:
         return "Falta el UUID del paciente. Busca al paciente primero con search_patient."
 
+    from src.openmrs_client import CONCEPT_MAP
+
     observations = []
     for fact in draft.facts:
+        concept_uuid = fact.openmrs_concept_uuid
+        display = fact.kind
+        if not concept_uuid and fact.kind in CONCEPT_MAP:
+            concept_uuid, display = CONCEPT_MAP[fact.kind]
+        if not concept_uuid:
+            concept_uuid, display = CONCEPT_MAP["note"]
         observations.append({
-            "code": fact.openmrs_concept_uuid or fact.kind,
-            "display": fact.kind,
+            "code": concept_uuid,
+            "display": display,
             "value": fact.value,
         })
 

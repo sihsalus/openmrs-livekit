@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import datetime, timezone
 from typing import Any
 
 import aiohttp
@@ -11,6 +12,31 @@ from src.config import Settings
 from src.logger import get_logger
 
 logger = get_logger("nebu.openmrs")
+
+CONCEPT_MAP: dict[str, tuple[str, str]] = {
+    "chief_complaint": ("160531AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Chief complaint (text)"),
+    "symptom": ("160531AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Chief complaint (text)"),
+    "systolic_bp": ("5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Systolic blood pressure"),
+    "diastolic_bp": ("5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Diastolic blood pressure"),
+    "temperature": ("5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Temperature (c)"),
+    "height": ("5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Height (cm)"),
+    "pulse": ("5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Pulse"),
+    "respiratory_rate": ("5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Respiratory rate"),
+    "allergy": ("121689AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Allergy"),
+    "diagnosis": ("1284AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Coded Diagnosis"),
+    "vital_sign": ("5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Systolic blood pressure"),
+    "medication": ("162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Text of encounter note"),
+    "note": ("162169AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "Text of encounter note"),
+}
+
+NUMERIC_CONCEPTS = {
+    "5085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "mmHg",
+    "5086AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "mmHg",
+    "5088AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "DEG C",
+    "5090AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "cm",
+    "5087AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "beats/min",
+    "5242AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA": "breaths/min",
+}
 
 _session: aiohttp.ClientSession | None = None
 
@@ -136,25 +162,41 @@ async def create_encounter(
         return None
 
     encounter_uuid = result.get("id")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     created_obs = []
     for obs in observations or []:
+        concept_uuid = obs.get("code", "")
         obs_payload = {
             "resourceType": "Observation",
             "status": "final",
+            "category": [
+                {
+                    "coding": [
+                        {
+                            "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                            "code": "exam",
+                            "display": "Exam",
+                        }
+                    ]
+                }
+            ],
             "code": {
-                "coding": [
-                    {
-                        "system": "http://loinc.org",
-                        "code": obs.get("code", ""),
-                        "display": obs.get("display", ""),
-                    }
-                ],
+                "coding": [{"code": concept_uuid, "display": obs.get("display", "")}],
                 "text": obs.get("display", ""),
             },
             "subject": {"reference": f"Patient/{patient_uuid}", "type": "Patient"},
             "encounter": {"reference": f"Encounter/{encounter_uuid}", "type": "Encounter"},
-            "valueString": obs.get("value", ""),
+            "effectiveDateTime": now,
         }
+        value_raw = obs.get("value", "")
+        unit = NUMERIC_CONCEPTS.get(concept_uuid)
+        if unit:
+            try:
+                obs_payload["valueQuantity"] = {"value": float(value_raw), "unit": unit}
+            except (ValueError, TypeError):
+                obs_payload["valueString"] = value_raw
+        else:
+            obs_payload["valueString"] = value_raw
         obs_result = await fhir_request(settings, "POST", "Observation", json=obs_payload)
         if obs_result:
             created_obs.append(obs_result.get("id"))
