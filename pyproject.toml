@@ -57,8 +57,12 @@ noise-cancellation = [
     "livekit-plugins-noise-cancellation~=0.2",
 ]
 
+local = [
+    "faster-whisper>=1.0",
+]
+
 all = [
-    "openmrs-livekit[dev,deepgram,noise-cancellation]",
+    "openmrs-livekit[dev,deepgram,noise-cancellation,local]",
 ]
 
 [project.scripts]

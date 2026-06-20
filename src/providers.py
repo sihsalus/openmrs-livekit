@@ -111,6 +111,17 @@ def _build_llm_provider(provider: str, settings: Settings):
             kwargs["max_completion_tokens"] = settings.llm_max_output_tokens
         return openai.LLM(**kwargs)
 
+    if provider == "ollama":
+        kwargs: dict = {
+            "model": settings.ollama_model,
+            "api_key": "ollama",
+            "base_url": settings.ollama_base_url,
+            "temperature": settings.llm_temperature,
+        }
+        if settings.llm_apply_token_limits:
+            kwargs["max_completion_tokens"] = settings.llm_max_output_tokens
+        return openai.LLM(**kwargs)
+
     raise ValueError(f"LLM provider desconocido: {provider}")
 
 
@@ -155,6 +166,18 @@ def _build_stt_provider(provider: str, settings: Settings):
             punctuate=settings.deepgram_punctuate,
             profanity_filter=True,
             endpointing_ms=settings.deepgram_endpointing_ms,
+        )
+
+    if provider == "whisper":
+        from src.local_stt import WhisperConfig, WhisperSTT
+
+        return WhisperSTT(
+            config=WhisperConfig(
+                model_size=settings.whisper_model_size,
+                language=settings.stt_language,
+                compute_type=settings.whisper_compute_type,
+                beam_size=settings.whisper_beam_size,
+            )
         )
 
     raise ValueError(f"STT provider desconocido: {provider}")
@@ -218,6 +241,17 @@ def _build_tts_provider(provider: str, settings: Settings):
             temperature=settings.inworld_temperature,
             buffer_char_threshold=settings.inworld_buffer_char_threshold,
             max_buffer_delay_ms=settings.inworld_max_buffer_delay_ms,
+        )
+
+    if provider == "piper":
+        from src.local_tts import PiperConfig, PiperTTS
+
+        return PiperTTS(
+            config=PiperConfig(
+                piper_binary=settings.piper_binary,
+                model_path=settings.piper_model_path,
+                length_scale=settings.piper_length_scale,
+            )
         )
 
     raise ValueError(f"TTS provider desconocido: {provider}")
