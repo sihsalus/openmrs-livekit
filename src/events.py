@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from typing import Any
 
 from livekit import rtc
 from livekit.agents import AgentSession, SpeechCreatedEvent
@@ -51,7 +52,7 @@ def _on_task_done(task: asyncio.Task[None]) -> None:
 
 
 def setup_event_listeners(
-    session: AgentSession,
+    session: AgentSession[Any],
     room: rtc.Room,
     room_name: str,
     settings: Settings,
@@ -62,7 +63,7 @@ def setup_event_listeners(
     """Registra listeners: user_input_transcribed, conversation_item_added, speech_created."""
     _state: dict[str, object] = {"turn_start": None, "filler_task": None}
 
-    def on_user_transcribed(ev) -> None:  # type: ignore[no-untyped-def]
+    def on_user_transcribed(ev: Any) -> None:
         if not ev.is_final:
             return
 
@@ -99,7 +100,7 @@ def setup_event_listeners(
 
             _state["filler_task"] = asyncio.create_task(_maybe_filler())
 
-    def on_conversation_item(ev) -> None:  # type: ignore[no-untyped-def]
+    def on_conversation_item(ev: Any) -> None:
         """Latencia LLM + publish assistant response."""
         item = ev.item
         if not hasattr(item, "role") or item.role != "assistant":

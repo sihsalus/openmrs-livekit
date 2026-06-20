@@ -7,10 +7,13 @@ Incluye:
 - Helpers de construcción de instrucciones a partir de room metadata.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from livekit import agents
 from livekit.agents import AgentSession
@@ -90,7 +93,7 @@ class NebuAgent:
             metrics.audio_duration
         )
 
-    def _on_session_metrics(self, ev) -> None:  # type: ignore[no-untyped-def]
+    def _on_session_metrics(self, ev: Any) -> None:
         if isinstance(ev.metrics, EOUMetrics):
             self._on_eou_metrics(ev.metrics)
 
