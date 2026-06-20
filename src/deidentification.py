@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Iterable, Literal
-
+from typing import Literal
 
 FindingType = Literal[
     "email",
@@ -47,16 +47,12 @@ class DeidentificationResult:
 
 
 _EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
-_PHONE_RE = re.compile(
-    r"(?<!\d)(?:\+?51[\s.-]?)?(?:9[\d\s.-]{8,}|(?:\d[\s.-]){8,}\d)(?!\d)"
-)
+_PHONE_RE = re.compile(r"(?<!\d)(?:\+?51[\s.-]?)?(?:9[\d\s.-]{8,}|(?:\d[\s.-]){8,}\d)(?!\d)")
 _DOCUMENT_RE = re.compile(
     r"\b(?:dni|documento|doc\.?|id|hc|historia(?:\s+clinica)?)\s*[:#-]?\s*([A-Z0-9-]{6,18})\b",
     re.IGNORECASE,
 )
-_DATE_RE = re.compile(
-    r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})\b"
-)
+_DATE_RE = re.compile(r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})\b")
 _UUID_RE = re.compile(
     r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b",
     re.IGNORECASE,
@@ -137,7 +133,9 @@ def _known_entity_spans(
         if len(entity) < 3:
             continue
         pattern = re.compile(rf"(?<!\w){re.escape(entity)}(?!\w)", re.IGNORECASE)
-        spans.extend((m.start(), m.end(), "known_entity", m.group(0)) for m in pattern.finditer(text))
+        spans.extend(
+            (m.start(), m.end(), "known_entity", m.group(0)) for m in pattern.finditer(text)
+        )
     return spans
 
 
@@ -158,4 +156,4 @@ def _select_non_overlapping(
 
 
 def _digest(value: str, salt: str) -> str:
-    return hashlib.sha256(f"{salt}:{value.lower()}".encode("utf-8")).hexdigest()
+    return hashlib.sha256(f"{salt}:{value.lower()}".encode()).hexdigest()

@@ -1,6 +1,9 @@
 """Helpers para presupuestar texto que termina dentro del contexto del LLM."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import Any
 
 CHARS_PER_TOKEN = 4
 TRUNCATION_MARKER = "\n[truncado]"
@@ -46,11 +49,11 @@ def truncate_to_tokens(text: str, max_tokens: int) -> str:
 def compose_budgeted_text(
     sections: list[BudgetSection],
     total_tokens: int,
-) -> tuple[str, dict[str, object]]:
+) -> tuple[str, dict[str, Any]]:
     """Compone secciones dentro de un presupuesto global con degradación por prioridad."""
     budget_chars = tokens_to_chars(total_tokens)
-    prepared = []
-    meta = {
+    prepared: list[dict[str, Any]] = []
+    meta: dict[str, Any] = {
         "budget_tokens": total_tokens,
         "truncated_sections": [],
         "dropped_sections": [],

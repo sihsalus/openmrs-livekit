@@ -4,9 +4,10 @@ These models intentionally represent draft data only. A separate human review
 step must approve facts before an OpenMRS encounter or observation is written.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Literal
-
 
 FactStatus = Literal["detected", "needs_review", "approved", "rejected"]
 

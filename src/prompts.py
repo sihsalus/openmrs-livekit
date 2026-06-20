@@ -30,7 +30,9 @@ _CLINICAL_CAPABILITIES_BLOCK = """
 IDENTIDAD: Eres un asistente clínico de documentación. Nunca diagnostiques ni prescribas.
 CAPACIDADES: buscar pacientes, registrar hechos clínicos, mostrar borrador de encounter, enviar encounter a OpenMRS."""
 
-_CLINICAL_GREETING = """Hola, soy tu asistente de documentación clínica. ¿Con qué paciente trabajamos hoy?"""
+_CLINICAL_GREETING = (
+    """Hola, soy tu asistente de documentación clínica. ¿Con qué paciente trabajamos hoy?"""
+)
 
 
 def get_system_prompt() -> str:

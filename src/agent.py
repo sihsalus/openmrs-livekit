@@ -9,10 +9,13 @@ Responsabilidades de este módulo:
 La lógica de sesión, eventos y transcripts está en session.py, events.py, transcript.py.
 """
 
+from __future__ import annotations
+
 import asyncio
 import atexit
 import functools
 import time
+from typing import Any
 
 from livekit import agents, rtc
 from livekit.agents import Agent
@@ -130,9 +133,9 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings) -> None:
 
 def _register_session_lifecycle(
     ctx: agents.JobContext,
-    session: agents.AgentSession,
+    session: agents.AgentSession[Any],
     room_name: str,
-    job_logger,
+    job_logger: Any,
     transcript_sent: TranscriptFlag,
 ) -> None:
     """Registra métricas de sesión activa y callback de cierre para transcript."""
@@ -155,10 +158,10 @@ def _register_session_lifecycle(
 
 def _setup_budget_timer(
     ctx: agents.JobContext,
-    session: agents.AgentSession,
+    session: agents.AgentSession[Any],
     settings: Settings,
     room_metadata: dict[str, object],
-    job_logger,
+    job_logger: Any,
 ) -> None:
     """Configura el timer de budget: avisa y desconecta cuando se acaba el tiempo."""
     budget_minutes = room_metadata.get("budget_minutes")
@@ -192,7 +195,7 @@ def _setup_budget_timer(
     ctx.add_shutdown_callback(_cancel_budget_task)
 
 
-def make_entrypoint(settings: Settings):  # type: ignore[no-untyped-def]
+def make_entrypoint(settings: Settings) -> functools.partial[Any]:
     """Devuelve el entrypoint del agente picklable via functools.partial."""
     return functools.partial(_entrypoint, settings=settings)
 
@@ -231,7 +234,7 @@ def start_metrics_server(settings: Settings) -> None:
 
 def main() -> None:
     """Función principal para ejecutar el agente."""
-    settings = Settings()
+    settings = Settings()  # type: ignore[call-arg]  # pydantic loads from env
     setup_logging(settings)
 
     logger.info(

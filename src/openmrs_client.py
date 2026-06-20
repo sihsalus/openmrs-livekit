@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import aiohttp
@@ -61,9 +61,9 @@ async def fhir_request(
     method: str,
     path: str,
     *,
-    json: dict | None = None,
-    params: dict | None = None,
-) -> dict | None:
+    json: dict[str, Any] | None = None,
+    params: dict[str, str] | None = None,
+) -> dict[str, Any] | None:
     session = await _get_session()
     url = f"{settings.openmrs_base_url}/ws/fhir2/R4/{path}"
     headers = {
@@ -77,7 +77,7 @@ async def fhir_request(
                 body = await resp.text()
                 logger.error("FHIR error", extra={"status": resp.status, "body": body[:200]})
                 return None
-            return await resp.json()
+            return await resp.json()  # type: ignore[no-any-return]
     except Exception as e:
         logger.error("FHIR request failed", extra={"error": str(e), "path": path})
         return None
@@ -94,17 +94,19 @@ async def search_patients(settings: Settings, name: str) -> list[dict[str, Any]]
         display = names[0].get("text", "") if names else ""
         ids = r.get("identifier", [{}])
         openmrs_id = ids[0].get("value", "") if ids else ""
-        results.append({
-            "uuid": r.get("id", ""),
-            "name": display,
-            "openmrs_id": openmrs_id,
-            "gender": r.get("gender", ""),
-            "birth_date": r.get("birthDate", ""),
-        })
+        results.append(
+            {
+                "uuid": r.get("id", ""),
+                "name": display,
+                "openmrs_id": openmrs_id,
+                "gender": r.get("gender", ""),
+                "birth_date": r.get("birthDate", ""),
+            }
+        )
     return results
 
 
-async def get_patient(settings: Settings, uuid: str) -> dict | None:
+async def get_patient(settings: Settings, uuid: str) -> dict[str, Any] | None:
     data = await fhir_request(settings, "GET", f"Patient/{uuid}")
     if not data:
         return None
@@ -128,8 +130,8 @@ async def create_encounter(
     patient_uuid: str,
     encounter_type_uuid: str = "0e8230ce-bd1d-43f5-a863-cf44344fa4b0",
     location_uuid: str = "92dbdbdf-17da-4cf0-873c-ad15dfae71cb",
-    observations: list[dict] | None = None,
-) -> dict | None:
+    observations: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
     encounter_payload = {
         "resourceType": "Encounter",
         "status": "finished",
@@ -162,7 +164,7 @@ async def create_encounter(
         return None
 
     encounter_uuid = result.get("id")
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S+00:00")
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
     created_obs = []
     for obs in observations or []:
         concept_uuid = obs.get("code", "")

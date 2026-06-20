@@ -7,7 +7,6 @@ from typing import Literal
 
 from src.deidentification import DeidentificationResult, deidentify_text
 
-
 SpeakerRole = Literal["clinician", "patient", "caregiver", "interpreter", "unknown"]
 
 

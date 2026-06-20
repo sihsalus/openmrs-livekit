@@ -8,7 +8,7 @@ clinician reviewer.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from src.clinical_facts import ClinicalFact, EncounterDraft
@@ -23,9 +23,7 @@ class OpenMRSEncounterContext:
     location_uuid: str
     provider_uuid: str | None = None
     visit_uuid: str | None = None
-    encounter_datetime: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    encounter_datetime: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 def build_openmrs_encounter_payload(

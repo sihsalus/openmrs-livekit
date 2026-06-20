@@ -143,16 +143,12 @@ class Settings(BaseSettings):
     whisper_beam_size: int = Field(default=5, description="Whisper beam search size")
 
     # ============= Piper Configuration (Local) =============
-    piper_binary: str = Field(
-        default="/srv/piper/piper/piper", description="Path to Piper binary"
-    )
+    piper_binary: str = Field(default="/srv/piper/piper/piper", description="Path to Piper binary")
     piper_model_path: str = Field(
         default="/srv/piper/voices/es_MX-claude-high.onnx",
         description="Path to Piper ONNX voice model",
     )
-    piper_length_scale: float = Field(
-        default=1.0, description="Piper speech speed (1.0 = normal)"
-    )
+    piper_length_scale: float = Field(default=1.0, description="Piper speech speed (1.0 = normal)")
 
     # ============= Deepgram Configuration =============
     deepgram_api_key: str | None = Field(default=None, description="API Key Deepgram")

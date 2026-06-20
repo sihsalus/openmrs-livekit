@@ -33,7 +33,7 @@ def _get_session(settings: Settings) -> aiohttp.ClientSession:
     global _session
     if _session is None or _session.closed:
         _session = aiohttp.ClientSession(
-            headers={"x-agent-secret": settings.agent_internal_secret},
+            headers={"x-agent-secret": settings.agent_internal_secret or ""},
             timeout=aiohttp.ClientTimeout(total=10),
             connector=aiohttp.TCPConnector(limit=20, keepalive_timeout=60),
         )
@@ -41,7 +41,7 @@ def _get_session(settings: Settings) -> aiohttp.ClientSession:
 
 
 def _build_url(settings: Settings, path: str) -> str:
-    base = settings.agent_backend_url.rstrip("/")
+    base = (settings.agent_backend_url or "").rstrip("/")
     return f"{base}/{path.lstrip('/')}"
 
 
@@ -62,12 +62,12 @@ async def backend_request(
     settings: Settings,
     method: str,
     path: str,
-    job_logger,
+    job_logger: Any,
     *,
-    json: dict | None = None,
+    json: dict[str, Any] | None = None,
     timeout_seconds: float = 10,
     label: str = "backend request",
-) -> dict | None:
+) -> dict[str, Any] | None:
     """
     Make an authenticated request to the backend API.
 
@@ -95,7 +95,7 @@ async def backend_request(
             if not body.strip():
                 return {}
             try:
-                return await resp.json(content_type=None)
+                return await resp.json(content_type=None)  # type: ignore[no-any-return]
             except Exception as exc:
                 job_logger.warning(f"{label} returned non-JSON success response: {exc}")
                 return {}

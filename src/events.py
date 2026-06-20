@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, Coroutine
 
 from livekit import rtc
 from livekit.agents import AgentSession, SpeechCreatedEvent
@@ -35,7 +35,7 @@ _bg_tasks: set[asyncio.Task[None]] = set()
 _logger = logging.getLogger("nebu.events")
 
 
-def _fire_and_forget(coro) -> asyncio.Task[None]:  # type: ignore[type-arg]
+def _fire_and_forget(coro: Coroutine[Any, Any, Any]) -> asyncio.Task[None]:
     task = asyncio.create_task(coro)
     _bg_tasks.add(task)
     task.add_done_callback(_on_task_done)
@@ -78,9 +78,7 @@ def setup_event_listeners(
             extra={"turn_id": turn_context.turn_id, "transcript_len": len(text)},
         )
 
-        _fire_and_forget(
-            publish_transcript(room, role="doctor", language="auto", text=text)
-        )
+        _fire_and_forget(publish_transcript(room, role="doctor", language="auto", text=text))
 
         TURNS_TOTAL.labels(personality="clinical").inc()
 
@@ -110,9 +108,7 @@ def setup_event_listeners(
             LLM_LATENCY.labels(personality="clinical").observe(time.time() - turn_start)
         text = item.text_content
         if text:
-            _fire_and_forget(
-                publish_transcript(room, role="assistant", language="auto", text=text)
-            )
+            _fire_and_forget(publish_transcript(room, role="assistant", language="auto", text=text))
 
     def on_speech_created(ev: SpeechCreatedEvent) -> None:
         """Cancela el filler si el LLM respondió a tiempo; registra latencia de turno."""

@@ -39,12 +39,16 @@ async def publish_transcript(
     text: str,
     redacted: str | None = None,
 ) -> None:
-    await publish_message(room, "transcript", {
-        "role": role,
-        "language": language,
-        "text": text,
-        "redacted": redacted or text,
-    })
+    await publish_message(
+        room,
+        "transcript",
+        {
+            "role": role,
+            "language": language,
+            "text": text,
+            "redacted": redacted or text,
+        },
+    )
 
 
 async def publish_translation(
@@ -54,12 +58,16 @@ async def publish_translation(
     target_language: str,
     text: str,
 ) -> None:
-    await publish_message(room, "translation", {
-        "role": role,
-        "language": target_language,
-        "text": text,
-        "sourceLanguage": source_language,
-    })
+    await publish_message(
+        room,
+        "translation",
+        {
+            "role": role,
+            "language": target_language,
+            "text": text,
+            "sourceLanguage": source_language,
+        },
+    )
 
 
 async def publish_draft(room: rtc.Room, draft: dict[str, object]) -> None:
@@ -67,10 +75,14 @@ async def publish_draft(room: rtc.Room, draft: dict[str, object]) -> None:
 
 
 async def publish_status(room: rtc.Room, step: str, message: str = "") -> None:
-    await publish_message(room, "status", {
-        "step": step,
-        "message": message,
-    })
+    await publish_message(
+        room,
+        "status",
+        {
+            "step": step,
+            "message": message,
+        },
+    )
 
 
 async def publish_error(room: rtc.Room, message: str) -> None:

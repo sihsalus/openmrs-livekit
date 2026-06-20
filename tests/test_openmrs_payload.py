@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -41,7 +41,7 @@ def test_build_review_bundle_only_writes_approved_facts():
             encounter_type_uuid="encounter-type-uuid",
             location_uuid="location-uuid",
             provider_uuid="provider-uuid",
-            encounter_datetime=datetime(2026, 6, 20, 12, 0, tzinfo=timezone.utc),
+            encounter_datetime=datetime(2026, 6, 20, 12, 0, tzinfo=UTC),
         ),
     )
 

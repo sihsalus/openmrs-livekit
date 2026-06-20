@@ -146,11 +146,13 @@ async def submit_encounter(context: RunContext, patient_uuid: str = "") -> str:
             concept_uuid, display = CONCEPT_MAP[fact.kind]
         if not concept_uuid:
             concept_uuid, display = CONCEPT_MAP["note"]
-        observations.append({
-            "code": concept_uuid,
-            "display": display,
-            "value": fact.value,
-        })
+        observations.append(
+            {
+                "code": concept_uuid,
+                "display": display,
+                "value": fact.value,
+            }
+        )
 
     result = await create_encounter(
         settings,

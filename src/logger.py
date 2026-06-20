@@ -73,21 +73,21 @@ class TextFormatter(logging.Formatter):
         return msg
 
 
-class AgentLogger(logging.LoggerAdapter):
+class AgentLogger(logging.LoggerAdapter[logging.Logger]):
     """Logger adapter que facilita agregar contexto a los logs"""
 
     def __init__(self, logger: logging.Logger, extra: dict[str, Any] | None = None):
         super().__init__(logger, extra or {})
 
-    def process(self, msg: str, kwargs: dict) -> tuple[str, dict]:
-        # Combinar extra del adapter con extra del mensaje
-        extra = {**self.extra, **kwargs.pop("extra", {})}
+    def process(
+        self, msg: str, kwargs: Any  # noqa: ANN401
+    ) -> tuple[str, Any]:
+        extra: dict[str, Any] = {**(self.extra or {}), **kwargs.pop("extra", {})}
         kwargs["extra"] = extra
         return msg, kwargs
 
-    def with_context(self, **context) -> "AgentLogger":
-        """Crea un nuevo logger con contexto adicional"""
-        new_extra = {**self.extra, **context}
+    def with_context(self, **context: Any) -> "AgentLogger":
+        new_extra: dict[str, Any] = {**(self.extra or {}), **context}
         return AgentLogger(self.logger, new_extra)
 
 
@@ -106,6 +106,7 @@ def setup_logging(settings: Settings) -> logging.Logger:
     handler.setLevel(getattr(logging, settings.log_level))
 
     # Seleccionar formatter según configuración
+    formatter: logging.Formatter
     if settings.log_format == "json":
         formatter = JSONFormatter()
     else:

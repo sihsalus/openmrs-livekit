@@ -1,7 +1,7 @@
 import pytest
 
 from src.config import Settings
-from src.prompts import get_capabilities_block, get_system_prompt
+from src.prompts import get_capabilities_block
 from src.session import build_instructions
 
 

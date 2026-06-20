@@ -76,6 +76,4 @@ class PiperChunkedStream(tts.ChunkedStream):
             num_channels=1,
             samples_per_channel=len(stdout) // 2,
         )
-        self._event_ch.send_nowait(
-            tts.SynthesizedAudio(frame=frame, request_id=self._request_id)
-        )
+        self._event_ch.send_nowait(tts.SynthesizedAudio(frame=frame, request_id=self._request_id))

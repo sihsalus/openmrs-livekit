@@ -8,8 +8,8 @@ import pytest
 
 from src.config import Settings
 
-
 # ── Fixture: parchea todos los módulos externos que providers.py necesita ────
+
 
 @pytest.fixture
 def livekit_mock():
@@ -60,10 +60,13 @@ def livekit_mock():
 
 @pytest.fixture
 def mistral_settings():
-    return Settings(llm_provider="mistral", mistral_api_key="mist-test", llm_apply_token_limits=True)
+    return Settings(
+        llm_provider="mistral", mistral_api_key="mist-test", llm_apply_token_limits=True
+    )
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
+
 
 class TestBuildLlmMistral:
     def test_mistral_uses_openai_plugin_with_mistral_base_url(self, livekit_mock, mistral_settings):
@@ -71,6 +74,7 @@ class TestBuildLlmMistral:
         livekit_mock.LLM.return_value = fake_llm
 
         from src.providers import build_llm
+
         result = build_llm(mistral_settings)
 
         assert result is fake_llm
@@ -83,6 +87,7 @@ class TestBuildLlmMistral:
         livekit_mock.LLM.return_value = MagicMock()
 
         from src.providers import build_llm
+
         build_llm(mistral_settings)
 
         call_kwargs = livekit_mock.LLM.call_args.kwargs
@@ -92,16 +97,20 @@ class TestBuildLlmMistral:
         livekit_mock.LLM.return_value = MagicMock()
 
         from src.providers import build_llm
+
         build_llm(mistral_settings)
 
         call_kwargs = livekit_mock.LLM.call_args.kwargs
         assert call_kwargs["max_completion_tokens"] == mistral_settings.llm_max_output_tokens
 
     def test_mistral_omits_max_completion_tokens_when_limits_disabled(self, livekit_mock):
-        s = Settings(llm_provider="mistral", mistral_api_key="mist-test", llm_apply_token_limits=False)
+        s = Settings(
+            llm_provider="mistral", mistral_api_key="mist-test", llm_apply_token_limits=False
+        )
         livekit_mock.LLM.return_value = MagicMock()
 
         from src.providers import build_llm
+
         build_llm(s)
 
         call_kwargs = livekit_mock.LLM.call_args.kwargs
@@ -116,6 +125,7 @@ class TestBuildLlmMistral:
         livekit_mock.LLM.return_value = MagicMock()
 
         from src.providers import build_llm
+
         build_llm(s)
 
         assert livekit_mock.LLM.call_args.kwargs["model"] == "ministral-3b-latest"
@@ -139,6 +149,7 @@ class TestBuildLlmMistral:
         livekit_mock.LLM.side_effect = fake_llm_cls
 
         from src.providers import build_llm
+
         result = build_llm(s)
 
         assert result is not None
@@ -148,5 +159,6 @@ class TestBuildLlmMistral:
         s = Settings()
 
         from src.providers import _build_llm_provider
+
         with pytest.raises(ValueError, match="desconocido"):
             _build_llm_provider("unknown_provider", s)
