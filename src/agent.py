@@ -1,10 +1,10 @@
 """
-Nebu Agent — entry point principal.
+OpenMRS LiveKit Agent — entry point principal.
 
 Responsabilidades de este módulo:
 - main() y _entrypoint(): orquestación del ciclo de vida del agente.
 - start_metrics_server(): servidor HTTP para /metrics de Prometheus.
-- Precarga de modelos (silero VAD, turn detection).
+- Precarga de modelos (silero VAD).
 
 La lógica de sesión, eventos y transcripts está en session.py, events.py, transcript.py.
 """
@@ -12,7 +12,6 @@ La lógica de sesión, eventos y transcripts está en session.py, events.py, tra
 import asyncio
 import atexit
 import functools
-import threading
 import time
 
 from livekit import agents, rtc
@@ -22,9 +21,8 @@ from livekit.plugins import silero
 
 from src.backend_client import close_session as _close_backend_session
 from src.config import AGENT_VERSION, Settings
-from src.events import AGENT_ROOM_PREFIX, setup_event_listeners, setup_walkie_talkie
+from src.events import AGENT_ROOM_PREFIX, setup_event_listeners
 from src.logger import get_logger, setup_logging
-from src.memory import fetch_memory_context
 from src.metrics import (
     ACTIVE_SESSIONS,
     AGENT_INFO,
@@ -32,8 +30,6 @@ from src.metrics import (
     SESSION_DURATION,
     SESSIONS_TOTAL,
 )
-from src.moderation import ContentModerator
-from src.personality import PersonalityProfile
 from src.session import (
     NebuAgent,
     TranscriptFlag,
@@ -41,33 +37,20 @@ from src.session import (
     build_instructions,
     parse_room_metadata,
     send_initial_greeting,
-    setup_variety_engine,
 )
-from src.tools import get_tools, init_dispatcher
-from src.transcript import save_transcript
+from src.tools import get_tools
 
 logger = get_logger("nebu.agent")
 
 
-def _prewarm_models(proc: agents.JobProcess, enable_turn_detection: bool):
+def _prewarm_models(proc: agents.JobProcess) -> None:
     """Precarga de modelos — top-level para ser picklable por forkserver."""
     silero.VAD.load()
-    if enable_turn_detection:
-        from livekit.plugins.turn_detector.multilingual import MultilingualModel
-
-        proc.userdata["turn_detection"] = MultilingualModel()
-        logger.info("Models preloaded: Silero VAD + Turn Detection")
-    else:
-        logger.info("Models preloaded: Silero VAD")
+    logger.info("Models preloaded: Silero VAD")
 
 
-def make_prewarm(settings: Settings):
-    """Devuelve la función de precarga picklable via functools.partial."""
-    return functools.partial(_prewarm_models, enable_turn_detection=settings.enable_turn_detection)
-
-
-async def _entrypoint(ctx: agents.JobContext, settings: Settings):
-    """Entrypoint del agente — top-level para ser picklable por forkserver."""
+async def _entrypoint(ctx: agents.JobContext, settings: Settings) -> None:
+    """Entrypoint del agente."""
     room_name = ctx.room.name if ctx.room else ""
     session_id = f"{room_name}_{int(time.time())}"
     job_logger = logger.with_context(
@@ -94,26 +77,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
 
     room_metadata = parse_room_metadata(ctx, job_logger)
 
-    agent_name = room_metadata.get("toy_name") or settings.agent_name
-    job_logger.info("Agent name resolved", extra={"agent_name": agent_name})
-
-    toy_id = room_metadata.get("toy_id")
-    memory_context = None
-    if toy_id:
-        memory_context = await fetch_memory_context(toy_id, settings, job_logger)
-    else:
-        job_logger.info("No toy_id in metadata, skipping memory fetch")
-
-    # Initialize tool dispatcher — must be done before tools are used
-    init_dispatcher(settings)
-
-    instructions = build_instructions(
-        room_metadata,
-        settings,
-        job_logger,
-        memory_context=memory_context,
-        agent_name=agent_name,
-    )
+    instructions = build_instructions(room_metadata, settings, job_logger)
     turn_context = TurnContext()
 
     nebu = NebuAgent(settings)
@@ -128,42 +92,18 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         ERRORS_TOTAL.labels(type="session").inc()
         return
 
-    profile = await setup_variety_engine(
-        session, room_metadata, settings, job_logger, agent_name=agent_name
-    )
     session.userdata["base_instructions"] = instructions
-    session.userdata["agent_name"] = agent_name
     session.userdata["settings"] = settings
     session.userdata["room"] = ctx.room
 
     transcript_sent = TranscriptFlag()
-    _register_session_lifecycle(
-        ctx, session, room_name, settings, profile, job_logger, transcript_sent
-    )
+    _register_session_lifecycle(ctx, session, room_name, job_logger, transcript_sent)
 
     agent = Agent(instructions=instructions, tools=get_tools(settings))
-    has_parent_in_room = setup_walkie_talkie(ctx, session, settings, job_logger, room_metadata)
-    moderator = (
-        ContentModerator(settings, room_name, job_logger)
-        if settings.enable_content_moderation
-        else None
-    )
     setup_event_listeners(
-        session,
-        ctx.room,
-        room_name,
-        settings,
-        turn_context,
-        profile,
-        job_logger,
-        transcript_sent,
-        moderator=moderator,
+        session, ctx.room, room_name, settings, turn_context, job_logger, transcript_sent
     )
 
-    # Opus RED: duplica frames anteriores en cada paquete para tolerar
-    # pérdida de paquetes WiFi (~+30% bitrate, sub-30kbps total para voz).
-    # Crítico para clientes ESP32 sobre WiFi 2.4GHz donde el jitter buffer
-    # es limitado y el rebuffer es audible.
     room_options = RoomOptions(
         audio_output=AudioOutputOptions(
             track_publish_options=rtc.TrackPublishOptions(
@@ -181,15 +121,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
         return
     job_logger.info("Session started and listening")
 
-    if has_parent_in_room and has_parent_in_room():
-        job_logger.info("Parent already in room - starting in walkie-talkie mode")
-        session.interrupt()
-        session.input.set_audio_enabled(False)
-        session.output.set_audio_enabled(False)
-    else:
-        await send_initial_greeting(
-            session, settings, room_metadata, job_logger, agent_name=agent_name
-        )
+    await send_initial_greeting(session, settings, room_metadata, job_logger)
 
     _setup_budget_timer(ctx, session, settings, room_metadata, job_logger)
 
@@ -200,20 +132,21 @@ def _register_session_lifecycle(
     ctx: agents.JobContext,
     session: agents.AgentSession,
     room_name: str,
-    settings: Settings,
-    profile: PersonalityProfile,
     job_logger,
     transcript_sent: TranscriptFlag,
 ) -> None:
     """Registra métricas de sesión activa y callback de cierre para transcript."""
+    from src.transcript import save_transcript
+
     session_start = time.time()
     ACTIVE_SESSIONS.inc()
-    SESSIONS_TOTAL.labels(personality=profile.id).inc()
+    SESSIONS_TOTAL.labels(personality="clinical").inc()
 
-    async def _on_session_end():
+    async def _on_session_end() -> None:
         ACTIVE_SESSIONS.dec()
         SESSION_DURATION.observe(time.time() - session_start)
-        if not transcript_sent.done:
+        settings: Settings = session.userdata.get("settings")
+        if not transcript_sent.done and settings:
             transcript_sent.done = True
             await save_transcript(session, room_name, settings, job_logger)
 
@@ -222,33 +155,30 @@ def _register_session_lifecycle(
 
 def _setup_budget_timer(
     ctx: agents.JobContext,
-    session,
+    session: agents.AgentSession,
     settings: Settings,
-    room_metadata: dict,
+    room_metadata: dict[str, object],
     job_logger,
 ) -> None:
-    """Configura el timer de budget: avisa al niño y desconecta cuando se acaba el tiempo."""
+    """Configura el timer de budget: avisa y desconecta cuando se acaba el tiempo."""
     budget_minutes = room_metadata.get("budget_minutes")
-    if not budget_minutes or budget_minutes <= 0:
+    if not budget_minutes or not isinstance(budget_minutes, (int, float)) or budget_minutes <= 0:
         return
 
     job_logger.info("Session budget set", extra={"budget_minutes": budget_minutes})
 
-    async def _budget_timer():
+    async def _budget_timer() -> None:
         warn_sec = settings.budget_warning_seconds
-        warning_at = max(0, (budget_minutes * 60) - warn_sec)
+        warning_at = max(0, (int(budget_minutes) * 60) - warn_sec)
         await asyncio.sleep(warning_at)
         try:
-            await session.say(
-                "¡Oye! Nos queda como un minutito para hablar hoy. "
-                "¿Hay algo más que quieras contarme?"
-            )
+            await session.say("Nos queda aproximadamente un minuto. ¿Algo más que registrar?")
         except Exception:
             job_logger.debug("Budget warning say failed", exc_info=True)
         await asyncio.sleep(warn_sec)
         job_logger.info("Budget exhausted, disconnecting")
         try:
-            await session.say("¡Se nos acabó el tiempo por hoy! ¡Nos vemos pronto!")
+            await session.say("Se acabó el tiempo de la sesión. Guardando el borrador.")
         except Exception:
             job_logger.debug("Budget goodbye say failed", exc_info=True)
         await asyncio.sleep(5)
@@ -257,82 +187,36 @@ def _setup_budget_timer(
     budget_task = asyncio.create_task(_budget_timer())
 
     async def _cancel_budget_task() -> None:
-        # add_shutdown_callback espera coroutines; Task.cancel() retorna bool.
         budget_task.cancel()
 
     ctx.add_shutdown_callback(_cancel_budget_task)
 
 
-def make_entrypoint(settings: Settings):
+def make_entrypoint(settings: Settings):  # type: ignore[no-untyped-def]
     """Devuelve el entrypoint del agente picklable via functools.partial."""
     return functools.partial(_entrypoint, settings=settings)
 
 
-def _build_wsgi_app():
-    """Build a WSGI app that routes /personalities and /metrics."""
-    import json
-    import os
-
-    from prometheus_client import CollectorRegistry
-    from prometheus_client import multiprocess as prom_mp
-    from prometheus_client.exposition import make_wsgi_app
-
-    from src.personalities import REGISTRY
-
-    multiprocess_dir = os.environ.get("PROMETHEUS_MULTIPROC_DIR")
-    metrics_app = None
-
-    def app(environ, start_response):
-        nonlocal metrics_app
-        path = environ.get("PATH_INFO", "")
-
-        if path == "/personalities":
-            profiles = [
-                {"id": p.id, "display_name": p.display_name, "description": p.description}
-                for p in REGISTRY.values()
-            ]
-            body = json.dumps(profiles).encode()
-            start_response(
-                "200 OK",
-                [
-                    ("Content-Type", "application/json"),
-                    ("Content-Length", str(len(body))),
-                ],
-            )
-            return [body]
-
-        # /metrics (default)
-        if metrics_app is None:
-            if multiprocess_dir:
-                registry = CollectorRegistry()
-                prom_mp.MultiProcessCollector(registry)
-            else:
-                registry = None
-            metrics_app = make_wsgi_app(registry)
-        return metrics_app(environ, start_response)
-
-    return app
-
-
 def start_metrics_server(settings: Settings) -> None:
-    """Start threaded HTTP server for /metrics and /personalities."""
+    """Start threaded HTTP server for /metrics."""
     if not settings.api_enabled:
         logger.info("Metrics server disabled (API_ENABLED=false)")
         return
 
+    import threading
     from socketserver import ThreadingMixIn
     from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
-    class _ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
-        """WSGI server that handles each request in a new thread."""
+    from prometheus_client import make_wsgi_app
 
+    class _ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
         daemon_threads = True
 
     class _SilentHandler(WSGIRequestHandler):
-        def log_message(self, *_):
+        def log_message(self, *_):  # type: ignore[no-untyped-def]
             pass
 
-    app = _build_wsgi_app()
+    app = make_wsgi_app()
     httpd = make_server(
         "0.0.0.0",
         settings.api_port,
@@ -345,16 +229,15 @@ def start_metrics_server(settings: Settings) -> None:
     logger.info("Metrics server started", extra={"port": settings.api_port})
 
 
-def main():
+def main() -> None:
     """Función principal para ejecutar el agente."""
     settings = Settings()
     setup_logging(settings)
 
     logger.info(
-        "Starting Nebu Agent",
+        "Starting OpenMRS LiveKit Agent",
         extra={
             "version": AGENT_VERSION,
-            "agent_name": settings.agent_name,
             "log_level": settings.log_level,
             "tts_provider": settings.tts_provider,
         },
@@ -366,7 +249,7 @@ def main():
     AGENT_INFO.info(
         {
             "version": AGENT_VERSION,
-            "agent_name": settings.agent_name,
+            "agent_name": "clinical",
             "tts_provider": settings.tts_provider,
             "stt_provider": settings.stt_provider,
             "log_level": settings.log_level,
@@ -375,20 +258,20 @@ def main():
 
     start_metrics_server(settings)
 
-    def _shutdown_backend():
+    def _shutdown_backend() -> None:
         try:
             loop = asyncio.new_event_loop()
             loop.run_until_complete(_close_backend_session())
             loop.close()
         except Exception:
-            pass  # event loop issues at shutdown — session will be GC'd
+            pass
 
     atexit.register(_shutdown_backend)
 
     agents.cli.run_app(
         agents.WorkerOptions(
             entrypoint_fnc=make_entrypoint(settings),
-            prewarm_fnc=make_prewarm(settings),
+            prewarm_fnc=_prewarm_models,
         )
     )
 

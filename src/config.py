@@ -196,21 +196,7 @@ class Settings(BaseSettings):
         description="Proveedores STT de fallback separados por coma si el primario falla (ej: 'openai')",
     )
 
-    # ============= Web Search Configuration =============
-    web_search_provider: Literal["tavily", "brave", "serpapi", "duckduckgo", "wikipedia"] | None = (
-        Field(default=None, description="Proveedor de búsqueda web (None = deshabilitado)")
-    )
-    web_search_parental_consent: bool = Field(
-        default=False,
-        description="COPPA: Consentimiento parental verificado para búsquedas web",
-    )
-    tavily_api_key: str | None = Field(default=None, description="API Key de Tavily")
-    brave_search_api_key: str | None = Field(default=None, description="API Key de Brave Search")
-    serpapi_api_key: str | None = Field(default=None, description="API Key de SerpAPI")
-    web_search_max_results: int = Field(default=3, description="Máximo de resultados de búsqueda")
-
     # ============= Agent Settings =============
-    agent_name: str = Field(default="Nebu", description="Nombre del agente")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
     log_format: Literal["json", "text"] = Field(default="json")
 
@@ -284,7 +270,7 @@ class Settings(BaseSettings):
     greeting_enabled: bool = Field(default=True, description="Habilitar saludo inicial")
     budget_warning_seconds: int = Field(
         default=60,
-        description="Segundos antes del fin del budget para avisar al niño",
+        description="Seconds before budget end to warn clinician",
     )
 
     # ============= Language Settings =============
@@ -357,27 +343,8 @@ class Settings(BaseSettings):
     openmrs_password: str = Field(default="Admin123", description="OpenMRS password")
 
     # ═══════════════════════════════════════════════════════════════
-    # Feature Flags - Optimización para ESP32
+    # Feature Flags
     # ═══════════════════════════════════════════════════════════════
-    enable_turn_detection: bool = Field(
-        default=False,
-        description="Enable semantic turn detection model (~20MB RAM overhead)",
-    )
-
-    enable_variety_engine: bool = Field(
-        default=True,
-        description="Enable anti-repetition FSM and sliding context (~10MB RAM overhead)",
-    )
-
-    enable_walkie_talkie: bool = Field(
-        default=False,
-        description="Enable parent pause mode for multi-participant rooms",
-    )
-
-    enable_content_moderation: bool = Field(
-        default=True,
-        description="Enable content moderation",
-    )
 
     # ═══════════════════════════════════════════════════════════════
     # Latency Tuning
@@ -492,9 +459,8 @@ class Settings(BaseSettings):
         budget_mode = "ON" if self.llm_apply_token_limits else "OFF"
         return f"""
 ╔══════════════════════════════════════════════════════════════╗
-║                    NEBU AGENT v{v:<29}║
+║              OPENMRS LIVEKIT AGENT v{v:<24}║
 ╠══════════════════════════════════════════════════════════════╣
-║  Agent Name:       {self.agent_name:<40} ║
 ║  Log Level:        {self.log_level:<40} ║
 ║  LiveKit URL:      {self.livekit_url:<40} ║
 ║  LLM:              {llm_label:<40} ║

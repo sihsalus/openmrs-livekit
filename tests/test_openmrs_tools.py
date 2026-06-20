@@ -82,23 +82,23 @@ class TestToolRegistration:
 
 class TestClinicalPrompts:
     def test_clinical_prompt_loaded(self):
-        from src.prompts import get_clinical_system_prompt
+        from src.prompts import get_system_prompt
 
-        prompt = get_clinical_system_prompt()
+        prompt = get_system_prompt()
         assert "asistente clínico" in prompt
         assert "record_clinical_fact" in prompt
         assert "search_patient" in prompt
 
     def test_clinical_greeting(self):
-        from src.prompts import get_clinical_greeting
+        from src.prompts import get_greeting
 
-        greeting = get_clinical_greeting()
+        greeting = get_greeting()
         assert "documentación clínica" in greeting
 
     def test_clinical_capabilities(self):
-        from src.prompts import get_clinical_capabilities_block
+        from src.prompts import get_capabilities_block
 
-        block = get_clinical_capabilities_block()
+        block = get_capabilities_block()
         assert "buscar pacientes" in block
 
 

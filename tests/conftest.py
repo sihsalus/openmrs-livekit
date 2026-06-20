@@ -1,4 +1,4 @@
-"""Shared fixtures for Nebu agent tests."""
+"""Shared fixtures for agent tests."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock
 import pytest
 
 
-# ── Environment: set dummy env vars so Settings() doesn't fail ──────────────
 @pytest.fixture(autouse=True)
 def _env_defaults(monkeypatch):
     """Provide required env vars for any test that imports Settings."""
@@ -27,7 +26,6 @@ def _env_defaults(monkeypatch):
         monkeypatch.setenv(k, v)
 
 
-# ── Mock RunContext for @function_tool tests ────────────────────────────────
 @dataclass
 class FakeAgent:
     """Minimal mock of livekit Agent with update_instructions."""
@@ -60,15 +58,9 @@ class FakeRunContext:
 
 @pytest.fixture
 def fake_context():
-    """Create a FakeRunContext with a VarietyEngine pre-loaded."""
-    from src.variety import VarietyEngine
-
-    base = "Base instructions for testing."
+    """Create a FakeRunContext for clinical tool tests."""
     ctx = FakeRunContext(
-        userdata={
-            "variety": VarietyEngine(),
-            "base_instructions": base,
-        },
-        instructions=base,
+        userdata={"base_instructions": "Clinical agent instructions."},
+        instructions="Clinical agent instructions.",
     )
     return ctx

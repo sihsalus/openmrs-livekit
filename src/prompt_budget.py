@@ -46,7 +46,7 @@ def truncate_to_tokens(text: str, max_tokens: int) -> str:
 def compose_budgeted_text(
     sections: list[BudgetSection],
     total_tokens: int,
-) -> tuple[str, dict]:
+) -> tuple[str, dict[str, object]]:
     """Compone secciones dentro de un presupuesto global con degradación por prioridad."""
     budget_chars = tokens_to_chars(total_tokens)
     prepared = []

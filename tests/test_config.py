@@ -10,7 +10,7 @@ class TestSettingsDefaults:
         s = Settings()
         assert s.livekit_url == "ws://localhost:7880"
         assert s.openai_model == "gpt-4.1-mini"
-        assert s.agent_name == "Nebu"
+        assert s.openai_api_key == "sk-test"
 
     def test_greeting_enabled_by_default(self):
         s = Settings()
@@ -93,4 +93,4 @@ class TestDisplayConfig:
         display = s.display_config()
         assert "sk-test" not in display
         assert "el-test" not in display
-        assert "Nebu" in display
+        assert "OPENMRS" in display

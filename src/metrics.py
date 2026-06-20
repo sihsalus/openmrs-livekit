@@ -67,13 +67,6 @@ TURNS_TOTAL = Counter(
     ["personality"],
 )
 
-# Señales detectadas en el input del niño
-CHILD_SIGNALS_TOTAL = Counter(
-    "nebu_agent_child_signals_total",
-    "Señales detectadas en el input del niño",
-    ["signal"],
-)
-
 # Latencia LLM: desde transcripción final hasta respuesta completa del modelo
 # (conversation_item_added con role=assistant)
 LLM_LATENCY = Histogram(

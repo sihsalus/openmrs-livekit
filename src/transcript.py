@@ -42,7 +42,7 @@ async def save_transcript(
         text = getattr(msg, "text_content", None) or ""
         if role == "system":
             continue
-        label = "Niño" if role == "user" else session.userdata.get("agent_name", "Nebu")
+        label = "Clinician" if role == "user" else "Agent"
         if text.strip():
             lines.append(f"[{label}]: {text.strip()}")
 
@@ -59,16 +59,8 @@ async def save_transcript(
 
     message_count = len(lines)
 
-    engagement_stats = None
-    variety = session.userdata.get("variety")
-    if variety is not None:
-        try:
-            engagement_stats = variety.get_session_stats()
-        except Exception:
-            job_logger.warning("Failed to collect engagement stats")
-
     try:
-        payload: dict = {
+        payload: dict[str, object] = {
             "roomName": room_name,
             "transcript": transcript,
             "messageCount": message_count,
@@ -76,8 +68,6 @@ async def save_transcript(
             and not settings.transcript_raw_storage_allowed,
             "redactionCount": redaction_count,
         }
-        if engagement_stats:
-            payload["engagementStats"] = engagement_stats
 
         result = await backend_request(
             settings,

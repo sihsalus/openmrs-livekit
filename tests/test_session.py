@@ -1,13 +1,13 @@
 import pytest
 
 from src.config import Settings
-from src.prompts import CAPABILITIES_BLOCK, CONVERSATION_POLICY_BLOCK
+from src.prompts import get_capabilities_block, get_system_prompt
 from src.session import build_instructions
 
 
 class DummyLogger:
     def __init__(self):
-        self.records = []
+        self.records: list[tuple[str, str, dict | None]] = []
 
     def info(self, message, extra=None):
         self.records.append(("info", message, extra))
@@ -16,61 +16,40 @@ class DummyLogger:
         self.records.append(("warning", message, extra))
 
 
-def test_build_instructions_truncates_memory_first_when_budget_enabled():
-    settings = Settings(llm_apply_token_limits=True)
-    logger = DummyLogger()
-    room_metadata = {
-        "agent_prompt": "REGLAS IMPORTANTES\n" + ("A" * 260),
-        "owner_name": "Luna",
-        "owner_interests": "astronomia",
-    }
-    memory_context = "M" * 500
-
-    result = build_instructions(room_metadata, settings, logger, memory_context=memory_context)
-
-    assert "MEMORIA PREVIA" in result
-    assert memory_context not in result
-    assert "REGLAS IMPORTANTES" in result
-    assert "CONTEXTO:" in result
-    assert "Nombre: Luna" in result
-    assert "tema adulto" in result
-    assert CAPABILITIES_BLOCK.strip() in result
-    assert len(result) <= settings.llm_max_input_tokens * 4
-
-
-def test_build_instructions_no_truncation_when_budget_disabled():
+def test_build_instructions_uses_clinical_prompt_by_default():
     settings = Settings(llm_apply_token_limits=False)
     logger = DummyLogger()
-    room_metadata = {
-        "agent_prompt": "REGLAS IMPORTANTES\n" + ("A" * 260),
-        "owner_name": "Luna",
-        "owner_interests": "astronomia",
-    }
-    memory_context = "M" * 500
 
-    result = build_instructions(room_metadata, settings, logger, memory_context=memory_context)
+    result = build_instructions({}, settings, logger)
 
-    assert "MEMORIA PREVIA" in result
-    assert "REGLAS IMPORTANTES" in result
-    assert "CONTEXTO:" in result
-    assert "Nombre: Luna" in result
-    assert CONVERSATION_POLICY_BLOCK.strip() in result
-    assert CAPABILITIES_BLOCK.strip() in result
+    assert "asistente clínico" in result
+    assert "record_clinical_fact" in result
+    assert get_capabilities_block().strip() in result
 
 
-def test_custom_prompt_still_gets_non_optional_safety_policy():
+def test_build_instructions_respects_custom_prompt():
     settings = Settings(llm_apply_token_limits=False)
     logger = DummyLogger()
 
     result = build_instructions(
-        {"agent_prompt": "Eres Luna y hablas de ciencia divertida."},
+        {"agent_prompt": "Eres un asistente de triaje."},
         settings,
         logger,
     )
 
-    assert "Eres Luna" in result
-    assert "temas adultos" in result
-    assert "adulto de confianza" in result
+    assert "Eres un asistente de triaje" in result
+    assert get_capabilities_block().strip() in result
+
+
+def test_build_instructions_truncates_when_budget_enabled():
+    settings = Settings(llm_apply_token_limits=True)
+    logger = DummyLogger()
+    room_metadata = {"agent_prompt": "REGLAS IMPORTANTES\n" + ("A" * 260)}
+
+    result = build_instructions(room_metadata, settings, logger)
+
+    assert "REGLAS IMPORTANTES" in result
+    assert len(result) <= settings.llm_max_input_tokens * 4
 
 
 def test_legacy_llm_max_tokens_alias_maps_to_output_budget():

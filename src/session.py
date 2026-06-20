@@ -5,14 +5,12 @@ Incluye:
 - TurnContext: dataclass para estado de turno compartido entre session y events.
 - NebuAgent: clase que construye la AgentSession con STT/LLM/TTS y métricas.
 - Helpers de construcción de instrucciones a partir de room metadata.
-- Setup de VarietyEngine y envío del saludo inicial.
 """
 
 import asyncio
 import json
 import re
 from dataclasses import dataclass
-from types import SimpleNamespace
 
 from livekit import agents
 from livekit.agents import AgentSession
@@ -27,16 +25,8 @@ from src.metrics import (
     TTS_AUDIO_DURATION,
     TTS_TTFB,
 )
-from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tokens, truncate_text
-from src.prompts import (
-    CAPABILITIES_BLOCK,
-    CONVERSATION_POLICY_BLOCK,
-    get_clinical_capabilities_block,
-    get_clinical_greeting,
-    get_clinical_system_prompt,
-    get_greeting,
-    get_system_prompt,
-)
+from src.prompt_budget import BudgetSection, compose_budgeted_text, estimate_tokens
+from src.prompts import get_capabilities_block, get_greeting, get_system_prompt
 
 logger = get_logger("nebu.session")
 
@@ -55,7 +45,7 @@ class TranscriptFlag:
 
 
 class NebuAgent:
-    """Agente Nebu — construye y configura la AgentSession."""
+    """Clinical voice agent — construye y configura la AgentSession."""
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -65,7 +55,7 @@ class NebuAgent:
     def _on_llm_metrics(self, metrics: LLMMetrics) -> None:
         if self._job_logger:
             self._job_logger.info(
-                f"🧠 LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
+                f"LLM: TTFT={metrics.ttft:.3f}s, tokens/s={metrics.tokens_per_second:.1f}, "
                 f"prompt_tok={metrics.prompt_tokens}, completion_tok={metrics.completion_tokens}",
                 extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
             )
@@ -73,7 +63,7 @@ class NebuAgent:
     def _on_stt_metrics(self, metrics: STTMetrics) -> None:
         if self._job_logger:
             self._job_logger.info(
-                f"🎤 STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
+                f"STT: duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
                 extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
             )
         STT_DURATION.labels(stt_provider=self.settings.stt_provider).observe(metrics.duration)
@@ -84,7 +74,7 @@ class NebuAgent:
             self._turn_context.turn_id = f"t{self._turn_context.turn_num:03d}"
         if self._job_logger:
             self._job_logger.info(
-                f"⏱️ EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s",
+                f"EOU: eou_delay={metrics.end_of_utterance_delay:.3f}s, transcription_delay={metrics.transcription_delay:.3f}s",
                 extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
             )
         EOU_DELAY.observe(metrics.end_of_utterance_delay)
@@ -92,7 +82,7 @@ class NebuAgent:
     def _on_tts_metrics(self, metrics: TTSMetrics) -> None:
         if self._job_logger:
             self._job_logger.info(
-                f"🔊 TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
+                f"TTS: TTFB={metrics.ttfb:.3f}s, duration={metrics.duration:.3f}s, audio={metrics.audio_duration:.3f}s, streamed={metrics.streamed}",
                 extra={"turn_id": self._turn_context.turn_id if self._turn_context else None},
             )
         TTS_TTFB.labels(tts_provider=self.settings.tts_provider).observe(metrics.ttfb)
@@ -100,7 +90,7 @@ class NebuAgent:
             metrics.audio_duration
         )
 
-    def _on_session_metrics(self, ev) -> None:
+    def _on_session_metrics(self, ev) -> None:  # type: ignore[no-untyped-def]
         if isinstance(ev.metrics, EOUMetrics):
             self._on_eou_metrics(ev.metrics)
 
@@ -150,22 +140,14 @@ class NebuAgent:
         return session
 
 
-def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict:
+def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict[str, object]:  # type: ignore[type-arg]
     """Parsea la metadata JSON del room. Retorna dict vacío si falta o es inválida."""
     if not ctx.room.metadata:
         job_logger.warning("Room metadata empty")
         return {}
     try:
         metadata = json.loads(ctx.room.metadata)
-        job_logger.info(
-            "Metadata parsed",
-            extra={
-                "keys": list(metadata.keys()),
-                "has_age": metadata.get("owner_age") is not None,
-                "language": metadata.get("preferred_language", "es"),
-                "personality": metadata.get("personality_profile"),
-            },
-        )
+        job_logger.info("Metadata parsed", extra={"keys": list(metadata.keys())})
         return metadata
     except json.JSONDecodeError as e:
         job_logger.error("Failed to parse metadata", extra={"error": str(e)})
@@ -173,55 +155,26 @@ def parse_room_metadata(ctx: agents.JobContext, job_logger) -> dict:
 
 
 def build_instructions(
-    room_metadata: dict,
+    room_metadata: dict[str, object],
     settings: Settings,
     job_logger,
-    memory_context: str | None = None,
-    agent_name: str = "Nebu",
 ) -> str:
     """Construye las instrucciones del agente a partir de metadata y settings."""
     raw_prompt = room_metadata.get("agent_prompt")
-    custom_prompt = (
-        _sanitize_custom_prompt(raw_prompt, settings.max_custom_prompt_chars)
-        if raw_prompt
-        else None
-    )
-    owner_context = _build_owner_context(room_metadata)
-    if custom_prompt:
+    if raw_prompt and isinstance(raw_prompt, str):
+        custom_prompt = _sanitize_custom_prompt(raw_prompt, settings.max_custom_prompt_chars)
         job_logger.info("Using custom prompt", extra={"length": len(custom_prompt)})
-    elif settings.enable_openmrs_tools:
-        job_logger.info("Using clinical prompt")
-        custom_prompt = get_clinical_system_prompt()
     else:
-        job_logger.info("Using default prompt")
-        custom_prompt = get_system_prompt(name=agent_name)
-    if owner_context:
-        job_logger.info("Owner context injected into prompt")
+        custom_prompt = get_system_prompt()
+        job_logger.info("Using clinical prompt")
 
-    memory_block = ""
-    if memory_context:
-        memory_block = "\n\nMEMORIA PREVIA (no repitas datos ya contados):\n" + memory_context
-        job_logger.info(
-            "Memory context injected into prompt", extra={"length": len(memory_context)}
-        )
-
-    caps_block = (
-        get_clinical_capabilities_block() if settings.enable_openmrs_tools else CAPABILITIES_BLOCK
-    )
-    policy_block = "" if settings.enable_openmrs_tools else CONVERSATION_POLICY_BLOCK
+    caps_block = get_capabilities_block()
 
     if not settings.llm_apply_token_limits:
-        instructions = custom_prompt
-        if owner_context:
-            instructions += owner_context
-        if memory_block:
-            instructions += memory_block
-        if policy_block:
-            instructions += "\n\n" + policy_block.strip()
-        instructions += "\n\n" + caps_block.strip()
+        instructions = custom_prompt + "\n\n" + caps_block.strip()
         job_logger.info(
             "Instruction prompt built without token budget",
-            extra={"approx_prompt_tokens": _estimate_tokens(instructions)},
+            extra={"approx_prompt_tokens": estimate_tokens(instructions)},
         )
         return instructions
 
@@ -237,27 +190,6 @@ def build_instructions(
                 trim_priority=20,
             ),
             BudgetSection(
-                name="owner_context",
-                text=owner_context,
-                required=bool(owner_context),
-                max_tokens=min(18, max(10, total_tokens // 4)),
-                min_tokens=10 if owner_context else 0,
-                trim_priority=80,
-            ),
-            BudgetSection(
-                name="memory_block",
-                text=memory_block,
-                max_tokens=min(14, max(6, total_tokens // 6)),
-                trim_priority=100,
-            ),
-            BudgetSection(
-                name="conversation_policy",
-                text=policy_block,
-                required=bool(policy_block),
-                min_tokens=estimate_tokens(policy_block) if policy_block else 0,
-                trim_priority=5,
-            ),
-            BudgetSection(
                 name="capabilities_block",
                 text=caps_block,
                 required=True,
@@ -267,7 +199,7 @@ def build_instructions(
         ],
         total_tokens=total_tokens,
     )
-    approx_tokens = _estimate_tokens(instructions)
+    approx_tokens = estimate_tokens(instructions)
     if budget_meta["truncated_sections"] or budget_meta["hard_truncated"]:
         job_logger.warning(
             "Instruction prompt truncated to fit budget",
@@ -277,14 +209,6 @@ def build_instructions(
                 "truncated_sections": budget_meta["truncated_sections"],
                 "dropped_sections": budget_meta["dropped_sections"],
                 "hard_truncated": budget_meta["hard_truncated"],
-            },
-        )
-    elif approx_tokens >= int(settings.llm_max_input_tokens * 0.8):
-        job_logger.warning(
-            "Instruction prompt near input budget",
-            extra={
-                "approx_prompt_tokens": approx_tokens,
-                "input_budget_tokens": settings.llm_max_input_tokens,
             },
         )
     else:
@@ -298,125 +222,27 @@ def build_instructions(
     return instructions
 
 
-def _resolve_flag(metadata: dict, key: str, default: bool) -> bool:
-    """Lee un flag booleano del room metadata con coerción segura.
-
-    Maneja strings ("true"/"false") que el backend podría enviar,
-    evitando que "false" sea truthy en Python.
-    """
-    val = metadata.get(key)
-    if val is None:
-        return default
-    if isinstance(val, bool):
-        return val
-    if isinstance(val, str):
-        return val.lower() in ("true", "1", "yes")
-    return bool(val)
-
-
-async def setup_variety_engine(
-    session: AgentSession,
-    room_metadata: dict,
-    settings: Settings,
-    job_logger,
-    agent_name: str = "Nebu",
-):
-    """Inicializa VarietyEngine si está habilitado. Retorna el perfil de personalidad.
-
-    El usuario puede activar/desactivar via room metadata ('enable_variety_engine').
-    Si no viene en metadata, se usa el valor global del env como fallback.
-    """
-    enabled = _resolve_flag(room_metadata, "enable_variety_engine", settings.enable_variety_engine)
-    if not enabled:
-        session.userdata["variety"] = None
-        job_logger.info("VarietyEngine disabled - using hardcoded neutral profile")
-        return SimpleNamespace(id="neutral", name="Neutral")
-
-    from src.personalities import get_profile
-    from src.variety import VarietyEngine
-
-    profile = None
-
-    # Priority 1: Custom personality from backend
-    custom_personality_id = room_metadata.get("custom_personality_id")
-    if custom_personality_id:
-        from src.custom_personality import fetch_custom_personality
-
-        profile = await fetch_custom_personality(custom_personality_id, settings, job_logger)
-        if profile:
-            job_logger.info(
-                "Custom personality loaded from backend",
-                extra={"id": custom_personality_id, "display_name": profile.display_name},
-            )
-
-    # Priority 2: Built-in YAML personality
-    if profile is None:
-        personality_id = room_metadata.get("personality_profile")
-        try:
-            profile = get_profile(personality_id)
-        except ValueError:
-            job_logger.warning(
-                "Unknown personality profile, using default",
-                extra={"requested": personality_id},
-            )
-            profile = get_profile()
-
-    profile.resolve_name(agent_name)
-    session.userdata["variety"] = VarietyEngine(profile=profile, agent_name=agent_name)
-    job_logger.info(
-        "VarietyEngine enabled", extra={"profile": profile.id, "agent_name": agent_name}
-    )
-    return profile
-
-
 async def send_initial_greeting(
     session: AgentSession,
     settings: Settings,
-    room_metadata: dict,
+    room_metadata: dict[str, object],
     job_logger,
-    agent_name: str = "Nebu",
 ) -> None:
     """Envía el saludo inicial tras el delay configurado."""
     if not settings.greeting_enabled:
         return
     await asyncio.sleep(settings.greeting_delay)
     raw_greeting = room_metadata.get("greeting")
-    if raw_greeting:
+    if raw_greeting and isinstance(raw_greeting, str):
         greeting_text = _sanitize_custom_prompt(raw_greeting, settings.max_custom_prompt_chars)
-    elif settings.enable_openmrs_tools:
-        greeting_text = get_clinical_greeting()
     else:
-        greeting_text = get_greeting(name=agent_name)
+        greeting_text = get_greeting()
     job_logger.info("Sending initial greeting")
     try:
         await session.say(greeting_text)
     except Exception as e:
         job_logger.error("Failed to send greeting", extra={"error": str(e)}, exc_info=True)
         ERRORS_TOTAL.labels(type="greeting").inc()
-
-
-def _build_owner_context(room_metadata: dict) -> str:
-    """Construye un bloque de contexto sobre el niño/owner para inyectar en el prompt."""
-
-    def sanitize(v, limit=200):
-        return _sanitize_custom_prompt(str(v), limit)
-
-    lines = []
-    if name := room_metadata.get("owner_name"):
-        lines.append(f"- Nombre: {sanitize(name, 80)}")
-    if age := room_metadata.get("owner_age"):
-        lines.append(f"- Edad: {sanitize(age, 10)} años")
-    if interests := room_metadata.get("owner_interests"):
-        if isinstance(interests, list):
-            interests = ", ".join(str(i) for i in interests[:3])  # Solo top 3 intereses
-        lines.append(f"- Intereses: {sanitize(interests, 120)}")
-    if goals := room_metadata.get("learning_goals"):
-        lines.append(f"- Aprendizaje: {sanitize(goals, 100)}")
-    if voice := room_metadata.get("voice_preference"):
-        lines.append(f"- Voz: {sanitize(voice, 30)}")
-    if not lines:
-        return ""
-    return "\n\nCONTEXTO:\n" + "\n".join(lines)
 
 
 _INJECTION_PATTERNS = re.compile(
@@ -430,13 +256,3 @@ def _sanitize_custom_prompt(prompt: str, max_chars: int) -> str:
     prompt = prompt.strip()[:max_chars]
     prompt = "".join(c for c in prompt if c >= " " or c in "\n\t")
     return _INJECTION_PATTERNS.sub("", prompt)
-
-
-def _estimate_tokens(text: str) -> int:
-    """Estimación rápida para presupuestar prompts sin tokenizer del proveedor."""
-    return estimate_tokens(text)
-
-
-def _truncate_text(text: str, max_chars: int) -> str:
-    """Recorta texto preservando el inicio, donde viven reglas e instrucciones críticas."""
-    return truncate_text(text, max_chars)
