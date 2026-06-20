@@ -62,7 +62,7 @@ local = [
 ]
 
 all = [
-    "openmrs-livekit[dev,deepgram,noise-cancellation]",
+    "openmrs-livekit[dev,deepgram,noise-cancellation,local]",
 ]
 
 [project.scripts]
