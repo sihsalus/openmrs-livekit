@@ -20,7 +20,7 @@ from livekit import rtc
 logger = logging.getLogger("nebu.data_channel")
 
 
-async def publish_message(room: rtc.Room, msg_type: str, payload: dict) -> None:
+async def publish_message(room: rtc.Room, msg_type: str, payload: dict[str, object]) -> None:
     message = json.dumps({"type": msg_type, "payload": payload})
     try:
         await room.local_participant.publish_data(
@@ -62,7 +62,7 @@ async def publish_translation(
     })
 
 
-async def publish_draft(room: rtc.Room, draft: dict) -> None:
+async def publish_draft(room: rtc.Room, draft: dict[str, object]) -> None:
     await publish_message(room, "draft", draft)
 
 
