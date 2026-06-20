@@ -6,6 +6,7 @@ from livekit.agents import RunContext, function_tool
 
 from src.clinical_facts import ClinicalEvidence, ClinicalFact, EncounterDraft
 from src.config import Settings
+from src.data_channel import publish_draft
 
 
 @function_tool(
@@ -64,6 +65,17 @@ async def record_clinical_fact(
         evidence=ClinicalEvidence(transcript=transcript_excerpt),
     )
     draft.add_fact(fact)
+
+    room = context.session.userdata.get("room")
+    if room:
+        draft_payload = {
+            "patientUuid": draft.patient_uuid,
+            "facts": [
+                {"kind": f.kind, "value": f.value, "confidence": f.confidence, "status": f.status}
+                for f in draft.facts
+            ],
+        }
+        await publish_draft(room, draft_payload)
 
     status_label = "⚠️ requiere revisión" if fact.needs_review() else "✓ registrado"
     total = len(draft.facts)

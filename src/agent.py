@@ -134,6 +134,7 @@ async def _entrypoint(ctx: agents.JobContext, settings: Settings):
     session.userdata["base_instructions"] = instructions
     session.userdata["agent_name"] = agent_name
     session.userdata["settings"] = settings
+    session.userdata["room"] = ctx.room
 
     transcript_sent = TranscriptFlag()
     _register_session_lifecycle(

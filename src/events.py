@@ -18,6 +18,7 @@ from livekit import rtc
 from livekit.agents import AgentSession, SpeechCreatedEvent
 
 from src.config import Settings
+from src.data_channel import publish_transcript
 from src.logger import AgentLogger
 from src.metrics import (
     CHILD_SIGNALS_TOTAL,
@@ -158,6 +159,12 @@ def setup_event_listeners(
             extra={"turn_id": turn_context.turn_id, "transcript_len": len(text)},
         )
 
+        # Publish transcript to frontend via data channel
+        if settings.enable_openmrs_tools:
+            _fire_and_forget(
+                publish_transcript(room, role="doctor", language="auto", text=text)
+            )
+
         if settings.filler_sound_enabled:
             if _state["filler_task"] and not _state["filler_task"].done():
                 _state["filler_task"].cancel()
@@ -229,6 +236,10 @@ def setup_event_listeners(
             variety = session.userdata.get("variety")
             if variety:
                 variety.record_agent_response(text)
+            if settings.enable_openmrs_tools:
+                _fire_and_forget(
+                    publish_transcript(room, role="patient", language="auto", text=text)
+                )
 
     def on_speech_created(ev: SpeechCreatedEvent):
         """Cancela el filler si el LLM respondió a tiempo; registra latencia de turno."""
