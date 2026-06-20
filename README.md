@@ -140,8 +140,16 @@ docs/
   security-model.md
   proposal-positioning.md
 tests/
+  test_backend_client.py
+  test_clinical_facts.py
+  test_config.py
   test_deidentification.py
+  test_inworld_integration.py
+  test_local_providers.py
   test_openmrs_payload.py
+  test_openmrs_tools.py
+  test_providers_mistral.py
+  test_session.py
 ```
 
 ## Local Development
@@ -152,6 +160,15 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env
 pytest
+```
+
+Useful checks before opening a PR:
+
+```bash
+ruff check src/ tests/
+ruff format --check src/ tests/
+mypy src/ --ignore-missing-imports
+pytest --tb=short -q --cov=src --cov-report=term-missing
 ```
 
 Use demo or test credentials only.
