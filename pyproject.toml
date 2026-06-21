@@ -8,7 +8,22 @@ license = {text = "MIT"}
 authors = [
     {name = "NEBUAI"}
 ]
-keywords = ["openmrs", "livekit", "voice-agent", "clinical-ai", "human-in-the-loop"]
+keywords = [
+    "openmrs",
+    "livekit",
+    "livekit-agents",
+    "voice-agent",
+    "clinical-ai",
+    "clinical-translation",
+    "offline-ai",
+    "human-in-the-loop",
+]
+
+[project.urls]
+Homepage = "https://github.com/sihsalus/openmrs-livekit"
+Repository = "https://github.com/sihsalus/openmrs-livekit"
+Issues = "https://github.com/sihsalus/openmrs-livekit/issues"
+Documentation = "https://github.com/sihsalus/openmrs-livekit/tree/main/docs"
 
 dependencies = [
     # LiveKit core

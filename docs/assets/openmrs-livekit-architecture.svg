@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="600" viewBox="0 0 1180 600" role="img" aria-labelledby="title desc">
+  <title id="title">OpenMRS LiveKit architecture</title>
+  <desc id="desc">Local-first voice AI flow from OpenMRS patient chart through LiveKit, local AI processing, clinician review, and OpenMRS draft payloads.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f7f9fb; }
+      .panel { fill: #ffffff; stroke: #d9e1e8; stroke-width: 2; rx: 12; }
+      .primary { fill: #0f766e; }
+      .secondary { fill: #155e75; }
+      .accent { fill: #4f46e5; }
+      .warn { fill: #b45309; }
+      .ink { fill: #15212e; font-family: Inter, Arial, sans-serif; }
+      .muted { fill: #5f6f7d; font-family: Inter, Arial, sans-serif; }
+      .label { font-size: 23px; font-weight: 700; }
+      .small { font-size: 16px; }
+      .arrow { stroke: #66788a; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#66788a" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1180" height="600" rx="24" />
+
+  <text class="ink" x="60" y="64" font-size="34" font-weight="800">OpenMRS LiveKit</text>
+  <text class="muted" x="60" y="96" font-size="18">Local-first clinical voice AI with human review before OpenMRS writes</text>
+
+  <rect class="panel" x="60" y="145" width="210" height="120" />
+  <circle class="primary" cx="95" cy="185" r="17" />
+  <text class="ink label" x="122" y="192">OpenMRS O3</text>
+  <text class="muted small" x="88" y="226">Patient chart context</text>
+  <text class="muted small" x="88" y="248">Clinician workspace</text>
+
+  <rect class="panel" x="350" y="145" width="210" height="120" />
+  <circle class="secondary" cx="385" cy="185" r="17" />
+  <text class="ink label" x="412" y="192">LiveKit Room</text>
+  <text class="muted small" x="378" y="226">Clinic-local audio</text>
+  <text class="muted small" x="378" y="248">Turn events</text>
+
+  <rect class="panel" x="640" y="130" width="230" height="150" />
+  <circle class="accent" cx="675" cy="172" r="17" />
+  <text class="ink label" x="702" y="179">Local AI</text>
+  <text class="muted small" x="668" y="213">STT / translation / TTS</text>
+  <text class="muted small" x="668" y="235">PHI redaction</text>
+  <text class="muted small" x="668" y="257">Fact extraction</text>
+
+  <rect class="panel" x="950" y="145" width="180" height="120" />
+  <circle class="warn" cx="985" cy="185" r="17" />
+  <text class="ink label" x="1012" y="192">Review</text>
+  <text class="muted small" x="978" y="226">Approve, edit,</text>
+  <text class="muted small" x="978" y="248">or reject facts</text>
+
+  <path class="arrow" d="M270 205 H345" />
+  <path class="arrow" d="M560 205 H635" />
+  <path class="arrow" d="M870 205 H945" />
+
+  <rect class="panel" x="210" y="380" width="230" height="115" />
+  <text class="ink label" x="245" y="428">Privacy Defaults</text>
+  <text class="muted small" x="245" y="462">No raw audio storage</text>
+  <text class="muted small" x="245" y="484">Redaction before persistence</text>
+
+  <rect class="panel" x="500" y="380" width="230" height="115" />
+  <text class="ink label" x="535" y="428">Draft Payloads</text>
+  <text class="muted small" x="535" y="462">Evidence-backed facts</text>
+  <text class="muted small" x="535" y="484">OpenMRS-style JSON</text>
+
+  <rect class="panel" x="790" y="380" width="230" height="115" />
+  <text class="ink label" x="825" y="428">OpenMRS Write</text>
+  <text class="muted small" x="825" y="462">Disabled by default</text>
+  <text class="muted small" x="825" y="484">Requires clinician approval</text>
+
+  <path class="arrow" d="M755 280 C755 330 615 330 615 375" />
+  <path class="arrow" d="M730 438 H785" />
+  <path class="arrow" d="M1020 265 C1020 320 905 320 905 375" />
+</svg>
