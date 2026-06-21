@@ -19,12 +19,6 @@ keywords = [
     "human-in-the-loop",
 ]
 
-[project.urls]
-Homepage = "https://github.com/sihsalus/openmrs-livekit"
-Repository = "https://github.com/sihsalus/openmrs-livekit"
-Issues = "https://github.com/sihsalus/openmrs-livekit/issues"
-Documentation = "https://github.com/sihsalus/openmrs-livekit/tree/main/docs"
-
 dependencies = [
     # LiveKit core
     "livekit-agents",
@@ -54,6 +48,12 @@ dependencies = [
 
 
 ]
+
+[project.urls]
+Homepage = "https://github.com/sihsalus/openmrs-livekit"
+Repository = "https://github.com/sihsalus/openmrs-livekit"
+Issues = "https://github.com/sihsalus/openmrs-livekit/issues"
+Documentation = "https://github.com/sihsalus/openmrs-livekit/tree/main/docs"
 
 [project.optional-dependencies]
 dev = [
